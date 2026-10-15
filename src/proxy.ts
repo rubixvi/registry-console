@@ -27,6 +27,11 @@ export function proxy(request: NextRequest) {
 
   const requestHeaders = new Headers(request.headers)
 
+  requestHeaders.set(
+    'x-registry-refresh',
+    /(?:^|,)\s*no-cache\b/i.test(request.headers.get('cache-control') ?? '') ? '1' : '0'
+  )
+
   requestHeaders.set('x-nonce', nonce)
   requestHeaders.set('Content-Security-Policy', policy)
 
