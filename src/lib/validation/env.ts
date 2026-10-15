@@ -1,0 +1,31 @@
+import { z } from 'zod'
+
+import { pullUrlSchema } from '@/lib/validation/url'
+import { TAG_ORDERS } from '@/utils/tag-order'
+
+export const envSchema = z.object({
+  APP_ORIGIN: z.string().url(),
+  DATA_DIR: z.string().default('./data'),
+  ENCRYPTION_KEY: z.string().regex(/^[a-f0-9]{64}$/i, 'Must be 32 random bytes encoded as hex'),
+  REGISTRY_ALLOWED_ORIGINS: z.string().default(''),
+  REGISTRY_TOKEN_ORIGINS: z.string().default(''),
+  ALLOW_HTTP_REGISTRIES: z.enum(['true', 'false']).default('false'),
+  TRUST_PROXY: z.enum(['true', 'false']).default('false'),
+  SESSION_HOURS: z.coerce.number().int().min(1).max(24).default(8),
+  PULL_URL: pullUrlSchema.default(''),
+  TAGLIST_ORDER: z.enum(TAG_ORDERS).default('natural-asc'),
+  HISTORY_CUSTOM_LABELS: z
+    .string()
+    .max(4096)
+    .default('')
+    .transform((value) => [
+      ...new Set(
+        value
+          .split(',')
+          .map((key) => key.trim())
+          .filter(Boolean)
+      ),
+    ])
+    .pipe(z.array(z.string().min(1).max(256)).max(32)),
+  BRAND_NAME: z.string().min(1).max(64).default('Registry Console'),
+})

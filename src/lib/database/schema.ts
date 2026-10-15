@@ -1,0 +1,100 @@
+export const DATABASE_SCHEMA = `
+  PRAGMA journal_mode = WAL;
+  PRAGMA busy_timeout = 5000;
+
+  CREATE TABLE IF NOT EXISTS sessions (
+    id TEXT PRIMARY KEY,
+    username TEXT NOT NULL,
+    fingerprint TEXT NOT NULL,
+    expires INTEGER NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS session_expiry
+    ON sessions (expires);
+
+  CREATE TABLE IF NOT EXISTS auth_requests (
+    id TEXT PRIMARY KEY,
+    purpose TEXT NOT NULL,
+    username TEXT NOT NULL,
+    fingerprint TEXT NOT NULL,
+    session_id TEXT NOT NULL,
+    value TEXT NOT NULL,
+    expires INTEGER NOT NULL,
+    attempts INTEGER NOT NULL DEFAULT 0
+  );
+
+  CREATE INDEX IF NOT EXISTS auth_request_expiry
+    ON auth_requests (expires);
+
+  CREATE TABLE IF NOT EXISTS security_accounts (
+    username TEXT PRIMARY KEY,
+    account_id TEXT NOT NULL UNIQUE,
+    configured_id TEXT NOT NULL DEFAULT ''
+  );
+
+  CREATE TABLE IF NOT EXISTS passkeys (
+    id TEXT PRIMARY KEY,
+    username TEXT NOT NULL,
+    fingerprint TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    public_key TEXT NOT NULL,
+    counter INTEGER NOT NULL,
+    transports TEXT NOT NULL,
+    name TEXT NOT NULL,
+    created TEXT NOT NULL,
+    last_used TEXT
+  );
+
+  CREATE INDEX IF NOT EXISTS passkey_user
+    ON passkeys (username, fingerprint);
+
+  CREATE TABLE IF NOT EXISTS authenticators (
+    username TEXT PRIMARY KEY,
+    fingerprint TEXT NOT NULL,
+    secret TEXT NOT NULL,
+    last_step INTEGER NOT NULL,
+    recovery TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS settings (
+    id TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS registries (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    url TEXT NOT NULL,
+    pull_url TEXT NOT NULL DEFAULT '',
+    username TEXT NOT NULL,
+    password TEXT NOT NULL,
+    read_only INTEGER NOT NULL DEFAULT 0
+  );
+
+  CREATE TABLE IF NOT EXISTS deletion_plans (
+    id TEXT PRIMARY KEY,
+    username TEXT NOT NULL,
+    registry_id TEXT NOT NULL,
+    session_id TEXT NOT NULL,
+    repository TEXT NOT NULL,
+    value TEXT NOT NULL,
+    expires INTEGER NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS deletion_plan_expiry
+    ON deletion_plans (expires);
+
+  CREATE TABLE IF NOT EXISTS limits (
+    id TEXT PRIMARY KEY,
+    count INTEGER NOT NULL,
+    expires INTEGER NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS audit (
+    id INTEGER PRIMARY KEY,
+    at TEXT NOT NULL,
+    actor TEXT NOT NULL,
+    action TEXT NOT NULL,
+    target TEXT NOT NULL
+  );
+`

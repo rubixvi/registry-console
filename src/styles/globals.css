@@ -1,0 +1,15 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@import "./animation.css";
+@import "./base.css";
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+html[data-theme-vt="active"]::view-transition-group(root) {
+  animation-duration: var(--theme-toggle-duration);
+}
