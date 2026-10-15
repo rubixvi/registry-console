@@ -14,7 +14,9 @@ export const GET = api(async (request, context, identity) => {
   if (!parsed.success) throw new AppError(400, 'Invalid repository filter.')
 
   const registry = getRegistry(id)
-  const refresh = request.headers.get('x-registry-refresh') === '1'
+  const refresh =
+    request.headers.get('x-registry-refresh') === '1' ||
+    request.headers.get('cache-control')?.toLowerCase().includes('no-cache') === true
 
   rateLimit(`registry-browse:${identity.username}`, 30, 60_000)
 
