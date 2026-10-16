@@ -1,10 +1,14 @@
 # Registry Console
 
-A self-hosted interface for Docker Registry v2 and OCI registries, built with Next.js. Browse repositories, inspect tags and manifests, and manage registry connections from one workspace.
+A self-hosted interface for Docker Registry v2/v3 and OCI registries, built with Next.js. Browse repositories, inspect tags and manifests, and manage registry connections from one workspace.
 
 ## Features
 
 - Multiple registry connections with encrypted credentials and a registry selector.
+- Docker Hub namespace browsing, repository search, and architecture filters.
+- Optional LDAP sign-in with LDAPS or StartTLS.
+- Optional Trivy vulnerability reports on tags and image details.
+- Theme-aware Sonner notifications for operation results.
 - Repository and tag browsing, readable image history, and multi-platform manifests.
 - Bulk manifest deletion with digest previews and individual results.
 - Administrator and viewer accounts, with read-only connection controls.
@@ -176,7 +180,7 @@ HTTP registry connections require `ALLOW_HTTP_REGISTRIES=true` and an approved o
 
 Manifest deletion requires an administrator, a writable connection, typed confirmation, and registry-side deletion support. Deleting a manifest can invalidate every tag that refers to its digest. Removing a connection does not delete content from its registry. Registry garbage collection is managed separately.
 
-Supported registries must expose the Distribution v2 catalogue and tag APIs. SHA-256 schema v2 and OCI manifests are supported. Legacy schema v1 manifests, image uploads, vendor-specific project APIs, and configuration-blob redirects are not supported.
+Standard connections must expose the Distribution v2 catalogue and tag APIs. Docker Hub connections use the Hub API for namespace discovery and Distribution APIs for tags and manifests. SHA-256 schema v2 and OCI manifests are supported. Legacy schema v1 manifests, image uploads, other vendor-specific project APIs are not supported. Configuration-blob redirects require an explicitly approved HTTPS destination in `REGISTRY_BLOB_ORIGINS`; registry authorization headers are never forwarded to that destination.
 
 ### Namespace browsing and tag ordering
 
@@ -280,3 +284,94 @@ pnpm run test:container your-account/registry-console:1.0.0
 ## Storage and licensing
 
 Registry Console is licensed under the GNU Affero General Public License, version 3 or any later version (`AGPL-3.0-or-later`). See [LICENSE](LICENSE) for the full licence and [NOTICE](NOTICE) for the copyright and licence grant.
+
+
+## Docker Hub
+
+Add `https://registry-1.docker.io` and `https://hub.docker.com` to `REGISTRY_ALLOWED_ORIGINS`, preserving any existing approved origins. Add `https://auth.docker.io` to `REGISTRY_TOKEN_ORIGINS`.
+
+```dotenv
+REGISTRY_ALLOWED_ORIGINS=https://registry.example.com,https://registry-1.docker.io,https://hub.docker.com
+REGISTRY_TOKEN_ORIGINS=https://auth.docker.io
+REGISTRY_BLOB_ORIGINS=https://production.cloudfront.docker.com
+```
+
+Docker Hub may serve configuration blobs through other CDN origins depending on the account and region. Approve the exact HTTPS origin used by your deployment in `REGISTRY_BLOB_ORIGINS`. Do not use wildcard hosts or disable certificate verification. See Docker's [published network allowlist](https://docs.docker.com/desktop/enterprise/allow-list/).
+
+Select **Docker Hub** when creating a connection. Enter the user or organisation namespace to browse, such as `library` for official images. Leave both credential fields empty for public repositories. For private repositories, provide the Docker username and a personal access token with the required read permissions. The Hub API exchanges these credentials at `/v2/auth/token` using the [documented authentication flow](https://docs.docker.com/reference/api/hub/latest/operations/AuthCreateAccessToken/).
+
+Docker Hub connections are read only. Copied pull commands default to `docker.io`, independently of a self-hosted registry's global `PULL_URL`; a connection-specific Pull URL can override this. This release supports repository discovery, tags, image metadata, pull commands, and optional scanning. It does not implement Docker Hub's separate deletion APIs. Private repository access must be verified with the permissions of the token you deploy.
+
+## Repository search and architecture filters
+
+The main **Registries** page includes repository-name search, a registry selector, and an architecture filter. Each registry and repository listing also has an architecture filter. A repository matches when at least one runnable tag supports the selected architecture; tag filtering uses that tag's verified image metadata. Build attestations are excluded.
+
+Name matching is case insensitive. Architecture searches inspect up to 200 images per registry, with at most two concurrent searches per application process. Large or timed-out searches fail explicitly instead of returning incomplete architecture results. Narrow the name filter or open an individual repository when a limit is reached. Workspace architecture searches across more than five connections require selecting one registry. Connection failures are listed alongside successful workspace results.
+
+## LDAP authentication
+
+LDAP is disabled by default. Directory accounts must be explicitly listed in `AUTH_USERS_JSON` with `authProvider` set to `ldap`. Their role comes from this configuration; directory attributes never grant administrator access automatically. LDAP accounts must omit `passwordHash`. Existing local accounts continue to work.
+
+```dotenv
+LDAP_ENABLED=true
+LDAP_URL=ldaps://directory.example.com:636
+LDAP_STARTTLS=false
+LDAP_BASE_DN=ou=People,dc=example,dc=com
+LDAP_BIND_DN=cn=registry-search,ou=ServiceAccounts,dc=example,dc=com
+LDAP_BIND_PASSWORD_ENCRYPTED=v1.IV.TAG.CIPHERTEXT
+LDAP_USER_FILTER=(uid={username})
+LDAP_SESSION_MINUTES=15
+```
+
+Use `pnpm run secret:encrypt` to encrypt the search account password with the existing encryption key. Assign the resulting encrypted value to `LDAP_BIND_PASSWORD_ENCRYPTED`. The search account should have permission only to find users within `LDAP_BASE_DN`.
+
+To use StartTLS, set `LDAP_URL=ldap://directory.example.com:389` and `LDAP_STARTTLS=true`. The application upgrades the connection before transmitting either password. Plain LDAP without StartTLS is rejected. A StartTLS connection cannot silently reconnect and send a bind over cleartext; an interrupted connection must start a new authentication attempt. Certificates are always verified and TLS 1.2 or later is required. For an internal CA, provide a trusted CA using Node's `NODE_EXTRA_CA_CERTS` configuration and mount that certificate into the container.
+
+Example account configuration, preserving a local administrator for recovery.
+
+```dotenv
+AUTH_USERS_JSON='[{"username":"admin","passwordHash":"REPLACE_WITH_ADMIN_SCRYPT_HASH","role":"admin"},{"username":"directory.reader","authProvider":"ldap","role":"viewer"}]'
+```
+
+`LDAP_USER_FILTER` must contain exactly one `{username}` placeholder. An Active Directory deployment can use `(&(objectClass=user)(sAMAccountName={username}))`; adapt the base DN and attribute to the directory. Username values are escaped using RFC 4515 rules, empty passwords are rejected, referrals are not followed, and searches must return exactly one user. Directory diagnostics and passwords are not returned to clients or recorded in audit events.
+
+LDAP accounts can use the existing authenticator second factor. Passkey registration and sign-in are disabled for directory accounts so directory authentication remains required. LDAP sessions expire after `LDAP_SESSION_MINUTES`, from 5 to 60 minutes, with a default of 15. Directory password changes or account disablement block future logins; an already issued session remains valid until its short expiry. Removing the account from the application configuration and restarting revokes its access and enrolled factors.
+
+## Optional Trivy scanning
+
+Trivy is disabled by default and the standard application image does not include its executable. For a local installation, install a verified Trivy release and set its absolute executable path. A Docker image that includes Trivy can be built with the optional `Dockerfile.trivy` below. Enable the server setting and then enable **Trivy vulnerability scanning** on the required registry connection.
+
+```dotenv
+TRIVY_ENABLED=true
+TRIVY_PATH=/usr/local/bin/trivy
+TRIVY_TIMEOUT_SECONDS=180
+```
+
+An administrator starts a scan from the image inspector. Viewers can read existing reports. Tag rows show the last result for their current digest, including critical and high counts. The image inspector shows severity totals, packages, installed and fixed versions, and affected platforms. Scans are explicit so opening a repository cannot start an unbounded number of image downloads.
+
+The scanner uses immutable SHA-256 references and scans every runnable platform, up to eight. It excludes attestations, runs one scan job at a time across the shared SQLite database, and enforces a subprocess deadline and 16 MiB output limit. Reports expire after 24 hours and at most 50 reports are retained. Detail tables retain up to 1,000 findings while severity totals count all returned findings. Counts are per platform and may include the same vulnerability on multiple platforms.
+
+Scanning requires HTTPS registries with valid certificates. The process uses a private temporary directory and a Docker credential file scoped to the selected registry. Application secrets and inherited Trivy settings are not passed into its environment. Temporary credentials are removed after success or failure. Scanner diagnostics are not exposed to clients. The persistent Trivy database and analysis cache are stored beneath `DATA_DIR/trivy-cache`; retain this volume to avoid repeated database downloads.
+
+Run the scanner in an appropriately sized deployment with outbound access to the approved registry, its blob storage, and Trivy's vulnerability databases. The sample 512 MiB application memory limit may be insufficient for large scans. Increase the container memory and temporary filesystem allowance for your image sizes. The application response allowlists protect its metadata requests; Trivy performs its own image and database requests, so enforce scanner egress controls at the deployment network boundary. No Docker socket is required or mounted.
+
+### Building an optional scanner image
+
+Choose verified, immutable image digests for your published console image and the official Trivy image. Build for the same architecture as the deployment.
+
+```sh
+docker build -f Dockerfile.trivy \
+  --build-arg CONSOLE_IMAGE=YOUR_CONSOLE_IMAGE_AT_SHA256_DIGEST \
+  --build-arg TRIVY_IMAGE=YOUR_VERIFIED_TRIVY_IMAGE_AT_SHA256_DIGEST \
+  -t registry-console-with-trivy:local .
+```
+
+Configure `REGISTRY_CONSOLE_IMAGE` to the built image or its published digest. Trivy's [image command reference](https://trivy.dev/docs/latest/references/configuration/cli/trivy_image/) documents the required CLI options. Test the selected Trivy version against your private registry before production rollout.
+
+## Upgrade notes
+
+Back up the SQLite database and encryption key before applying the update. Install dependencies with `pnpm install --frozen-lockfile`, rebuild the application, and recreate the container. Database migrations preserve existing registry connections and add provider, namespace, scanner settings, and report storage automatically.
+
+Connections now have persisted random revisions that change whenever they are saved. Cache identifiers and deletion-plan fingerprints use those revisions and public metadata, with domain-separated HMAC keys derived using HKDF. Registry password values never enter these hash operations. Local password verification continues to use scrypt. Pending deletion previews become invalid after this update and must be recreated. Existing local sessions, authenticators, and passkeys retain their account identity.
+
+The console fixture now parses URL origins and checks an exact origin rather than testing for an embedded hostname substring. Sonner is wrapped in `src/components/ui/sonner.tsx`, follows the theme, and handles transient success and failure notifications. Confirmation dialogs, recovery-code displays, and persistent scan results remain visible in their respective views.

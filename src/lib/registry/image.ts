@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto'
 
 import { env } from '@/lib/config/env'
 import { registryRequest } from '@/lib/registry/client'
+import { assertDockerHubRepository } from '@/lib/registry/dockerhub'
 import { AppError } from '@/lib/security/error'
 import { manifestSchema } from '@/lib/validation/image'
 import { referenceName, repositoryName } from '@/lib/validation/registry'
@@ -25,6 +26,7 @@ export async function imageManifest(
   mediaType: string
 }> {
   repositoryName.parse(repository)
+  assertDockerHubRepository(registry, repository)
   referenceName.parse(reference)
 
   const encoded = repository.split('/').map(encodeURIComponent).join('/')
@@ -113,10 +115,41 @@ export async function imageDetails(
 
   const blobs = new Map<string, number>()
   const visited = new Set<string>()
+  const order = new Map<string, number>([[digest, 0]])
+  const waiting: (() => void)[] = []
+
+  let active = 0
+  let inspectionFailure: { error: unknown } | undefined
   const platformDetails: PlatformDetails[] = []
   const deadline = Date.now() + 45_000
 
   let config: unknown = null
+
+  async function limited<T>(operation: () => Promise<T>): Promise<T> {
+    await new Promise<void>((resolve) => {
+      const start = () => {
+        active++
+        resolve()
+      }
+
+      if (active < 2) {
+        start()
+      } else {
+        waiting.push(start)
+      }
+    })
+
+    try {
+      if (inspectionFailure) {
+        throw inspectionFailure.error
+      }
+
+      return await operation()
+    } finally {
+      active--
+      waiting.shift()?.()
+    }
+  }
 
   async function inspect(
     current: ImageManifest,
@@ -139,26 +172,63 @@ export async function imageDetails(
     visited.add(currentDigest)
 
     if (current.manifests) {
-      for (const child of current.manifests) {
-        if (isAttestation(child)) {
-          continue
+      const children = current.manifests.filter((child) => !isAttestation(child))
+      let cursor = 0
+
+      for (const child of children) {
+        if (!order.has(child.digest)) {
+          order.set(child.digest, order.size)
         }
+      }
 
-        const result = await imageManifest(registry, repository, child.digest, refresh)
+      async function worker(): Promise<void> {
+        while (cursor < children.length && !inspectionFailure) {
+          const child = children[cursor++]
 
-        const platform = child.platform
-          ? [child.platform.os, child.platform.architecture, child.platform.variant]
-              .filter(Boolean)
-              .join('/')
-          : fallbackPlatform
+          if (visited.has(child.digest)) {
+            continue
+          }
 
-        await inspect(result.manifest, result.digest, depth + 1, platform)
+          try {
+            if (Date.now() >= deadline) {
+              throw new AppError(504, 'Image metadata inspection timed out. Refresh to try again.')
+            }
+
+            if (depth >= 4 || visited.size >= 32) {
+              throw new AppError(
+                413,
+                'Image index exceeds the supported metadata inspection limit.'
+              )
+            }
+
+            const result = await limited(() =>
+              imageManifest(registry, repository, child.digest, refresh)
+            )
+            const platform = child.platform
+              ? [child.platform.os, child.platform.architecture, child.platform.variant]
+                  .filter(Boolean)
+                  .join('/')
+              : fallbackPlatform
+
+            await inspect(result.manifest, result.digest, depth + 1, platform)
+          } catch (error) {
+            inspectionFailure ??= { error }
+          }
+        }
+      }
+
+      await Promise.all(Array.from({ length: Math.min(2, children.length) }, worker))
+
+      if (inspectionFailure) {
+        throw inspectionFailure.error
       }
 
       return
     }
 
-    const currentConfig = await imageConfiguration(registry, repository, current, refresh)
+    const currentConfig = await limited(() =>
+      imageConfiguration(registry, repository, current, refresh)
+    )
 
     if (currentDigest === digest) {
       config = currentConfig
@@ -201,6 +271,10 @@ export async function imageDetails(
   }
 
   await inspect(manifest, digest, 0)
+
+  platformDetails.sort(
+    (left, right) => (order.get(left.digest) ?? 0) - (order.get(right.digest) ?? 0)
+  )
 
   const dates = platformDetails.flatMap((entry) => (entry.created ? [entry.created] : [])).sort()
 

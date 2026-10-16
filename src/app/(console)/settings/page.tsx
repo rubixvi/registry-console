@@ -1,3 +1,4 @@
+import { type Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { ShieldCheck, Users } from 'lucide-react'
 
@@ -8,16 +9,16 @@ import { getIdentity } from '@/lib/auth/session'
 import { users } from '@/lib/config/users'
 import { getSettings } from '@/lib/settings'
 
-type Props = {
-  searchParams: Promise<{ saved?: string }>
+export const metadata: Metadata = {
+  title: 'Settings',
+  description: 'Apply your branding across the workspace and login screen.',
 }
 
-export default async function SettingsPage({ searchParams }: Props) {
+export default async function SettingsPage() {
   const identity = await getIdentity()
 
   if (identity?.role !== 'admin') redirect('/')
 
-  const { saved } = await searchParams
   const branding = getSettings()
   const configuredUsers = users()
 
@@ -27,15 +28,6 @@ export default async function SettingsPage({ searchParams }: Props) {
         description="Apply your branding across the workspace and login screen."
         title="Settings"
       />
-
-      {saved === '1' && (
-        <p
-          className="mb-6 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800"
-          role="status"
-        >
-          Settings saved.
-        </p>
-      )}
 
       <div className="grid items-start gap-6 xl:grid-cols-[1.3fr_1fr]">
         <section className="min-w-0 rounded-xl border bg-card p-6 shadow-xs">

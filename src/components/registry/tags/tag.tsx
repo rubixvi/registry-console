@@ -1,12 +1,13 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowRight, RefreshCw, Search, Tag as TagIcon } from 'lucide-react'
+import { ArrowRight, RefreshCw, Search } from 'lucide-react'
 import { useSWRConfig } from 'swr'
 
-import { BulkDeleteDialog } from '@/components/registry/bulk-delete'
-import { Controls } from '@/components/registry/controls'
-import { Metadata } from '@/components/registry/metadata'
+import { BulkDelete } from '@/components/registry/controls/bulk-delete'
+import { Architecture } from '@/components/registry/filters/architecture'
+import { Pagination } from '@/components/registry/filters/pagination'
+import { Metadata } from '@/components/registry/tags/metadata'
 import { ErrorMessage } from '@/components/shared/error-message'
 import { Loading } from '@/components/shared/loading'
 import { Button } from '@/components/ui/button'
@@ -29,9 +30,10 @@ type Props = {
   admin: boolean
   readOnly: boolean
   defaultOrder: TagOrder
+  trivyEnabled?: boolean
 }
 
-export function Tag({ id, repository, admin, readOnly, defaultOrder }: Props) {
+export function Tag({ id, repository, admin, readOnly, defaultOrder, trivyEnabled }: Props) {
   const ordering = useTagOrder(defaultOrder)
   const state = useRegistryPage(id, repository, ordering.order)
   const { mutate } = useSWRConfig()
@@ -100,18 +102,15 @@ export function Tag({ id, repository, admin, readOnly, defaultOrder }: Props) {
                 query: { repository, reference: tag },
               }}
             >
-              <TagIcon aria-hidden="true" className="size-4 shrink-0 text-primary" />
-
-              <div className="min-w-0 flex-1">
-                <code className="break-all text-sm">{tag}</code>
-
-                <Metadata
-                  id={id}
-                  key={`${repository}/${tag}`}
-                  reference={tag}
-                  repository={repository}
-                />
-              </div>
+              <Metadata
+                id={id}
+                key={`${repository}/${tag}`}
+                reference={tag}
+                repository={repository}
+                trivyEnabled={trivyEnabled}
+              >
+                <span className="text-sm font-semibold">{tag}</span>
+              </Metadata>
 
               <ArrowRight aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
             </Link>
@@ -152,6 +151,8 @@ export function Tag({ id, repository, admin, readOnly, defaultOrder }: Props) {
               <SelectItem value="alpha-desc">Alphabetic ↓</SelectItem>
             </SelectContent>
           </Select>
+
+          <Architecture onChange={state.changeArchitecture} value={state.architecture} />
 
           <div className="relative col-span-2 row-start-2 min-w-0 sm:flex-1">
             <Search
@@ -201,20 +202,13 @@ export function Tag({ id, repository, admin, readOnly, defaultOrder }: Props) {
             Select all
           </label>
 
-          <BulkDeleteDialog repository={repository} state={bulk} />
+          <BulkDelete repository={repository} state={bulk} />
         </div>
-      )}
-
-      {canDelete && state.items.length > 0 && (
-        <p className="border-b px-5 py-3 text-xs text-muted-foreground">
-          Shift-click to select a range. Ctrl/Cmd+A selects this page while a tag checkbox is
-          focused.
-        </p>
       )}
 
       {content}
 
-      <Controls
+      <Pagination
         hasNext={state.hasNext}
         hasPrevious={state.hasPrevious}
         next={state.next}

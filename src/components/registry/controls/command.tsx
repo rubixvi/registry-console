@@ -10,10 +10,10 @@ type Props = {
 }
 
 export function Command({ command }: Props) {
-  const { copied, error, copy } = useCopy(command)
+  const { copied, copy } = useCopy(command)
 
   return (
-    <section className="rounded-xl border bg-(--brand-background) p-5 text-white">
+    <section className="rounded-xl border bg-(--brand-background) p-5 text-white hidden sm:block">
       <div className="mb-3 flex items-center gap-2 text-xs font-medium tracking-wide text-slate-400 uppercase">
         <Terminal aria-hidden="true" className="size-4" />
         Pull command
@@ -32,12 +32,6 @@ export function Command({ command }: Props) {
         >
           {copied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
         </Button>
-      </div>
-
-      <div aria-atomic="true" aria-live="polite">
-        {copied && <p className="mt-2 text-xs text-emerald-300">Copied to clipboard.</p>}
-
-        {error && <p className="mt-2 text-xs text-amber-300">{error}</p>}
       </div>
     </section>
   )

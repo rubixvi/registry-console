@@ -5,7 +5,8 @@ import Link from 'next/link'
 import { ArrowRight, Package, RefreshCw, Search } from 'lucide-react'
 import { useSWRConfig } from 'swr'
 
-import { Controls } from '@/components/registry/controls'
+import { Architecture } from '@/components/registry/filters/architecture'
+import { Pagination } from '@/components/registry/filters/pagination'
 import { Namespace } from '@/components/registry/namespace'
 import { Tags } from '@/components/registry/namespace/tags'
 import { ErrorMessage } from '@/components/shared/error-message'
@@ -55,8 +56,8 @@ export function Repository({ id }: Props) {
         <ErrorMessage message={state.error.message} />
 
         <p className="mt-3 text-xs leading-6 text-muted-foreground">
-          This registry must expose the v2 catalogue API. Some hosted services restrict catalogue
-          access.
+          Check the connection settings and repository permissions. For large architecture searches,
+          narrow the repository name first.
         </p>
       </div>
     )
@@ -117,11 +118,13 @@ export function Repository({ id }: Props) {
               <SelectValue />
             </SelectTrigger>
 
-            <SelectContent>
+            <SelectContent position="popper">
               <SelectItem value="tree">Tree</SelectItem>
               <SelectItem value="list">List</SelectItem>
             </SelectContent>
           </Select>
+
+          <Architecture onChange={state.changeArchitecture} value={state.architecture} />
 
           <div className="relative col-span-2 row-start-2 min-w-0 sm:flex-1">
             <Search
@@ -155,7 +158,7 @@ export function Repository({ id }: Props) {
       {content}
 
       {view === 'list' && (
-        <Controls
+        <Pagination
           hasNext={state.hasNext}
           hasPrevious={state.hasPrevious}
           next={state.next}

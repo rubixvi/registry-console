@@ -2,9 +2,11 @@ import 'server-only'
 
 import { randomUUID } from 'node:crypto'
 
+import { env } from '@/lib/config/env'
 import { database } from '@/lib/database/client'
 import { validateUrl } from '@/lib/registry/allowlist'
 import { invalidateRegistry } from '@/lib/registry/cache'
+import { dockerHubSettings } from '@/lib/registry/dockerhub-settings'
 import { decryptSecret, encryptSecret } from '@/lib/security/crypto'
 import { AppError } from '@/lib/security/error'
 import {
@@ -29,7 +31,10 @@ export function getRegistries(): Registry[] {
     pullUrl: row.pull_url,
     username: row.username,
     hasPassword: Boolean(row.password),
-    readOnly: Boolean(row.read_only),
+    readOnly: Boolean(row.read_only) || row.provider === 'dockerhub',
+    provider: row.provider,
+    namespace: row.namespace,
+    trivyEnabled: env().TRIVY_ENABLED === 'true',
   }))
 }
 
@@ -49,7 +54,11 @@ export function getRegistry(id: string): RegistryRecord {
     pullUrl: row.pull_url,
     username: row.username,
     password: row.password,
-    readOnly: Boolean(row.read_only),
+    revision: row.revision,
+    readOnly: Boolean(row.read_only) || row.provider === 'dockerhub',
+    provider: row.provider,
+    namespace: row.namespace,
+    trivyEnabled: env().TRIVY_ENABLED === 'true',
   }
 }
 
@@ -64,11 +73,34 @@ export function addRegistry(input: RegistryInput): string {
   const id = randomUUID()
   const url = validateUrl(input.url)
   const password = encryptSecret(input.password)
+  const settings = dockerHubSettings(input, url)
 
   db.prepare(`
-    INSERT INTO registries (id, name, url, pull_url, username, password, read_only)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(id, input.name, url, input.pullUrl, input.username, password, Number(input.readOnly))
+    INSERT INTO registries (
+      id,
+      name,
+      url,
+      pull_url,
+      username,
+      password,
+      read_only,
+      provider,
+      namespace,
+      revision
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    id,
+    input.name,
+    url,
+    input.pullUrl,
+    input.username,
+    password,
+    Number(input.readOnly || settings.provider === 'dockerhub'),
+    settings.provider,
+    settings.namespace,
+    randomUUID()
+  )
 
   return id
 }
@@ -77,11 +109,21 @@ export function updateRegistry(id: string, input: RegistryInput): string {
   const current = getRegistry(id)
   const url = validateUrl(input.url)
   const password = encryptSecret(input.password)
+  const settings = dockerHubSettings(input, url)
 
   database()
     .prepare(`
       UPDATE registries
-      SET name = ?, url = ?, pull_url = ?, username = ?, password = ?, read_only = ?
+      SET
+        name = ?,
+        url = ?,
+        pull_url = ?,
+        username = ?,
+        password = ?,
+        read_only = ?,
+        provider = ?,
+        namespace = ?,
+        revision = ?
       WHERE id = ?
     `)
     .run(
@@ -90,7 +132,10 @@ export function updateRegistry(id: string, input: RegistryInput): string {
       input.pullUrl,
       input.username,
       password,
-      Number(input.readOnly),
+      Number(input.readOnly || settings.provider === 'dockerhub'),
+      settings.provider,
+      settings.namespace,
+      randomUUID(),
       current.id
     )
 
@@ -119,15 +164,24 @@ export function seedRegistry(): void {
   if (seedQuery.get()) return
 
   const password = process.env.REGISTRY_PASSWORD_ENCRYPTED || ''
-  decryptSecret(password)
 
+  decryptSecret(password)
   db.exec('BEGIN IMMEDIATE')
 
   try {
     if (!seedQuery.get()) {
       db.prepare(`
-        INSERT INTO registries (id, name, url, pull_url, username, password, read_only)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO registries (
+          id,
+          name,
+          url,
+          pull_url,
+          username,
+          password,
+          read_only,
+          revision
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         randomUUID(),
         process.env.REGISTRY_NAME || 'Primary registry',
@@ -135,7 +189,8 @@ export function seedRegistry(): void {
         '',
         process.env.REGISTRY_USERNAME || '',
         password,
-        Number(process.env.REGISTRY_READ_ONLY === 'true')
+        Number(process.env.REGISTRY_READ_ONLY === 'true'),
+        randomUUID()
       )
 
       db.prepare(`
@@ -147,6 +202,7 @@ export function seedRegistry(): void {
     db.exec('COMMIT')
   } catch (error) {
     db.exec('ROLLBACK')
+
     throw error
   }
 }

@@ -56,6 +56,9 @@ test('registry schema migration preserves existing connections and permits publi
   assert.equal(existing.name, 'Existing')
   assert.equal(existing.readOnly, true)
   assert.equal(existing.pullUrl, '')
+  assert.equal(existing.provider, 'distribution')
+  assert.equal(existing.trivyEnabled, false)
+  assert.match(getRegistry('legacy').revision!, /^[0-9a-f-]{36}$/)
   registryId = addRegistry(
     registryInput.parse({
       name: 'Production',

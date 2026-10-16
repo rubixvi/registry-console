@@ -1,45 +1,41 @@
+import { type Metadata } from 'next'
 import Link from 'next/link'
-import { notFound, redirect } from 'next/navigation'
 import { ArrowLeft, ChevronRight } from 'lucide-react'
 
 import { PageHeading } from '@/components/layout/page-heading'
-import { Connection } from '@/components/registry/connection'
-import { Inspector } from '@/components/registry/inspector'
+import { Connection } from '@/components/registry/controls/connection'
+import { Inspector } from '@/components/registry/image/inspector'
 import { Repository } from '@/components/registry/repository'
-import { Tag } from '@/components/registry/tag'
+import { Tag } from '@/components/registry/tags/tag'
 import { Badge } from '@/components/ui/badge'
-import { getIdentity } from '@/lib/auth/session'
 import { env } from '@/lib/config/env'
-import { getRegistries } from '@/lib/registry/store'
-import { referenceName, repositoryName } from '@/lib/validation/registry'
+import { getRegistry, type RegistryProps } from '@/lib/registry/page'
 
-type Props = {
-  params: Promise<{ id: string }>
-  searchParams: Promise<{
-    repository?: string
-    reference?: string
-  }>
+export async function generateMetadata(props: RegistryProps): Promise<Metadata> {
+  const { registry, repository, reference } = await getRegistry(props)
+
+  if (repository && reference) {
+    return {
+      title: `${repository}:${reference}`,
+      description: `Inspect ${repository}:${reference} in ${registry.name}.`,
+    }
+  }
+
+  if (repository) {
+    return {
+      title: repository,
+      description: `Browse image tags for ${repository} in ${registry.name}.`,
+    }
+  }
+
+  return {
+    title: registry.name,
+    description: `Browse repositories in ${registry.name}.`,
+  }
 }
 
-export default async function RegistryPage({ params, searchParams }: Props) {
-  const identity = await getIdentity()
-
-  if (!identity) redirect('/login')
-
-  const { id } = await params
-  const { repository, reference } = await searchParams
-
-  const registry = getRegistries().find((registry) => registry.id === id)
-
-  if (!registry) notFound()
-
-  if (repository !== undefined && !repositoryName.safeParse(repository).success) {
-    notFound()
-  }
-
-  if (reference !== undefined && (!repository || !referenceName.safeParse(reference).success)) {
-    notFound()
-  }
+export default async function RegistryPage(props: RegistryProps) {
+  const { identity, id, registry, repository, reference } = await getRegistry(props)
 
   const admin = identity.role === 'admin'
 
@@ -56,7 +52,10 @@ export default async function RegistryPage({ params, searchParams }: Props) {
       <Inspector
         admin={admin}
         key={`${repository}@${reference}`}
-        pullUrl={registry.pullUrl || env().PULL_URL}
+        pullUrl={
+          registry.pullUrl ||
+          (registry.provider === 'dockerhub' ? 'https://docker.io' : env().PULL_URL)
+        }
         reference={reference}
         registry={registry}
         repository={repository}
@@ -71,6 +70,7 @@ export default async function RegistryPage({ params, searchParams }: Props) {
         key={`${id}/${repository}`}
         readOnly={registry.readOnly}
         repository={repository}
+        trivyEnabled={registry.trivyEnabled}
       />
     )
   }
@@ -120,7 +120,7 @@ export default async function RegistryPage({ params, searchParams }: Props) {
 
       <PageHeading
         description={registry.url}
-        eyebrow={repository ? 'Repository' : 'Registry connection'}
+        eyebrow={repository ? 'Repository' : 'Registry'}
         title={repository || registry.name}
       >
         {registry.readOnly && <Badge>Read only</Badge>}

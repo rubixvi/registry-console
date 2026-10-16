@@ -2,6 +2,7 @@
 
 import { LogOut } from 'lucide-react'
 
+import { ErrorMessage } from '@/components/shared/error-message'
 import { Button } from '@/components/ui/button'
 import { useLogout } from '@/hooks/auth/use-logout'
 
@@ -23,11 +24,7 @@ export function LogoutButton() {
         {busy ? 'Signing out…' : 'Sign out'}
       </Button>
 
-      {error && (
-        <p className="px-2 text-xs text-red-300" role="alert">
-          {error}
-        </p>
-      )}
+      <ErrorMessage message={error} />
     </div>
   )
 }

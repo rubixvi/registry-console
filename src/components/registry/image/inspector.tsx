@@ -3,9 +3,10 @@
 import Link from 'next/link'
 import { Layers3, ShieldCheck } from 'lucide-react'
 
-import { Command } from '@/components/registry/command'
-import { DeleteDialog } from '@/components/registry/delete-dialog'
-import { ImageHistory } from '@/components/registry/history'
+import { Command } from '@/components/registry/controls/command'
+import { DeleteDialog } from '@/components/registry/controls/delete-dialog'
+import { ImageHistory } from '@/components/registry/image/history'
+import { ImageScan } from '@/components/registry/security/scan'
 import { ErrorMessage } from '@/components/shared/error-message'
 import { Loading } from '@/components/shared/loading'
 import { useResource } from '@/hooks/shared/use-resource'
@@ -27,17 +28,25 @@ type Props = {
 export function Inspector({ registry, repository, reference, admin, pullUrl }: Props) {
   const registryPath = `/registries/${encodeURIComponent(registry.id)}`
   const params = new URLSearchParams({ repository, reference })
+  const endpoint = `/api${registryPath}/image?${params}`
 
-  const { data, error, isLoading } = useResource<ImageDetails>(
-    `/api${registryPath}/image?${params}`
-  )
+  const { data, error, isLoading } = useResource<ImageDetails>(endpoint)
 
-  if (isLoading) return <Loading />
-  if (error) return <ErrorMessage message={error.message} />
-  if (!data) return null
+  if (isLoading) {
+    return <Loading />
+  }
+
+  if (error) {
+    return <ErrorMessage message={error.message} />
+  }
+
+  if (!data) {
+    return null
+  }
 
   const summary = imageSummary(data)
   const command = pullCommand(registry.url, repository, reference, pullUrl)
+
   const hasChildren = summary.children.length > 0
   const multiple = data.platformDetails.length > 1
   const canDelete = admin && !registry.readOnly
@@ -112,8 +121,9 @@ export function Inspector({ registry, repository, reference, admin, pullUrl }: P
 
           <ul className="space-y-3">
             {summary.children.map((child) => {
-              let platform = 'Manifest'
               const metadata = data.platformDetails.find((entry) => entry.digest === child.digest)
+
+              let platform = 'Manifest'
 
               if (child.platform) {
                 const { os, architecture, variant } = child.platform
@@ -126,7 +136,9 @@ export function Inspector({ registry, repository, reference, admin, pullUrl }: P
                 platform = parts.join('/')
               }
 
-              if (isAttestation(child)) platform = 'Build attestation'
+              if (isAttestation(child)) {
+                platform = 'Build attestation'
+              }
 
               return (
                 <li key={child.digest}>
@@ -134,13 +146,18 @@ export function Inspector({ registry, repository, reference, admin, pullUrl }: P
                     className="block rounded-lg border p-3 transition-colors hover:bg-muted/50"
                     href={{
                       pathname: registryPath,
-                      query: { repository, reference: child.digest },
+                      query: {
+                        repository,
+                        reference: child.digest,
+                      },
                     }}
                   >
                     <span className="mb-1 block text-sm font-medium">{platform}</span>
+
                     {metadata && (
                       <span className="mb-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                         <span>Compressed size {formatBytes(metadata.size)}</span>
+
                         <span>
                           Created{' '}
                           {metadata.created ? (
@@ -151,6 +168,7 @@ export function Inspector({ registry, repository, reference, admin, pullUrl }: P
                         </span>
                       </span>
                     )}
+
                     <code className="break-all text-xs text-muted-foreground">{child.digest}</code>
                   </Link>
                 </li>
@@ -160,11 +178,16 @@ export function Inspector({ registry, repository, reference, admin, pullUrl }: P
         </section>
       )}
 
+      {registry.trivyEnabled && (
+        <ImageScan admin={admin} digest={data.digest} id={registry.id} repository={repository} />
+      )}
+
       {!hasChildren && <ImageHistory entries={data.history} labels={data.labels} />}
 
       <section className="overflow-hidden rounded-xl border bg-card">
         <details className="p-5">
           <summary className="cursor-pointer text-sm font-semibold">Manifest JSON</summary>
+
           <pre className="mt-4 max-h-96 overflow-auto rounded-lg bg-muted p-4 text-xs leading-6">
             {JSON.stringify(data.manifest, null, 2)}
           </pre>
@@ -173,6 +196,7 @@ export function Inspector({ registry, repository, reference, admin, pullUrl }: P
         {data.config !== null && (
           <details className="border-t p-5">
             <summary className="cursor-pointer text-sm font-semibold">Image History</summary>
+
             <pre className="mt-4 max-h-96 overflow-auto rounded-lg bg-muted p-4 text-xs leading-6">
               {JSON.stringify(data.config, null, 2)}
             </pre>

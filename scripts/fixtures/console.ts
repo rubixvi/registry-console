@@ -79,7 +79,9 @@ export async function consoleChecks({
   const defaultHtml = await (await request(`${page}?${query}`)).text()
 
   check(
-    defaultHtml.includes('pull-default.example.com'),
+    [...defaultHtml.matchAll(/https?:\/\/[a-zA-Z0-9.:-]+/g)].some(
+      ([address]) => new URL(address).origin === 'https://pull-default.example.com'
+    ),
     'global public pull URL is available to the image view'
   )
   check(defaultHtml.includes('href="/audit"'), 'admin sidebar includes audit navigation')
@@ -118,6 +120,52 @@ export async function consoleChecks({
   check(
     image.history[1].emptyLayer && image.history[1].size === null,
     'metadata steps do not consume filesystem layers'
+  )
+
+  const search = await (
+    await request(
+      `/api/search?registry=${id}&query=app&architecture=amd64`,
+      'GET',
+      undefined,
+      readerCookie
+    )
+  ).json()
+
+  check(
+    search.results.length === 1 && search.results[0].repository === repository,
+    'viewers can search repositories by name and architecture'
+  )
+
+  const filtered = await (
+    await request(`${api}/browse?repository=${repository}&architecture=arm64`)
+  ).json()
+
+  check(filtered.items.length === 0, 'architecture filtering excludes unsupported tag platforms')
+
+  const scanQuery = new URLSearchParams({ repository, digest: image.digest })
+  const scan = await (await request(`${api}/scan?${scanQuery}`)).json()
+
+  check(scan.enabled === false, 'scanning is disabled unless explicitly enabled')
+  check(
+    (await request(`${api}/scan`, 'POST', { repository, digest: image.digest }, readerCookie))
+      .status === 403,
+    'viewers cannot start vulnerability scans'
+  )
+  check(
+    (await request(`${api}/scan`, 'POST', { repository, digest: image.digest })).status === 409,
+    'administrators cannot bypass the scanner opt-in'
+  )
+  check(
+    (
+      await request(
+        `${api}/scan`,
+        'POST',
+        { repository, digest: image.digest },
+        cookie,
+        'https://evil.example'
+      )
+    ).status === 403,
+    'scan starts reject cross-origin requests'
   )
 
   const preview = { repository, tags: ['latest', 'stable', 'worker', 'protected'] }

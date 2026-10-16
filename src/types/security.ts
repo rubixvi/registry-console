@@ -51,6 +51,7 @@ export type PasskeyRow = {
 }
 
 export type SecurityStatus = {
+  directoryAccount?: boolean
   passkeys: PasskeySummary[]
   totpEnabled: boolean
   recoveryRemaining: number

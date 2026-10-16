@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { validateToken, validateUrl } from '@/lib/registry/allowlist'
+import { validateBlobRedirect, validateToken, validateUrl } from '@/lib/registry/allowlist'
 import {
   cachedResponse,
   cacheGeneration,
@@ -43,8 +43,11 @@ export async function registryRequest(
 
   const deletion = options.method === 'DELETE'
 
-  if (deletion) invalidateRegistry(registry.id)
-  else if (options.cache === 'reload') invalidateResponse(registry, path, options.scope)
+  if (deletion) {
+    invalidateRegistry(registry.id)
+  } else if (options.cache === 'reload') {
+    invalidateResponse(registry, path, options.scope)
+  }
 
   try {
     if (!deletion && options.cache !== 'reload') {
@@ -56,11 +59,15 @@ export async function registryRequest(
     const generation = cacheGeneration()
     const response = await fetchRegistry(registry, path, options)
 
-    if (!deletion) rememberResponse(registry, path, options.scope, response, generation)
+    if (!deletion) {
+      rememberResponse(registry, path, options.scope, response, generation)
+    }
 
     return response
   } finally {
-    if (deletion) invalidateRegistry(registry.id)
+    if (deletion) {
+      invalidateRegistry(registry.id)
+    }
   }
 }
 
@@ -119,6 +126,7 @@ async function fetchRegistry(
       forgetToken(key)
 
       const challengeHeader = response.headers.get('www-authenticate')
+
       await response.body?.cancel()
 
       const challenge = parseChallenge(challengeHeader)
@@ -153,10 +161,12 @@ async function fetchRegistry(
 
       if (!tokenResp.ok) {
         await tokenResp.body?.cancel()
+
         throw new AppError(502, 'Registry token authentication failed.')
       }
 
       const tokenBody = await readBounded(tokenResp, MAX_TOKEN_BYTES)
+
       let tokenData: unknown
 
       try {
@@ -184,6 +194,27 @@ async function fetchRegistry(
         ...init,
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       })
+    }
+
+    if (method === 'GET' && /^\/v2\/.+\/blobs\/sha256(?::|%3A)[a-f0-9]{64}$/i.test(path)) {
+      for (let redirects = 0; [301, 302, 303, 307, 308].includes(response.status); redirects++) {
+        const location = response.headers.get('location')
+
+        await response.body?.cancel()
+
+        if (!location || redirects >= 2) {
+          throw new AppError(502, 'Registry blob redirect limit exceeded.')
+        }
+
+        const destination = validateBlobRedirect(location)
+
+        response = await fetch(destination, {
+          headers: { Accept: 'application/json' },
+          cache: 'no-store',
+          redirect: 'manual',
+          signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        })
+      }
     }
 
     if (!response.ok) {

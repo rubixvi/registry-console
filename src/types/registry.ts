@@ -1,4 +1,9 @@
+export type RegistryProvider = 'distribution' | 'dockerhub'
+
 export type Registry = {
+  provider?: RegistryProvider
+  namespace?: string
+  trivyEnabled?: boolean
   id: string
   name: string
   url: string
@@ -9,6 +14,7 @@ export type Registry = {
 }
 
 export type RegistryRecord = Omit<Registry, 'hasPassword'> & {
+  revision?: string
   password: string
 }
 
@@ -18,6 +24,8 @@ export type RegistryPage = {
 }
 
 export type RegistryInput = {
+  provider?: RegistryProvider
+  namespace?: string
   name: string
   url: string
   pullUrl: string
@@ -44,6 +52,9 @@ export type RegistryResponse = {
 }
 
 export type RegistryRow = {
+  revision: string
+  provider: RegistryProvider
+  namespace: string
   id: string
   name: string
   url: string

@@ -1,6 +1,7 @@
 'use client'
 
-import { type ChangeEvent, useState } from 'react'
+import { type ChangeEvent, useEffect, useState } from 'react'
+import { toast } from 'sonner'
 
 import { useResource } from '@/hooks/shared/use-resource'
 import { apiRequest } from '@/lib/http/client'
@@ -11,11 +12,24 @@ const PAGE_SIZE = 100
 export function useRegistryPage(id: string, repository?: string, order: TagOrder = 'natural-asc') {
   const [index, setIndex] = useState(0)
   const [query, setQuery] = useState('')
+  const [architecture, setArchitecture] = useState('all')
+  const [searchQuery, setSearchQuery] = useState('')
   const [refreshing, setRefreshing] = useState(false)
   const [refreshError, setRefreshError] = useState<Error>()
   const params = new URLSearchParams()
 
+  useEffect(() => {
+    const timeout = setTimeout(() => setSearchQuery(query), 500)
+
+    return () => clearTimeout(timeout)
+  }, [query])
+
   if (repository) params.set('repository', repository)
+
+  if (architecture !== 'all') {
+    params.set('architecture', architecture)
+    params.set('query', searchQuery)
+  }
 
   const endpoint = `/api/registries/${encodeURIComponent(id)}/browse?${params}`
   const resource = useResource<{ items: string[] }>(endpoint)
@@ -28,7 +42,14 @@ export function useRegistryPage(id: string, repository?: string, order: TagOrder
 
   function changeQuery(event: ChangeEvent<HTMLInputElement>): void {
     setQuery(event.target.value)
+    setRefreshError(undefined)
     setIndex(0)
+  }
+
+  function changeArchitecture(value: string): void {
+    setArchitecture(value)
+    setIndex(0)
+    setRefreshError(undefined)
   }
 
   function resetPage(): void {
@@ -55,6 +76,7 @@ export function useRegistryPage(id: string, repository?: string, order: TagOrder
       })
 
       await resource.mutate(data, { revalidate: false })
+      toast.success('Listing refreshed.')
     } catch (error) {
       setRefreshError(error instanceof Error ? error : new Error('Unable to refresh the listing.'))
     } finally {
@@ -72,6 +94,8 @@ export function useRegistryPage(id: string, repository?: string, order: TagOrder
     resetPage,
     query,
     changeQuery,
+    architecture,
+    changeArchitecture,
     page: current + 1,
     hasPrevious: current > 0,
     hasNext: current < maximum,

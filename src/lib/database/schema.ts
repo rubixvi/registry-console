@@ -68,7 +68,10 @@ export const DATABASE_SCHEMA = `
     pull_url TEXT NOT NULL DEFAULT '',
     username TEXT NOT NULL,
     password TEXT NOT NULL,
-    read_only INTEGER NOT NULL DEFAULT 0
+    read_only INTEGER NOT NULL DEFAULT 0,
+    revision TEXT NOT NULL DEFAULT '',
+    provider TEXT NOT NULL DEFAULT 'distribution',
+    namespace TEXT NOT NULL DEFAULT ''
   );
 
   CREATE TABLE IF NOT EXISTS deletion_plans (
@@ -83,6 +86,17 @@ export const DATABASE_SCHEMA = `
 
   CREATE INDEX IF NOT EXISTS deletion_plan_expiry
     ON deletion_plans (expires);
+
+  CREATE TABLE IF NOT EXISTS image_scans (
+    id TEXT PRIMARY KEY,
+    registry_id TEXT NOT NULL,
+    status TEXT NOT NULL,
+    value TEXT NOT NULL,
+    expires INTEGER NOT NULL,
+    updated INTEGER NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS image_scan_expiry ON image_scans (expires);
 
   CREATE TABLE IF NOT EXISTS limits (
     id TEXT PRIMARY KEY,

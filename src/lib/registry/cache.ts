@@ -1,7 +1,7 @@
 import 'server-only'
 
-import { createHash } from 'node:crypto'
-
+import { registryCacheIdentity } from '@/lib/registry/identity'
+import { keyedFingerprint } from '@/lib/security/fingerprint'
 import { type CacheState, type Entry } from '@/types/cache'
 import { type RegistryRecord, type RegistryResponse } from '@/types/registry'
 
@@ -25,11 +25,7 @@ globals.registryConsoleResponses = state
 const entries = state.entries
 
 function key(registry: RegistryRecord, path: string, scope = ''): string {
-  return createHash('sha256')
-    .update(
-      JSON.stringify([registry.id, registry.url, registry.username, registry.password, scope, path])
-    )
-    .digest('hex')
+  return keyedFingerprint('registry-response', [registryCacheIdentity(registry), scope, path])
 }
 
 function forget(id: string): void {
@@ -52,7 +48,11 @@ export function cacheLifetime(path: string): number {
     return DIGEST_LIFETIME
   }
 
-  if (pathname === '/v2/_catalog' || /\/(?:tags\/list|manifests\/[^/]+)$/.test(pathname)) {
+  if (
+    /^\/v2\/namespaces\/[^/]+\/repositories$/.test(pathname) ||
+    pathname === '/v2/_catalog' ||
+    /\/(?:tags\/list|manifests\/[^/]+)$/.test(pathname)
+  ) {
     return MUTABLE_LIFETIME
   }
 

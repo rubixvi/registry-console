@@ -1,6 +1,7 @@
 import 'server-only'
 
 import { registryRequest } from '@/lib/registry/client'
+import { assertDockerHubRepository, dockerHubPage } from '@/lib/registry/dockerhub'
 import { nextCursor } from '@/lib/registry/pagination'
 import { AppError } from '@/lib/security/error'
 import { catalogueSchema, tagsSchema } from '@/lib/validation/response/registry'
@@ -12,6 +13,14 @@ export async function registryPage(
   refresh = false
 ): Promise<RegistryPage> {
   const { repository, last, n } = input
+
+  if (registry.provider === 'dockerhub' && !repository) {
+    return dockerHubPage(registry, input, refresh)
+  }
+
+  if (repository) {
+    assertDockerHubRepository(registry, repository)
+  }
 
   let path = '/v2/_catalog'
   let scope = 'registry:catalog:*'

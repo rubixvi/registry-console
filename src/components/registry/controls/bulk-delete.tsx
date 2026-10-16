@@ -25,7 +25,7 @@ type Props = {
   state: ReturnType<typeof useBulkDelete>
 }
 
-export function BulkDeleteDialog({ repository, state }: Props) {
+export function BulkDelete({ repository, state }: Props) {
   const id = useId()
   const canDelete = !state.busy && Boolean(state.plan) && state.confirmation === repository
 
@@ -52,22 +52,15 @@ export function BulkDeleteDialog({ repository, state }: Props) {
 
           <AlertDialogDescription>
             {state.result
-              ? `Deleted ${state.result.deleted} manifests. ${state.result.failed} failed.`
-              : 'All tags sharing these manifests, including unselected tags, will stop working.'}
+              ? `Manifests deleted: ${state.result.deleted}. Failed: ${state.result.failed}.`
+              : 'Deleting these manifests will also remove access to any tags that reference them, including unselected tags.'}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
-        {state.busy && !state.plan && (
-          <p className="text-sm text-muted-foreground">Resolving tags…</p>
-        )}
+        {state.busy && !state.plan && <p className="text-sm text-muted-foreground">Loading…</p>}
 
         {state.plan && !state.result && (
           <>
-            <p className="text-sm">
-              {state.plan.entries.reduce((total, entry) => total + entry.tags.length, 0)} selected
-              tags reference {state.plan.entries.length} unique manifests.
-            </p>
-
             <ul className="max-h-60 space-y-3 overflow-auto rounded-lg border p-3">
               {state.plan.entries.map((entry) => (
                 <li className="space-y-1" key={entry.digest}>

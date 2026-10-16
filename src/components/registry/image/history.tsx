@@ -21,7 +21,7 @@ export function ImageHistory({ entries, labels }: Props) {
         </h2>
 
         <p className="mt-1 text-xs text-muted-foreground">
-          Build steps. Sizes refer to compressed layers.
+          Image build history with compressed layer sizes.
         </p>
       </div>
 

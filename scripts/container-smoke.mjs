@@ -65,6 +65,7 @@ const containerEnv = {
   REGISTRY_TOKEN_ORIGINS: '',
   ALLOW_HTTP_REGISTRIES: 'false',
   TRUST_PROXY: 'false',
+  TRIVY_ENABLED: 'false',
   DATA_DIR: '/app/data',
   NEXT_TELEMETRY_DISABLED: '1',
 }
@@ -209,6 +210,10 @@ try {
 
   docker(['exec', name, 'node', '-e', runtimeCheck])
 
+  const scannerVersion = docker(['exec', name, '/usr/local/bin/trivy', '--version'])
+
+  assert.match(scannerVersion, /^Version: \d+\.\d+\.\d+/m)
+
   const logout = await request('/api/auth/logout', {
     method: 'POST',
     headers: {
@@ -230,7 +235,7 @@ try {
   await replay.body?.cancel()
 
   console.log(
-    'Container smoke test passed with a non-root user, read-only root filesystem, writable named volume, and authenticated production server.'
+    'Container smoke test passed with bundled Trivy, a non-root user, read-only root filesystem, writable named volume, and authenticated production server.'
   )
 } finally {
   spawnSync('docker', ['rm', '--force', name], {
