@@ -1,57 +1,19 @@
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { randomBytes, scryptSync } from 'node:crypto'
-import { createServer } from 'node:net'
+import { randomBytes } from 'node:crypto'
 
-const SCRYPT_OPTIONS = {
-  N: 32768,
-  r: 8,
-  p: 1,
-  maxmem: 64 * 1024 * 1024,
-}
+import { hashPassword } from './helpers/crypto.mjs'
+import { availablePort } from './helpers/network.mjs'
+import { docker, imageArgument } from './helpers/process.mjs'
 
-const image = process.argv[2]
-
-if (!image || image.startsWith('-') || /\s/.test(image)) {
-  throw new Error('Usage: pnpm run test:container -- registry/owner/image:tag')
-}
+const image = imageArgument('test:container')
 
 const name = `registry-console-test-${randomBytes(6).toString('hex')}`
 const volume = `${name}-data`
-const portServer = createServer()
-
-await new Promise((resolve, reject) => {
-  portServer.once('error', reject)
-  portServer.listen(0, '127.0.0.1', resolve)
-})
-
-const address = portServer.address()
-
-if (!address || typeof address === 'string') {
-  throw new Error('Port unavailable.')
-}
-
-const port = address.port
-
-await new Promise((resolve, reject) => {
-  portServer.close((error) => {
-    if (error) {
-      reject(error)
-      return
-    }
-
-    resolve()
-  })
-})
-
+const port = await availablePort()
 const base = `http://127.0.0.1:${port}`
 const password = randomBytes(24).toString('base64url')
-const salt = randomBytes(16)
-const passwordHash = scryptSync(password, salt, 32, SCRYPT_OPTIONS)
-
-const hash = ['scrypt', '32768', '8', '1', salt.toString('hex'), passwordHash.toString('hex')].join(
-  '$'
-)
+const hash = hashPassword(password)
 
 const containerEnv = {
   NODE_ENV: 'production',
@@ -68,25 +30,6 @@ const containerEnv = {
   TRIVY_ENABLED: 'false',
   DATA_DIR: '/app/data',
   NEXT_TELEMETRY_DISABLED: '1',
-}
-
-function docker(args, options = {}) {
-  const result = spawnSync('docker', args, {
-    encoding: 'utf8',
-    timeout: 60_000,
-    ...options,
-  })
-
-  if (result.error) {
-    throw result.error
-  }
-
-  if (result.status !== 0) {
-    const message = result.stderr || result.stdout || result.signal
-    throw new Error(`Docker command failed: ${message}`)
-  }
-
-  return result.stdout.trim()
 }
 
 async function request(path, options = {}) {
@@ -234,9 +177,7 @@ try {
   assert.equal(replay.status, 401)
   await replay.body?.cancel()
 
-  console.log(
-    'Container smoke test passed with bundled Trivy, a non-root user, read-only root filesystem, writable named volume, and authenticated production server.'
-  )
+  console.log('Container checks passed.')
 } finally {
   spawnSync('docker', ['rm', '--force', name], {
     stdio: 'ignore',

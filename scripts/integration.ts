@@ -1,81 +1,34 @@
-import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
-import { createCipheriv, randomBytes, scryptSync } from 'node:crypto'
+import { randomBytes } from 'node:crypto'
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
-import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 
-import { authenticationChecks } from './fixtures/authentication'
-import { browsingChecks } from './fixtures/browsing'
-import { mockBrowsingRegistry } from './fixtures/browsing-registry'
-import { consoleChecks } from './fixtures/console'
-import { mockConsoleRegistry } from './fixtures/console-registry'
-import { mockRegistry } from './fixtures/registry'
-
-const SCRYPT_OPTIONS = {
-  N: 32768,
-  r: 8,
-  p: 1,
-  maxmem: 64 * 1024 * 1024,
-}
+import { checkAuthentication } from './fixtures/authentication'
+import { checkBrowsing } from './fixtures/browsing'
+import { checkConsole } from './fixtures/console'
+import { mockBrowsing } from './fixtures/mock-browsing'
+import { mockConsole } from './fixtures/mock-console'
+import { mockRegistry } from './fixtures/mock-registry'
+import { encryptSecret, hashPassword } from './helpers/crypto.mjs'
+import { availablePort } from './helpers/network.mjs'
+import { createCheck, createRequest } from './helpers/testing'
 
 const directory = mkdtempSync(path.join(tmpdir(), 'registry-integration-'))
 const fixture = await mockRegistry()
-const consoleFixture = await mockConsoleRegistry()
-const browsingFixture = await mockBrowsingRegistry()
-const portServer = createServer()
-
-await new Promise<void>((resolve, reject) => {
-  portServer.once('error', reject)
-  portServer.listen(0, '127.0.0.1', resolve)
-})
-
-const address = portServer.address()
-
-if (!address || typeof address === 'string') {
-  throw new Error('Port unavailable.')
-}
-
-const port = address.port
-
-await new Promise<void>((resolve, reject) => {
-  portServer.close((error) => {
-    if (error) {
-      reject(error)
-
-      return
-    }
-
-    resolve()
-  })
-})
+const consoleFixture = await mockConsole()
+const browsingFixture = await mockBrowsing()
+const port = await availablePort()
 
 const loopbackHttp = process.env.INTEGRATION_HTTP === 'true'
 const origin = loopbackHttp ? `http://127.0.0.1:${port}` : `https://localhost:${port}`
 
 const base = `http://127.0.0.1:${port}`
 const password = 'a-long-test-password'
-const salt = randomBytes(16)
-const passwordHash = scryptSync(password, salt, 32, SCRYPT_OPTIONS)
-
-const hash = ['scrypt', '32768', '8', '1', salt.toString('hex'), passwordHash.toString('hex')].join(
-  '$'
-)
-
+const hash = hashPassword(password)
 const key = randomBytes(32)
-const iv = randomBytes(12)
-const cipher = createCipheriv('aes-256-gcm', key, iv)
-
-const encrypted = Buffer.concat([cipher.update('registry-secret', 'utf8'), cipher.final()])
-
-const encryptedPassword = [
-  'v1',
-  iv.toString('hex'),
-  cipher.getAuthTag().toString('hex'),
-  encrypted.toString('hex'),
-].join('.')
+const encryptedPassword = encryptSecret('registry-secret', key)
 
 const child = spawn(
   process.execPath,
@@ -127,35 +80,8 @@ child.once('error', (error) => {
   spawnError = error
 })
 
-function check(value: unknown, message: string): void {
-  assert.ok(value, message)
-  assertions++
-}
-
-async function request(
-  url: string,
-  method = 'GET',
-  cookie = '',
-  body?: unknown,
-  requestOrigin = origin
-): Promise<Response> {
-  const headers = new Headers({
-    Origin: requestOrigin,
-    'Content-Type': 'application/json',
-  })
-
-  if (cookie) {
-    headers.set('Cookie', cookie)
-  }
-
-  return fetch(`${base}${url}`, {
-    method,
-    headers,
-    redirect: 'manual',
-    signal: AbortSignal.timeout(30_000),
-    body: body === undefined ? undefined : JSON.stringify(body),
-  })
-}
+const check = createCheck()
+const request = createRequest({ base, origin })
 
 try {
   let ready = false
@@ -195,26 +121,30 @@ try {
 
   check((await request('/')).status === 307, 'protected page redirects to login')
 
-  const crossOriginLogin = await request(
-    '/api/auth/login',
-    'POST',
-    '',
-    { username: 'admin', password },
-    'https://evil.example'
-  )
+  const crossOriginLogin = await request('/api/auth/login', {
+    method: 'POST',
+    body: { username: 'admin', password },
+    origin: 'https://evil.example',
+  })
 
   check(crossOriginLogin.status === 403, 'login rejects cross-origin requests')
 
-  const incorrectLogin = await request('/api/auth/login', 'POST', '', {
-    username: 'admin',
-    password: 'wrong',
+  const incorrectLogin = await request('/api/auth/login', {
+    method: 'POST',
+    body: {
+      username: 'admin',
+      password: 'wrong',
+    },
   })
 
   check(incorrectLogin.status === 401, 'login rejects incorrect passwords')
 
-  const login = await request('/api/auth/login', 'POST', '', {
-    username: 'admin',
-    password,
+  const login = await request('/api/auth/login', {
+    method: 'POST',
+    body: {
+      username: 'admin',
+      password,
+    },
   })
 
   check(login.status === 200, 'admin login succeeds')
@@ -233,7 +163,7 @@ try {
   )
 
   const cookie = setCookie.split(';')[0]
-  const connectionsResponse = await request('/api/registries', 'GET', cookie)
+  const connectionsResponse = await request('/api/registries', { cookie })
 
   check(connectionsResponse.status === 200, 'authenticated user can list connections')
 
@@ -251,11 +181,11 @@ try {
   const registryApi = `/api/registries/${encodeURIComponent(id)}`
 
   check(
-    (await request(`${registryApi}/status`, 'GET', cookie)).status === 200,
+    (await request(`${registryApi}/status`, { cookie })).status === 200,
     'Bearer authentication connects to registry'
   )
 
-  const catalogue = await (await request(`${registryApi}/catalog`, 'GET', cookie)).json()
+  const catalogue = await (await request(`${registryApi}/catalog`, { cookie })).json()
 
   check(
     catalogue.items[0] === 'team/api' && catalogue.next === 'team/api',
@@ -267,7 +197,7 @@ try {
   ).length
 
   const secondPage = await (
-    await request(`${registryApi}/catalog?last=team%2Fapi`, 'GET', cookie)
+    await request(`${registryApi}/catalog?last=team%2Fapi`, { cookie })
   ).json()
 
   check(secondPage.items[0] === 'worker' && !secondPage.next, 'next catalogue page works')
@@ -278,14 +208,12 @@ try {
     'catalogue pagination reuses a scoped Bearer token'
   )
 
-  const tags = await (
-    await request(`${registryApi}/tags?repository=team%2Fapi`, 'GET', cookie)
-  ).json()
+  const tags = await (await request(`${registryApi}/tags?repository=team%2Fapi`, { cookie })).json()
 
   check(tags.items.includes('latest'), 'tag list works')
 
   const image = await (
-    await request(`${registryApi}/image?repository=team%2Fapi&reference=latest`, 'GET', cookie)
+    await request(`${registryApi}/image?repository=team%2Fapi&reference=latest`, { cookie })
   ).json()
 
   check(
@@ -296,19 +224,19 @@ try {
   )
 
   const index = await (
-    await request(`${registryApi}/image?repository=team%2Fapi&reference=multi`, 'GET', cookie)
+    await request(`${registryApi}/image?repository=team%2Fapi&reference=multi`, { cookie })
   ).json()
 
   check(index.platforms[0] === 'linux/amd64', 'multi-platform OCI index works')
 
   check(
-    (await request(`${registryApi}/image?repository=bad&reference=latest`, 'GET', cookie))
-      .status === 502,
+    (await request(`${registryApi}/image?repository=bad&reference=latest`, { cookie })).status ===
+      502,
     'tampered manifest is rejected'
   )
 
   check(
-    (await request(`${registryApi}/image?repository=redirect&reference=latest`, 'GET', cookie))
+    (await request(`${registryApi}/image?repository=redirect&reference=latest`, { cookie }))
       .status === 502,
     'upstream redirects are blocked'
   )
@@ -317,7 +245,7 @@ try {
 
   try {
     check(
-      (await request(`${registryApi}/status`, 'GET', cookie)).status === 502,
+      (await request(`${registryApi}/status`, { cookie })).status === 502,
       'unapproved token realm is blocked'
     )
   } finally {
@@ -329,9 +257,12 @@ try {
     'challenge cannot escalate the requested token scope'
   )
 
-  const readerLogin = await request('/api/auth/login', 'POST', '', {
-    username: 'reader',
-    password,
+  const readerLogin = await request('/api/auth/login', {
+    method: 'POST',
+    body: {
+      username: 'reader',
+      password,
+    },
   })
 
   check(readerLogin.status === 200, 'viewer login succeeds')
@@ -339,7 +270,7 @@ try {
   const readerCookie = (readerLogin.headers.get('set-cookie') || '').split(';')[0]
 
   check(
-    (await request(`${registryApi}/catalog`, 'GET', readerCookie)).status === 200,
+    (await request(`${registryApi}/catalog`, { cookie: readerCookie })).status === 200,
     'viewer can browse registry'
   )
 
@@ -350,26 +281,43 @@ try {
   }
 
   check(
-    (await request(`${registryApi}/image`, 'DELETE', readerCookie, deletion)).status === 403,
+    (
+      await request(`${registryApi}/image`, {
+        method: 'DELETE',
+        body: deletion,
+        cookie: readerCookie,
+      })
+    ).status === 403,
     'viewer cannot delete images'
   )
 
   check(
-    (await request('/api/settings', 'PUT', readerCookie, {})).status === 403,
+    (await request('/api/settings', { method: 'PUT', body: {}, cookie: readerCookie })).status ===
+      403,
     'viewer cannot change settings'
   )
 
   check(
-    (await request(`${registryApi}/image`, 'DELETE', cookie, deletion, 'https://evil.example'))
-      .status === 403,
+    (
+      await request(`${registryApi}/image`, {
+        method: 'DELETE',
+        body: deletion,
+        cookie,
+        origin: 'https://evil.example',
+      })
+    ).status === 403,
     'deletion is protected against CSRF'
   )
 
   check(
     (
-      await request(`${registryApi}/image`, 'DELETE', cookie, {
-        ...deletion,
-        confirmation: 'wrong',
+      await request(`${registryApi}/image`, {
+        method: 'DELETE',
+        body: {
+          ...deletion,
+          confirmation: 'wrong',
+        },
+        cookie,
       })
     ).status === 400,
     'deletion requires correct typed confirmation'
@@ -384,20 +332,25 @@ try {
   }
 
   check(
-    (await request(registryApi, 'PUT', cookie, update)).status === 200,
+    (await request(registryApi, { method: 'PUT', body: update, cookie })).status === 200,
     'connection can be updated'
   )
 
   check(
-    (await request(`${registryApi}/image`, 'DELETE', cookie, deletion)).status === 403,
+    (await request(`${registryApi}/image`, { method: 'DELETE', body: deletion, cookie })).status ===
+      403,
     'read-only connection blocks administrator deletion'
   )
 
   check(
     (
-      await request(registryApi, 'PUT', cookie, {
-        ...update,
-        readOnly: false,
+      await request(registryApi, {
+        method: 'PUT',
+        body: {
+          ...update,
+          readOnly: false,
+        },
+        cookie,
       })
     ).status === 200,
     'connection can be made writable'
@@ -405,9 +358,13 @@ try {
 
   check(
     (
-      await request('/api/registries', 'POST', cookie, {
-        ...update,
-        url: 'https://evil.example',
+      await request('/api/registries', {
+        method: 'POST',
+        body: {
+          ...update,
+          url: 'https://evil.example',
+        },
+        cookie,
       })
     ).status === 400,
     'adding an unapproved origin is rejected'
@@ -421,11 +378,11 @@ try {
   }
 
   check(
-    (await request('/api/settings', 'PUT', cookie, settings)).status === 200,
+    (await request('/api/settings', { method: 'PUT', body: settings, cookie })).status === 200,
     'settings can be saved'
   )
 
-  const savedSettings = await (await request('/api/settings', 'GET', cookie)).json()
+  const savedSettings = await (await request('/api/settings', { cookie })).json()
 
   check(
     savedSettings.name === settings.name &&
@@ -435,7 +392,7 @@ try {
     'settings persist in SQLite'
   )
 
-  const html = await (await request('/', 'GET', cookie)).text()
+  const html = await (await request('/', { cookie })).text()
 
   check(html.includes(settings.name), 'saved branding renders on the server')
 
@@ -472,7 +429,7 @@ try {
     )
   }
 
-  assertions += await browsingChecks({
+  assertions += await checkBrowsing({
     base,
     origin,
     cookie,
@@ -480,7 +437,7 @@ try {
     fixture: browsingFixture,
   })
 
-  assertions += await consoleChecks({ base, origin, cookie, readerCookie, fixture: consoleFixture })
+  assertions += await checkConsole({ base, origin, cookie, readerCookie, fixture: consoleFixture })
 
   if (process.env.KEEP_INTEGRATION === '1') {
     console.log(
@@ -507,12 +464,13 @@ try {
   }
 
   check(
-    (await request(`${registryApi}/image`, 'DELETE', cookie, deletion)).status === 200,
+    (await request(`${registryApi}/image`, { method: 'DELETE', body: deletion, cookie })).status ===
+      200,
     'administrator can delete a confirmed manifest'
   )
 
   const remainingTags = await (
-    await request(`${registryApi}/tags?repository=team%2Fapi`, 'GET', cookie)
+    await request(`${registryApi}/tags?repository=team%2Fapi`, { cookie })
   ).json()
 
   check(
@@ -521,18 +479,21 @@ try {
   )
 
   check(
-    (await request(registryApi, 'DELETE', cookie, {})).status === 200,
+    (await request(registryApi, { method: 'DELETE', body: {}, cookie })).status === 200,
     'connection can be removed'
   )
 
-  check((await request('/api/auth/logout', 'POST', cookie, {})).status === 200, 'logout succeeds')
+  check(
+    (await request('/api/auth/logout', { method: 'POST', body: {}, cookie })).status === 200,
+    'logout succeeds'
+  )
 
   check(
-    (await request('/api/registries', 'GET', cookie)).status === 401,
+    (await request('/api/registries', { cookie })).status === 401,
     'logged-out cookie cannot be replayed'
   )
 
-  assertions += await authenticationChecks(base, origin, password)
+  assertions += await checkAuthentication(base, origin, password)
 
   const auditDatabase = new DatabaseSync(path.join(directory, 'console.sqlite'), { readOnly: true })
 
@@ -574,30 +535,39 @@ try {
   }
 
   check(
-    (await request('/api/auth/login', 'POST', '', { username: 'admin', password })).status === 200,
+    (
+      await request('/api/auth/login', {
+        method: 'POST',
+        body: { username: 'admin', password },
+      })
+    ).status === 200,
     'an unrelated valid account can sign in after malformed requests'
   )
 
   for (let attempt = 0; attempt < 8; attempt++) {
-    await request('/api/auth/login', 'POST', '', {
-      username: 'missing',
-      password: 'wrong',
+    await request('/api/auth/login', {
+      method: 'POST',
+      body: {
+        username: 'missing',
+        password: 'wrong',
+      },
     })
   }
 
   check(
     (
-      await request('/api/auth/login', 'POST', '', {
-        username: 'missing',
-        password: 'wrong',
+      await request('/api/auth/login', {
+        method: 'POST',
+        body: {
+          username: 'missing',
+          password: 'wrong',
+        },
       })
     ).status === 429,
     'repeated failed logins are throttled'
   )
 
-  console.log(
-    `Integration checks passed with ${assertions} assertions against the production Next.js server.`
-  )
+  console.log(`Integration passed (${check.count + assertions} assertions).`)
 } finally {
   try {
     if (child.pid && child.exitCode === null && child.signalCode === null) {

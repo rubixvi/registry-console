@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { after, before, test } from 'node:test'
 
-import { mockConsoleRegistry } from '../scripts/fixtures/console-registry'
+import { mockConsoleRegistry } from '../scripts/fixtures/mock-console'
 import { searchRegistry } from '../src/lib/registry/search'
 import { type RegistryRecord } from '../src/types/registry'
 
