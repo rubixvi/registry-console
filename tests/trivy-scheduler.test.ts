@@ -32,6 +32,7 @@ const HOUR = 60 * 60_000
 const directory = mkdtempSync(path.join(tmpdir(), 'registry-paced-scans-'))
 const executable = path.join(directory, 'scanner.cjs')
 const capture = path.join(directory, 'scans.jsonl')
+const runner = path.join(import.meta.dirname, 'fixtures', 'trivy-process.ts')
 const original = childProcess.spawn
 const objects = new Map<string, string>()
 const requests: { method: string; path: string }[] = []
@@ -65,13 +66,13 @@ Object.assign(process.env, {
   REGISTRY_ALLOWED_ORIGINS: 'https://registry.example.com',
   TRIVY_ENABLED: 'true',
   TRIVY_PATH: executable,
-  TRIVY_SCANS_PER_HOUR: '4',
+  TRIVY_SCANS_PER_HOUR: '16',
 })
 
 writeFileSync(
   executable,
   `const fs = require('node:fs')
-fs.appendFileSync(${JSON.stringify(capture)}, JSON.stringify(process.argv.at(-1)) + '\\n')
+fs.appendFileSync(process.argv[2], JSON.stringify(process.argv.at(-1)) + '\\n')
 console.log(JSON.stringify({ SchemaVersion: 2, Results: [] }))
 `,
   { mode: 0o700 }
@@ -101,18 +102,18 @@ function count(table: 'image_scans' | 'scan_queue' | 'scan_attempts'): number {
   return Number(database().prepare(`SELECT COUNT(*) AS count FROM ${table}`).get()!.count)
 }
 
-function child(code: string): string {
+function child(action: 'delay' | 'status' | 'discovery'): string {
   const result = childProcess.spawnSync(
     process.execPath,
-    [
-      '--conditions=react-server',
-      '--import',
-      'tsx',
-      '--input-type=module',
-      '-e',
-      `Date.now = () => ${clock}\n${code}`,
-    ],
-    { encoding: 'utf8', env: process.env }
+    ['--conditions=react-server', '--import', 'tsx', runner, action, String(clock), id, first],
+    {
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        TRIVY_SCANS_PER_HOUR: String(env().TRIVY_SCANS_PER_HOUR),
+        FORCE_COLOR: '0',
+      },
+    }
   )
 
   assert.equal(result.status, 0, result.stderr)
@@ -127,7 +128,7 @@ before(() => {
     'spawn',
     (command: string, args: readonly string[], options: childProcess.SpawnOptions) =>
       command === executable
-        ? original(process.execPath, [command, ...args], options)
+        ? original(process.execPath, [command, capture, ...args], options)
         : original(command, args, options)
   )
   syncBuiltinESMExports()
@@ -160,7 +161,7 @@ before(() => {
 beforeEach(() => {
   clock = Date.now()
   env().TRIVY_ENABLED = 'true'
-  env().TRIVY_SCANS_PER_HOUR = 4
+  env().TRIVY_SCANS_PER_HOUR = 16
   tags = ['latest', 'alias']
   latest = first
   requests.length = 0
@@ -207,7 +208,11 @@ test('background scanning discovers missing digests and reuses completed SHAs ac
 })
 
 test('rolling hourly budget spaces starts, counts failed attempts and survives a process restart', () => {
-  for (let index = 0; index < 4; index++) {
+  const limit = env().TRIVY_SCANS_PER_HOUR
+  const interval = Math.ceil(HOUR / limit)
+  const delay = Math.ceil(interval / 1000)
+
+  for (let index = 0; index < limit; index++) {
     const digest = image(`2026-11-${String(index + 1).padStart(2, '0')}T00:00:00Z`)
     const job = prepareScan(registry, 'team/app', digest, 'admin')
 
@@ -216,26 +221,29 @@ test('rolling hourly budget spaces starts, counts failed attempts and survives a
       job.expires,
       index === 0 ? { error: 'Unavailable' } : { report: emptyReport(digest) }
     )
+
     assert.equal(count('scan_attempts'), index + 1)
+
     assert.throws(
       () => prepareScan(registry, 'team/app', second, 'admin'),
       (error: unknown) =>
-        error instanceof AppError && error.status === 429 && error.retryAfter === 900
+        error instanceof AppError && error.status === 429 && error.retryAfter === delay
     )
 
-    if (index < 3) clock += HOUR / 4
+    if (index < limit - 1) {
+      clock += interval
+    }
   }
 
-  assert.equal(scanDelay(), 900)
-  assert.equal(
-    child(`import { scanDelay } from './src/lib/database/scan.ts'; console.log(scanDelay())`),
-    '900'
-  )
-  clock += HOUR / 4
+  assert.equal(scanDelay(), delay)
+  assert.equal(child('delay'), String(delay))
+
+  clock += interval
 
   const job = prepareScan(registry, 'team/app', second, 'admin')
 
-  assert.equal(count('scan_attempts'), 4)
+  assert.equal(count('scan_attempts'), limit)
+
   finishScan(job.id, job.expires, { report: emptyReport(second) })
 })
 
@@ -277,15 +285,7 @@ test('successful reports and pending targets persist without expiry or a 50-repo
   scheduleScan(registry, 'team/app', second)
   assert.equal(count('image_scans'), 56)
   assert.equal(scanStatus(registry, 'team/app', first).status, 'complete')
-  assert.equal(
-    child(`import { getRegistry } from './src/lib/registry/store.ts'
-import { scanStatus } from './src/lib/registry/trivy.ts'
-import { pendingScan } from './src/lib/database/scan.ts'
-console.log(JSON.stringify({ report: scanStatus(getRegistry(${JSON.stringify(id)}), 'team/app', ${JSON.stringify(first)}).report, pending: pendingScan() }))`).includes(
-      second
-    ),
-    true
-  )
+  assert.equal(child('status').includes(second), true)
 })
 
 test('discovery checkpoints bound HEAD checks and resume pending tags after a restart', async () => {
@@ -304,9 +304,7 @@ test('discovery checkpoints bound HEAD checks and resume pending tags after a re
   clock += 60_000
 
   const cursor = nextDiscovery()!
-  const saved = child(
-    `import { nextDiscovery } from './src/lib/database/scan-discovery.ts'; console.log(nextDiscovery().value)`
-  )
+  const saved = child('discovery')
 
   assert.equal(JSON.parse(saved).tags.length, 15)
   await discoverRegistry(registry, scope, cursor.value, () => true)
@@ -398,21 +396,11 @@ test('reports saved with the old repository key are adopted without spending the
 })
 
 test('competing processes cannot claim two jobs or spend the shared budget twice', async () => {
-  const code = `Date.now = () => ${clock}
-import { getRegistry } from './src/lib/registry/store.ts'
-import { prepareScan } from './src/lib/registry/trivy.ts'
-try {
-  prepareScan(getRegistry(${JSON.stringify(id)}), 'team/app', ${JSON.stringify(first)}, 'admin')
-  console.log('claimed')
-} catch (error) {
-  console.log(String(error.status))
-}`
-
   function compete(): Promise<string> {
     return new Promise((resolve, reject) => {
       const process = original(
         globalThis.process.execPath,
-        ['--conditions=react-server', '--import', 'tsx', '--input-type=module', '-e', code],
+        ['--conditions=react-server', '--import', 'tsx', runner, 'claim', String(clock), id, first],
         { env: globalThis.process.env, stdio: ['ignore', 'pipe', 'pipe'] }
       )
       let output = ''

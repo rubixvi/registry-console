@@ -60,9 +60,9 @@ const credentials = JSON.parse(
 )
 
 fs.writeFileSync(
-  ${JSON.stringify(capture)},
+  process.argv[2],
   JSON.stringify({
-    args: process.argv.slice(2),
+    args: process.argv.slice(3),
     env: Object.keys(process.env),
     credentials,
     temporary: process.cwd(),
@@ -110,7 +110,7 @@ before(() => {
     'spawn',
     (command: string, args: readonly string[], options: childProcess.SpawnOptions) => {
       if (fixtures.has(command)) {
-        return originalSpawn(process.execPath, [command, ...args], options)
+        return originalSpawn(process.execPath, [command, capture, ...args], options)
       }
 
       return originalSpawn(command, args, options)

@@ -147,7 +147,9 @@ test('CDN throttling pauses the source registry and never forwards registry cred
     async (raw: string | URL | Request, init?: RequestInit) => {
       requests++
 
-      if (String(raw).startsWith(cdn)) {
+      const target = new URL(raw instanceof Request ? raw.url : String(raw))
+
+      if (target.origin === new URL(cdn).origin) {
         assert.equal(new Headers(init?.headers).has('Authorization'), false)
         return new Response(null, { status: 429, headers: { 'Retry-After': '30' } })
       }
