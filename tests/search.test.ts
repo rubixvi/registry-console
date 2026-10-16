@@ -4,16 +4,16 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { after, before, test } from 'node:test'
 
-import { mockConsoleRegistry } from '../scripts/fixtures/mock-console'
+import { mockConsole } from '../scripts/fixtures/mock-console'
 import { searchRegistry } from '../src/lib/registry/search'
 import { type RegistryRecord } from '../src/types/registry'
 
 const directory = mkdtempSync(path.join(tmpdir(), 'registry-search-'))
-let fixture: Awaited<ReturnType<typeof mockConsoleRegistry>>
+let fixture: Awaited<ReturnType<typeof mockConsole>>
 let registry: RegistryRecord
 
 before(async () => {
-  fixture = await mockConsoleRegistry()
+  fixture = await mockConsole()
 
   Object.assign(process.env, {
     APP_ORIGIN: 'https://console.example.com',
