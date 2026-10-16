@@ -1,4 +1,4 @@
-# Registry Console
+# Registry Console (Docker Registry UI)
 
 A self-hosted interface for Docker Registry v2/v3 and OCI registries, built with Next.js. Browse repositories, inspect tags and manifests, and manage registry connections from one workspace.
 
