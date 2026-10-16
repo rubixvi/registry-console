@@ -95,10 +95,6 @@ export function prepareScan(
     throw new AppError(409, 'Trivy scanning is disabled. Set TRIVY_ENABLED=true to enable it.')
   }
 
-  if (new URL(registry.url).protocol !== 'https:') {
-    throw new AppError(409, 'Trivy scanning requires an HTTPS registry with a valid certificate.')
-  }
-
   if (!path.isAbsolute(env().TRIVY_PATH)) {
     throw new AppError(
       503,
@@ -163,10 +159,6 @@ export async function executeTrivy(
   const config = env()
   const origin = new URL(validateUrl(registry.url))
 
-  if (origin.protocol !== 'https:') {
-    throw new AppError(409, 'Trivy scanning requires an HTTPS registry with a valid certificate.')
-  }
-
   const target = `${origin.host}/${repository}@${digest}`
   const directory = await mkdtemp(path.join(tmpdir(), 'registry-trivy-'))
 
@@ -206,6 +198,10 @@ export async function executeTrivy(
       '--exit-code',
       '0',
     ]
+
+    if (origin.protocol === 'http:') {
+      args.push('--insecure')
+    }
 
     if (platform !== 'Not provided') {
       if (!/^[a-z0-9_-]+\/[a-z0-9_-]+(?:\/[a-z0-9_.-]+)?$/.test(platform)) {

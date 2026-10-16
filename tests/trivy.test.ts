@@ -135,6 +135,7 @@ test('Trivy subprocess uses immutable references, scoped credentials, minimal en
   assert.equal((output as { SchemaVersion: number }).SchemaVersion, 2)
   assert.equal(saved.args.at(-1), `registry.example.com/team/app@${digest}`)
   assert.ok(saved.args.includes('--image-src'))
+  assert.equal(saved.args.includes('--insecure'), false)
   assert.ok(!saved.args.some((argument: string) => argument.includes('private-password')))
 
   assert.equal(saved.env.includes('ENCRYPTION_KEY'), false)
@@ -198,12 +199,6 @@ test('scan jobs enforce global opt-in, concurrency, immutable digests, and crede
     configuration.TRIVY_ENABLED = previous
   }
 
-  assert.throws(
-    () =>
-      prepareScan({ ...registry, url: 'http://registry.example.com' }, 'team/app', digest, 'admin'),
-    /HTTPS/
-  )
-
   assert.throws(() => prepareScan(registry, 'team/app', 'latest', 'admin'))
 
   const job = prepareScan(registry, 'team/app', digest, 'admin')
@@ -234,6 +229,75 @@ test('scan jobs enforce global opt-in, concurrency, immutable digests, and crede
     database().prepare("SELECT id FROM audit WHERE action = 'image.scan.complete'").all().length,
     1
   )
+})
+
+test('HTTP scans use the internal registry origin and keep public pull overrides out of scanner access', async (context) => {
+  const httpId = addRegistry({
+    name: 'Internal scanner',
+    url: 'http://registry.example.com',
+    pullUrl: 'https://pull.example.com',
+    username: 'reader',
+    password: 'private-password',
+    readOnly: true,
+  })
+  const connection = getRegistry(httpId)
+  const job = prepareScan(connection, 'team/app', digest, 'admin')
+
+  context.mock.method(globalThis, 'fetch', async (raw: string | URL | Request) => {
+    const url = new URL(String(raw))
+
+    assert.equal(url.origin, connection.url)
+
+    return new Response(url.pathname.includes('/blobs/') ? config : manifest)
+  })
+
+  await runScan(job)
+
+  const result = scanStatus(connection, 'team/app', digest)
+  const saved = JSON.parse(readFileSync(capture, 'utf8'))
+
+  assert.equal(result.status, 'complete')
+  assert.equal(result.report?.counts.HIGH, 1)
+  assert.equal(saved.args.at(-1), `registry.example.com/team/app@${digest}`)
+  assert.equal(saved.args.includes('--insecure'), true)
+  assert.deepEqual(Object.keys(saved.credentials.auths), ['registry.example.com'])
+  assert.equal(existsSync(saved.temporary), false)
+  assert.equal(existsSync(saved.workspace), false)
+})
+
+test('HTTP scans still require the registry allowlist and explicit HTTP opt-in', async () => {
+  const configuration = env()
+  const previousOrigins = configuration.REGISTRY_ALLOWED_ORIGINS
+  const previousHttp = configuration.ALLOW_HTTP_REGISTRIES
+  const connection = { ...registry, url: 'http://registry.example.com' }
+
+  try {
+    configuration.ALLOW_HTTP_REGISTRIES = 'false'
+
+    assert.throws(
+      () => prepareScan(connection, 'team/app', digest, 'admin'),
+      /HTTP registries are disabled/
+    )
+    await assert.rejects(
+      executeTrivy(connection, 'team/app', digest, 'linux/amd64', 5000),
+      /HTTP registries are disabled/
+    )
+
+    configuration.ALLOW_HTTP_REGISTRIES = 'true'
+    configuration.REGISTRY_ALLOWED_ORIGINS = 'https://registry.example.com'
+
+    assert.throws(
+      () => prepareScan(connection, 'team/app', digest, 'admin'),
+      /REGISTRY_ALLOWED_ORIGINS/
+    )
+    await assert.rejects(
+      executeTrivy(connection, 'team/app', digest, 'linux/amd64', 5000),
+      /REGISTRY_ALLOWED_ORIGINS/
+    )
+  } finally {
+    configuration.REGISTRY_ALLOWED_ORIGINS = previousOrigins
+    configuration.ALLOW_HTTP_REGISTRIES = previousHttp
+  }
 })
 
 test('scanner failures are bounded and configuration changes fail a prepared job', async () => {

@@ -38,7 +38,7 @@ export function getRegistries(): Registry[] {
   }))
 }
 
-export function getRegistry(id: string): RegistryRecord {
+function registryRow(id: string): RegistryRow {
   const row = database().prepare('SELECT * FROM registries WHERE id = ?').get(id) as
     | RegistryRow
     | undefined
@@ -46,6 +46,12 @@ export function getRegistry(id: string): RegistryRecord {
   if (!row) {
     throw new AppError(404, 'Registry connection not found.')
   }
+
+  return row
+}
+
+export function getRegistry(id: string): RegistryRecord {
+  const row = registryRow(id)
 
   return {
     id: row.id,
@@ -106,7 +112,7 @@ export function addRegistry(input: RegistryInput): string {
 }
 
 export function updateRegistry(id: string, input: RegistryInput): string {
-  const current = getRegistry(id)
+  const current = registryRow(id)
   const url = validateUrl(input.url)
   const password = encryptSecret(input.password)
   const settings = dockerHubSettings(input, url)
@@ -145,7 +151,7 @@ export function updateRegistry(id: string, input: RegistryInput): string {
 }
 
 export function removeRegistry(id: string): void {
-  const current = getRegistry(id)
+  const current = registryRow(id)
 
   database().prepare('DELETE FROM registries WHERE id = ?').run(current.id)
   invalidateRegistry(current.id)

@@ -5,6 +5,7 @@ import path from 'node:path'
 import { after, before, test } from 'node:test'
 
 import { mockBrowsing } from '../scripts/fixtures/mock-browsing'
+import { env } from '../src/lib/config/env'
 import { database } from '../src/lib/database/client'
 import {
   cachedResponse,
@@ -306,6 +307,89 @@ test('connection changes invalidate old credential cache entries, and image deta
     image.labels.some((label) => label.name === 'com.example.hidden'),
     false
   )
+})
+
+test('saved connections can be removed after their origin or HTTP access is disabled', async () => {
+  const configuration = env()
+  const previousOrigins = configuration.REGISTRY_ALLOWED_ORIGINS
+  const previousHttp = configuration.ALLOW_HTTP_REGISTRIES
+  const input = {
+    name: 'Removable connection',
+    url: fixture.origin,
+    pullUrl: '',
+    username: '',
+    password: '',
+    readOnly: false,
+  }
+  const id = addRegistry(input)
+  const connection = getRegistry(id)
+
+  await registryRequest(connection, manifestPath, { scope })
+  assert.ok(cachedResponse(connection, manifestPath, scope))
+
+  try {
+    configuration.REGISTRY_ALLOWED_ORIGINS = ''
+
+    assert.throws(() => getRegistry(id), /REGISTRY_ALLOWED_ORIGINS/)
+    await assert.rejects(
+      registryRequest(connection, manifestPath, { scope }),
+      /REGISTRY_ALLOWED_ORIGINS/
+    )
+
+    removeRegistry(id)
+
+    assert.equal(cachedResponse(connection, manifestPath, scope), null)
+    assert.throws(() => getRegistry(id), /not found/)
+    assert.throws(() => removeRegistry(id), /not found/)
+
+    configuration.REGISTRY_ALLOWED_ORIGINS = previousOrigins
+
+    const httpId = addRegistry(input)
+
+    configuration.ALLOW_HTTP_REGISTRIES = 'false'
+
+    assert.throws(() => getRegistry(httpId), /HTTP registries are disabled/)
+
+    removeRegistry(httpId)
+
+    assert.throws(() => getRegistry(httpId), /not found/)
+  } finally {
+    configuration.REGISTRY_ALLOWED_ORIGINS = previousOrigins
+    configuration.ALLOW_HTTP_REGISTRIES = previousHttp
+  }
+})
+
+test('saved connections can be repaired while replacement origins remain validated', () => {
+  const configuration = env()
+  const previousOrigins = configuration.REGISTRY_ALLOWED_ORIGINS
+  const input = {
+    name: 'Repairable connection',
+    url: fixture.origin,
+    pullUrl: '',
+    username: '',
+    password: '',
+    readOnly: false,
+  }
+  const id = addRegistry(input)
+  const revision = getRegistry(id).revision
+
+  try {
+    configuration.REGISTRY_ALLOWED_ORIGINS = 'https://replacement.example.com'
+
+    assert.throws(() => getRegistry(id), /REGISTRY_ALLOWED_ORIGINS/)
+    assert.throws(() => updateRegistry(id, input), /REGISTRY_ALLOWED_ORIGINS/)
+
+    updateRegistry(id, { ...input, url: 'https://replacement.example.com' })
+
+    const connection = getRegistry(id)
+
+    assert.equal(connection.url, 'https://replacement.example.com')
+    assert.notEqual(connection.revision, revision)
+
+    removeRegistry(id)
+  } finally {
+    configuration.REGISTRY_ALLOWED_ORIGINS = previousOrigins
+  }
 })
 
 test('deletion invalidates mutable and digest reads, including older in-flight responses', async () => {
