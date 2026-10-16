@@ -106,5 +106,8 @@ export function requireSecurity(request: Request, username: string): void {
 }
 
 export function clearRequest(response: NextResponse, purpose: Purpose): void {
-  response.cookies.set(cookieName(purpose), '', { ...cookieOptions(), maxAge: 0 })
+  response.cookies.set(cookieName(purpose), '', {
+    ...cookieOptions(),
+    maxAge: 0,
+  })
 }

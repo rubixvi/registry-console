@@ -68,13 +68,24 @@ await test('Automatic vulnerability scanning in the production server', async (c
     username: 'admin',
     password: server.password,
   })
-  const reader = await signIn({ request: anonymous, username: 'reader', password: server.password })
-  const request = createRequest({ base: server.base, origin: server.origin, cookie })
+  const reader = await signIn({
+    request: anonymous,
+    username: 'reader',
+    password: server.password,
+  })
+  const request = createRequest({
+    base: server.base,
+    origin: server.origin,
+    cookie,
+  })
   const response = await request('/api/registries')
   const connections = await response.json()
   const id = connections[0].id
   const endpoint = `/api/registries/${encodeURIComponent(id)}/scan`
-  const query = new URLSearchParams({ repository: 'team/api', digest: server.fixture.digest })
+  const query = new URLSearchParams({
+    repository: 'team/api',
+    digest: server.fixture.digest,
+  })
 
   await context.test('startup discovery scans without a browser starting a job', async () => {
     let complete = false
@@ -104,7 +115,11 @@ await test('Automatic vulnerability scanning in the production server', async (c
       const body = { repository: 'team/api', digest: server.fixture.digest }
       const first = await request(endpoint, { method: 'POST', body })
       const second = await request(endpoint, { method: 'POST', body })
-      const viewer = await request(endpoint, { method: 'POST', body, cookie: reader.cookie })
+      const viewer = await request(endpoint, {
+        method: 'POST',
+        body,
+        cookie: reader.cookie,
+      })
       const foreign = await request(endpoint, {
         method: 'POST',
         body,

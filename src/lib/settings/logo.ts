@@ -71,7 +71,9 @@ export function validateLogo(bytes: Buffer): string {
 
   if (!ended || !compressed.length) throw invalid()
   try {
-    const pixels = inflateSync(Buffer.concat(compressed), { maxOutputLength: 34 * 1024 * 1024 })
+    const pixels = inflateSync(Buffer.concat(compressed), {
+      maxOutputLength: 34 * 1024 * 1024,
+    })
     if (!pixels.length) throw invalid()
   } catch {
     throw invalid()

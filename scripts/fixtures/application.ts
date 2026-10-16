@@ -30,7 +30,10 @@ export async function checkApplication({
         logoPath: '',
       }
 
-      const updated = await request('/api/settings', { method: 'PUT', body: settings })
+      const updated = await request('/api/settings', {
+        method: 'PUT',
+        body: settings,
+      })
 
       assert.equal(updated.status, 200)
 
@@ -133,7 +136,10 @@ export async function checkLoginLimits({ context, request, base, origin, passwor
         await request('/api/auth/login', { method: 'POST', body })
       }
 
-      const response = await request('/api/auth/login', { method: 'POST', body })
+      const response = await request('/api/auth/login', {
+        method: 'POST',
+        body,
+      })
 
       assert.equal(response.status, 429)
     })

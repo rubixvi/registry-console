@@ -23,7 +23,11 @@ export const GET = api(async (request, _context, identity) => {
     throw new AppError(400, 'Select a registry before searching across more than ten connections.')
   }
 
-  const results: { registryId: string; registryName: string; repository: string }[] = []
+  const results: {
+    registryId: string
+    registryName: string
+    repository: string
+  }[] = []
   const failures: { registryName: string; message: string }[] = []
   const deadline = Date.now() + 60_000
 
@@ -33,10 +37,17 @@ export const GET = api(async (request, _context, identity) => {
     }
 
     try {
-      const result = await searchRegistry(getRegistry(registry.id), { query, architecture })
+      const result = await searchRegistry(getRegistry(registry.id), {
+        query,
+        architecture,
+      })
 
       for (const repository of result.items) {
-        results.push({ registryId: registry.id, registryName: registry.name, repository })
+        results.push({
+          registryId: registry.id,
+          registryName: registry.name,
+          repository,
+        })
       }
 
       if (results.length > 10_000) {

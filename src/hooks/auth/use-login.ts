@@ -95,5 +95,14 @@ export function useLogin() {
     setError('')
   }
 
-  return { error, busy, twoFactor, recovery, setRecovery, submit, passkey, restart }
+  return {
+    error,
+    busy,
+    twoFactor,
+    recovery,
+    setRecovery,
+    submit,
+    passkey,
+    restart,
+  }
 }

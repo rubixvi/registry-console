@@ -5,13 +5,23 @@ import { type SyntheticEvent, useState } from 'react'
 import { useResource } from '@/hooks/shared/use-resource'
 import { type AuditFilters, type AuditPage } from '@/types/audit'
 
-const EMPTY_FILTERS: AuditFilters = { actor: '', action: '', query: '', from: '', to: '' }
+const EMPTY_FILTERS: AuditFilters = {
+  actor: '',
+  action: '',
+  query: '',
+  from: '',
+  to: '',
+}
 
 export function useAudit() {
   const [filters, setFilters] = useState<AuditFilters>(EMPTY_FILTERS)
   const [before, setBefore] = useState(0)
   const [history, setHistory] = useState<number[]>([])
-  const params = new URLSearchParams({ ...filters, before: String(before), n: '20' })
+  const params = new URLSearchParams({
+    ...filters,
+    before: String(before),
+    n: '20',
+  })
   const resource = useResource<AuditPage>(`/api/audit?${params}`)
 
   function apply(event: SyntheticEvent<HTMLFormElement>): void {

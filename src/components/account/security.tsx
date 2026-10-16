@@ -51,8 +51,9 @@ export function Security({ status }: Props) {
           </h2>
 
           <p className="text-sm text-muted-foreground">
-            Enter your password{status.totpEnabled ? ' and an authenticator or recovery code' : ''}{' '}
-            to manage your sign-in methods.
+            Enter your password
+            {status.totpEnabled ? ' and an authenticator or recovery code' : ''} to manage your
+            sign-in methods.
           </p>
 
           <form className="space-y-4" onSubmit={security.verify}>

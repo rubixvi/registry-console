@@ -47,5 +47,8 @@ export function registryIdentity(registry: RegistryRecord) {
 }
 
 export function registryCacheIdentity(registry: RegistryRecord) {
-  return { ...registryIdentity(registry), credentials: credentialMarker(registry) }
+  return {
+    ...registryIdentity(registry),
+    credentials: credentialMarker(registry),
+  }
 }

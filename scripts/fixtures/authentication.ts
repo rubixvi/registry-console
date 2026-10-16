@@ -33,7 +33,15 @@ export async function checkAuthentication({
 
   await checkTwoFactorLogin({ request, credentials, authenticator })
   await checkRecoveryCodes({ request, credentials, authenticator })
-  await checkPasskeyAccess({ base, origin, password, request, jar, passkey, authenticator })
+  await checkPasskeyAccess({
+    base,
+    origin,
+    password,
+    request,
+    jar,
+    passkey,
+    authenticator,
+  })
   await disableAuthenticator({ request, credentials, authenticator })
 }
 
@@ -51,7 +59,9 @@ async function checkEnrollmentAccess(request: TestRequest) {
 async function unlockSecurity({ request, credentials }: Account) {
   const page = await request('/account', { method: 'GET' })
   const enrollment = await request('/api/account/passkeys/options')
-  const incorrect = await request('/api/account/security/verify', { body: { password: 'wrong' } })
+  const incorrect = await request('/api/account/security/verify', {
+    body: { password: 'wrong' },
+  })
   const verified = await request('/api/account/security/verify', {
     body: { password: credentials.password },
   })
@@ -89,11 +99,15 @@ async function enrollPasskey({ request, origin }: { request: TestRequest; origin
     credential: device.registration(fresh.challenge, origin),
   }
 
-  const registered = await request('/api/account/passkeys/verify', { body: registration })
+  const registered = await request('/api/account/passkeys/verify', {
+    body: registration,
+  })
 
   assert.equal(registered.status, 200, 'valid signed passkey registration succeeds')
 
-  const replay = await request('/api/account/passkeys/verify', { body: registration })
+  const replay = await request('/api/account/passkeys/verify', {
+    body: registration,
+  })
 
   assert.equal(replay.status, 400, 'registration challenge cannot be replayed')
 
@@ -115,7 +129,9 @@ async function enableAuthenticator({
 
   assert.match(setup.qrCode, /^data:image\/png;base64,/, 'setup returns a local QR image')
 
-  const invalid = await request('/api/account/totp', { body: { code: 'invalid' } })
+  const invalid = await request('/api/account/totp', {
+    body: { code: 'invalid' },
+  })
 
   assert.equal(invalid.status, 400, 'invalid setup code cannot enable 2FA')
 
@@ -127,7 +143,10 @@ async function enableAuthenticator({
   assert.equal(confirmed.status, 200, 'authenticator is confirmed')
 
   const recovery = (await confirmed.json()).recoveryCodes as string[]
-  const revoked = await request('/api/registries', { method: 'GET', cookie: oldCookie })
+  const revoked = await request('/api/registries', {
+    method: 'GET',
+    cookie: oldCookie,
+  })
 
   assert.equal(recovery.length, 10, 'recovery codes are issued on confirmation')
   assert.equal(revoked.status, 401, 'enabling 2FA revokes previously issued sessions')
@@ -152,7 +171,9 @@ async function checkTwoFactorLogin({
   )
 
   const pending = await request('/api/registries', { method: 'GET' })
-  const invalid = await request('/api/auth/login/verify', { body: { code: 'wrong' } })
+  const invalid = await request('/api/auth/login/verify', {
+    body: { code: 'wrong' },
+  })
 
   assert.equal(pending.status, 401, 'pending second factor cannot access APIs')
   assert.equal(invalid.status, 401, 'invalid second factor is rejected')
@@ -219,15 +240,27 @@ async function checkPasskeyAccess({
   passkey,
   authenticator,
 }: PasskeyAccess) {
-  const unverified = await passkeySignIn({ request, origin, passkey, verified: false })
-  const verified = await passkeySignIn({ request, origin, passkey, verified: true })
+  const unverified = await passkeySignIn({
+    request,
+    origin,
+    passkey,
+    verified: false,
+  })
+  const verified = await passkeySignIn({
+    request,
+    origin,
+    passkey,
+    verified: true,
+  })
   const authenticated = await request('/api/registries', { method: 'GET' })
 
   assert.equal(unverified.status, 401, 'unverified passkey cannot bypass 2FA')
   assert.equal(verified.status, 200, 'verified passkey signs in without a TOTP prompt')
   assert.equal(authenticated.status, 200, 'verified passkey grants API access')
 
-  const passwordOnly = await request('/api/account/security/verify', { body: { password } })
+  const passwordOnly = await request('/api/account/security/verify', {
+    body: { password },
+  })
   const unlocked = await request('/api/account/security/verify', {
     body: { password, code: authenticator.recovery[1] },
   })
@@ -246,7 +279,12 @@ async function checkPasskeyAccess({
 
   await request('/api/auth/logout')
 
-  const removedLogin = await passkeySignIn({ request, origin, passkey, verified: true })
+  const removedLogin = await passkeySignIn({
+    request,
+    origin,
+    passkey,
+    verified: true,
+  })
 
   assert.equal(removedLogin.status, 401, 'removed passkey cannot sign in')
 }

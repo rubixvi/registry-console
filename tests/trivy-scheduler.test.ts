@@ -435,7 +435,9 @@ test('expired jobs recover and late output cannot overwrite a new execution leas
   assert.equal(finishScan(original.id, original.expires, { report: emptyReport(first) }), false)
   assert.equal(getScan(replacement.id)?.status, 'running')
   assert.equal(
-    finishScan(replacement.id, replacement.expires, { report: emptyReport(first) }),
+    finishScan(replacement.id, replacement.expires, {
+      report: emptyReport(first),
+    }),
     true
   )
   assert.equal(scanStatus(registry, 'team/app', first).status, 'complete')

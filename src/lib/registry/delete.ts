@@ -215,7 +215,12 @@ export async function executeDeletion(
   audit(
     actor,
     'manifest.bulk.complete',
-    JSON.stringify({ registryId: registry.id, repository: row.repository, deleted, failed })
+    JSON.stringify({
+      registryId: registry.id,
+      repository: row.repository,
+      deleted,
+      failed,
+    })
   )
 
   return { results, deleted, failed }

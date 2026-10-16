@@ -35,10 +35,16 @@ await test('Container smoke', { concurrency: false }, async (t) => {
   let volumeCreated = false
 
   t.after(() => {
-    spawnSync('docker', ['rm', '--force', name], { stdio: 'ignore', timeout: 30_000 })
+    spawnSync('docker', ['rm', '--force', name], {
+      stdio: 'ignore',
+      timeout: 30_000,
+    })
 
     if (volumeCreated) {
-      spawnSync('docker', ['volume', 'rm', volume], { stdio: 'ignore', timeout: 30_000 })
+      spawnSync('docker', ['volume', 'rm', volume], {
+        stdio: 'ignore',
+        timeout: 30_000,
+      })
     }
   })
 
@@ -74,7 +80,9 @@ await test('Container smoke', { concurrency: false }, async (t) => {
   })
 
   await t.test('authenticated users can read the empty registry list', async () => {
-    const response = await request('/api/registries', { headers: { Cookie: cookie } })
+    const response = await request('/api/registries', {
+      headers: { Cookie: cookie },
+    })
 
     assert.equal(response.status, 200)
     assert.deepEqual(await response.json(), [])
@@ -98,14 +106,20 @@ await test('Container smoke', { concurrency: false }, async (t) => {
   await t.test('logged-out session cookies cannot be replayed', async () => {
     const logout = await request('/api/auth/logout', {
       method: 'POST',
-      headers: { Origin: base, Cookie: cookie, 'Content-Type': 'application/json' },
+      headers: {
+        Origin: base,
+        Cookie: cookie,
+        'Content-Type': 'application/json',
+      },
       body: '{}',
     })
 
     assert.equal(logout.status, 200)
     await logout.body?.cancel()
 
-    const replay = await request('/api/registries', { headers: { Cookie: cookie } })
+    const replay = await request('/api/registries', {
+      headers: { Cookie: cookie },
+    })
 
     assert.equal(replay.status, 401)
     await replay.body?.cancel()

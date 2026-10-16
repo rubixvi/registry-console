@@ -51,7 +51,10 @@ export function useBulkDelete(
     if (busy || open) return
 
     anchor.current = null
-    setSelection({ scope, tags: selected.length === tags.length ? [] : [...tags] })
+    setSelection({
+      scope,
+      tags: selected.length === tags.length ? [] : [...tags],
+    })
   }
 
   function changeOpen(value: boolean): void {

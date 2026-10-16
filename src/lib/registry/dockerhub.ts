@@ -122,7 +122,10 @@ export async function dockerHubPage(
   }
 
   const path = `/v2/namespaces/${encodeURIComponent(namespace)}/repositories`
-  const query = new URLSearchParams({ page: String(page), page_size: String(input.n) })
+  const query = new URLSearchParams({
+    page: String(page),
+    page_size: String(input.n),
+  })
   const requestPath = `${path}?${query}`
   const scope = 'dockerhub-api'
   const cached = !refresh && cachedResponse(registry, requestPath, scope)

@@ -25,7 +25,15 @@ function connection(name: string): RegistryRecord {
 
   env().REGISTRY_ALLOWED_ORIGINS += `,${url}`
 
-  return { id: name, name, url, pullUrl: '', username: '', password: '', readOnly: true }
+  return {
+    id: name,
+    name,
+    url,
+    pullUrl: '',
+    username: '',
+    password: '',
+    readOnly: true,
+  }
 }
 
 test('registry 429 responses preserve Retry-After and pause other connections using the same origin', async (context) => {
@@ -151,10 +159,16 @@ test('CDN throttling pauses the source registry and never forwards registry cred
 
       if (target.origin === new URL(cdn).origin) {
         assert.equal(new Headers(init?.headers).has('Authorization'), false)
-        return new Response(null, { status: 429, headers: { 'Retry-After': '30' } })
+        return new Response(null, {
+          status: 429,
+          headers: { 'Retry-After': '30' },
+        })
       }
 
-      return new Response(null, { status: 307, headers: { Location: `${cdn}/blob` } })
+      return new Response(null, {
+        status: 307,
+        headers: { Location: `${cdn}/blob` },
+      })
     }
   )
 
@@ -182,7 +196,10 @@ test('Docker Hub listing throttles honour Retry-After and do not repeat upstream
 
   context.mock.method(globalThis, 'fetch', async () => {
     requests++
-    return new Response(null, { status: 429, headers: { 'Retry-After': '150' } })
+    return new Response(null, {
+      status: 429,
+      headers: { 'Retry-After': '150' },
+    })
   })
 
   await assert.rejects(
@@ -225,7 +242,9 @@ test('HEAD fallback verifies manifest bytes and never falls back after throttlin
 
     return init?.method === 'HEAD'
       ? new Response(null, { status: 405 })
-      : new Response(manifest, { headers: { 'Docker-Content-Digest': expected } })
+      : new Response(manifest, {
+          headers: { 'Docker-Content-Digest': expected },
+        })
   })
 
   assert.equal(await imageDigest(registry, 'team/app', 'latest'), expected)
@@ -253,7 +272,9 @@ test('HEAD digest responses reject a different immutable reference', async (cont
     globalThis,
     'fetch',
     async () =>
-      new Response(null, { headers: { 'Docker-Content-Digest': `sha256:${'b'.repeat(64)}` } })
+      new Response(null, {
+        headers: { 'Docker-Content-Digest': `sha256:${'b'.repeat(64)}` },
+      })
   )
 
   await assert.rejects(imageDigest(registry, 'team/app', digest), /requested digest/)

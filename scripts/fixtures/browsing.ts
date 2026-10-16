@@ -13,7 +13,10 @@ export async function checkBrowsing({ context, request, readerCookie, fixture }:
       readOnly: false,
     }
 
-    const created = await request('/api/registries', { method: 'POST', body: input })
+    const created = await request('/api/registries', {
+      method: 'POST',
+      body: input,
+    })
 
     assert.equal(created.status, 201, 'browsing connection can be created')
 
@@ -41,7 +44,9 @@ export async function checkBrowsing({ context, request, readerCookie, fixture }:
     })
 
     await t.test('viewers receive the complete paginated catalogue', async () => {
-      const response = await request(`${api}/browse`, { cookie: readerCookie })
+      const response = await request(`${api}/browse`, {
+        cookie: readerCookie,
+      })
       const catalogue = await response.json()
 
       assert.equal(catalogue.items.length, 210)
@@ -111,7 +116,10 @@ export async function checkBrowsing({ context, request, readerCookie, fixture }:
         assert.equal(response.status, 200, 'connection can be made writable')
       })
 
-      const updated = await request(api, { method: 'PUT', body: { ...input, readOnly: true } })
+      const updated = await request(api, {
+        method: 'PUT',
+        body: { ...input, readOnly: true },
+      })
 
       assert.equal(updated.status, 200, 'connection can be made read-only')
 

@@ -83,7 +83,10 @@ export function useSecurity() {
 
   async function removePasskey(id: string): Promise<void> {
     await run(async () => {
-      await apiRequest('/api/account/passkeys', { method: 'DELETE', body: JSON.stringify({ id }) })
+      await apiRequest('/api/account/passkeys', {
+        method: 'DELETE',
+        body: JSON.stringify({ id }),
+      })
       toast.success('Passkey removed.')
       router.refresh()
     })
@@ -91,7 +94,11 @@ export function useSecurity() {
 
   async function beginTotp(): Promise<void> {
     await run(async () => {
-      setSetup(await apiRequest<TotpSetup>('/api/account/totp/setup', { method: 'POST' }))
+      setSetup(
+        await apiRequest<TotpSetup>('/api/account/totp/setup', {
+          method: 'POST',
+        })
+      )
     })
   }
 

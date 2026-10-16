@@ -47,7 +47,12 @@ before(async () => {
 after(async () => {
   database().close()
   await fixture.close()
-  rmSync(directory, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 })
+  rmSync(directory, {
+    recursive: true,
+    force: true,
+    maxRetries: 5,
+    retryDelay: 100,
+  })
 })
 
 test('registry schema migration preserves existing connections and permits public pull overrides', () => {
@@ -144,7 +149,10 @@ test('bulk input rejects duplicate tags, oversized batches, traversal, and inval
     false
   )
   assert.equal(
-    bulkPreviewInput.safeParse({ repository: 'team/app', tags: ['latest', 'latest'] }).success,
+    bulkPreviewInput.safeParse({
+      repository: 'team/app',
+      tags: ['latest', 'latest'],
+    }).success,
     false
   )
   assert.equal(

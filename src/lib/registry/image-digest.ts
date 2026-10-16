@@ -22,7 +22,10 @@ export async function imageDigest(
     const response = await registryRequest(
       registry,
       `/v2/${encoded}/manifests/${encodeURIComponent(reference)}`,
-      { method: 'HEAD', scope: `repository:${repository}:pull` }
+      {
+        method: 'HEAD',
+        scope: `repository:${repository}:pull`,
+      }
     )
     const digest = digestName.safeParse(response.headers.get('docker-content-digest'))
 

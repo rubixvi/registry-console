@@ -46,7 +46,9 @@ test('repository searches combine name and verified architecture filters', async
   assert.deepEqual(await searchRegistry(registry, { query: 'missing', architecture: 'amd64' }), {
     items: [],
   })
-  assert.deepEqual(await searchRegistry(registry, { architecture: 'arm64' }), { items: [] })
+  assert.deepEqual(await searchRegistry(registry, { architecture: 'arm64' }), {
+    items: [],
+  })
 })
 
 test('tag searches use tag names and reject failed image metadata instead of guessing', async (context) => {
