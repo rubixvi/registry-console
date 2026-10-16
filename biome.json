@@ -14,8 +14,6 @@
       "!dist",
       "!build",
       "!out",
-      "!app/(payload)",
-      "!payload/payload-types.ts",
       "!**/*.svg",
       "!**/*.png",
       "!**/*.ico"
@@ -146,8 +144,6 @@
               ["node", "node:*"],
               ["react", "react/**"],
               ["next", "next/**", "next-*", "next-*/**"],
-              ["payload"],
-              ["@payloadcms", "@payloadcms/**"],
               ":PACKAGE:",
               ":BLANK_LINE:",
               ["**", "!:STYLE:"],
