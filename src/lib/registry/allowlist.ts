@@ -67,3 +67,25 @@ export function validateToken(raw: string, registryOrigin: string): URL {
 
   return url
 }
+
+export function validateBlobRedirect(raw: string): URL {
+  let url: URL
+
+  try {
+    url = new URL(raw)
+  } catch {
+    throw new AppError(502, 'Invalid registry blob redirect.')
+  }
+
+  if (
+    url.protocol !== 'https:' ||
+    url.username ||
+    url.password ||
+    url.hash ||
+    !allowedOrigins(env().REGISTRY_BLOB_ORIGINS).includes(url.origin)
+  ) {
+    throw new AppError(502, 'Registry blob redirect origin is not in REGISTRY_BLOB_ORIGINS.')
+  }
+
+  return url
+}

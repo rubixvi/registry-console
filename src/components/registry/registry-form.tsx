@@ -1,13 +1,27 @@
 'use client'
 
-import { useId } from 'react'
-import { Pencil, Plus } from 'lucide-react'
+import { useId, useState } from 'react'
 
 import { ErrorMessage } from '@/components/shared/error-message'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogFooter, DialogTrigger } from '@/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { useRegistryForm } from '@/hooks/registry/use-form'
 import { type Registry } from '@/types/registry'
 
@@ -18,6 +32,7 @@ type Props = {
 export function RegistryForm({ registry }: Props) {
   const { open, toggle, busy, error, submit } = useRegistryForm(registry?.id)
   const id = useId()
+  const [provider, setProvider] = useState(registry?.provider ?? 'distribution')
   const isEditing = Boolean(registry)
 
   return (
@@ -29,13 +44,56 @@ export function RegistryForm({ registry }: Props) {
     >
       <DialogTrigger asChild>
         <Button disabled={busy} type="button" variant={isEditing ? 'outline' : 'default'}>
-          {isEditing ? <Pencil aria-hidden="true" /> : <Plus aria-hidden="true" />}
           {isEditing ? 'Edit' : 'Connect'}
         </Button>
       </DialogTrigger>
 
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle>Registry</DialogTitle>
+          <DialogDescription>
+            Configure your registry connection and authentication details.
+          </DialogDescription>
+        </DialogHeader>
+
         <form aria-busy={busy} className="space-y-5" onSubmit={submit}>
+          <div className="grid gap-2">
+            <Label htmlFor={`${id}-provider`}>Registry type</Label>
+
+            <Select
+              name="provider"
+              onValueChange={(value) => setProvider(value as 'distribution' | 'dockerhub')}
+              value={provider}
+            >
+              <SelectTrigger className="w-full" id={`${id}-provider`}>
+                <SelectValue />
+              </SelectTrigger>
+
+              <SelectContent position="popper">
+                <SelectItem value="distribution">Container</SelectItem>
+                <SelectItem value="dockerhub">Docker Hub</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {provider === 'dockerhub' && (
+            <div className="grid gap-2">
+              <Label htmlFor={`${id}-namespace`}>Namespace</Label>
+              <Input
+                defaultValue={registry?.namespace}
+                id={`${id}-namespace`}
+                maxLength={64}
+                name="namespace"
+                placeholder="Username or organisation"
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                Docker Hub connections support read-only browsing. Use an access token for private
+                repositories.
+              </p>
+            </div>
+          )}
+
           <div className="grid gap-2">
             <Label htmlFor={`${id}-name`}>Connection</Label>
             <Input
@@ -52,15 +110,19 @@ export function RegistryForm({ registry }: Props) {
             <Label htmlFor={`${id}-url`}>Registry</Label>
             <Input
               aria-describedby={`${id}-url-help`}
-              defaultValue={registry?.url}
+              defaultValue={
+                provider === 'dockerhub' ? 'https://registry-1.docker.io' : registry?.url
+              }
               id={`${id}-url`}
+              key={provider}
               name="url"
               placeholder="https://registry.example.com"
+              readOnly={provider === 'dockerhub'}
               required
               type="url"
             />
             <p className="text-xs text-muted-foreground" id={`${id}-url-help`}>
-              The registry origin must be allowed in the server configuration.
+              The registry must be permitted by the server configuration.
             </p>
           </div>
 
@@ -76,7 +138,7 @@ export function RegistryForm({ registry }: Props) {
               type="url"
             />
             <p className="text-xs text-muted-foreground" id={`${id}-pull-url-help`}>
-              Public registry address for copied pull commands. Leave empty to use the default.
+              Registry address used in copied pull commands. Leave blank to use the default.
             </p>
           </div>
 
@@ -107,7 +169,7 @@ export function RegistryForm({ registry }: Props) {
 
           {isEditing && (
             <p className="text-xs text-muted-foreground" id={`${id}-password-help`}>
-              Enter the password again to keep or replace it. Leaving it empty removes the stored
+              Re-enter the current password or provide a new one. Leave blank to remove the stored
               password.
             </p>
           )}
@@ -116,10 +178,11 @@ export function RegistryForm({ registry }: Props) {
             <input
               className="size-4 accent-primary"
               defaultChecked={registry?.readOnly}
+              disabled={provider === 'dockerhub'}
               name="readOnly"
               type="checkbox"
             />
-            Read only connection
+            Read only
           </label>
 
           <ErrorMessage message={error} />

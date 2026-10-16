@@ -38,7 +38,12 @@ export function createSession(user: User): Session {
   const db = database()
   const now = Date.now()
   const token = randomBytes(32).toString('base64url')
-  const expires = now + env().SESSION_HOURS * MILLISECONDS_PER_HOUR
+  const lifetime =
+    user.authProvider === 'ldap'
+      ? env().LDAP_SESSION_MINUTES * 60_000
+      : env().SESSION_HOURS * MILLISECONDS_PER_HOUR
+
+  const expires = now + lifetime
 
   db.prepare('DELETE FROM sessions WHERE expires <= ?').run(now)
 
@@ -66,7 +71,11 @@ export function resolveSession(token?: string): Identity | null {
 
   const user = users().find((user) => user.username === row.username)
 
-  if (!user || row.fingerprint !== userFingerprint(user)) {
+  if (
+    !user ||
+    (user.authProvider === 'ldap' && env().LDAP_ENABLED !== 'true') ||
+    row.fingerprint !== userFingerprint(user)
+  ) {
     return null
   }
 

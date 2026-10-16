@@ -11,5 +11,13 @@ export async function register(): Promise<void> {
   const { securityAccounts } = await import('@/lib/auth/accounts')
 
   env()
-  securityAccounts(users())
+  const configured = users()
+
+  if (configured.some((user) => user.authProvider === 'ldap')) {
+    const { ldapConfiguration } = await import('@/lib/auth/ldap')
+
+    ldapConfiguration()
+  }
+
+  securityAccounts(configured)
 }

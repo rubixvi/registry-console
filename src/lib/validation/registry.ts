@@ -31,9 +31,11 @@ export const registryInput = z
     username: z
       .string()
       .max(128)
-      .refine((v) => !v.includes(':') && !/[\r\n]/.test(v)),
+      .refine((value) => !value.includes(':') && !/[\r\n]/.test(value)),
     password: z.string().max(4096),
     readOnly: z.boolean(),
+    provider: z.enum(['distribution', 'dockerhub']).default('distribution'),
+    namespace: z.string().trim().max(64).default(''),
   })
   .strict()
 
@@ -42,7 +44,15 @@ export const pageInput = z.object({
   n: z.coerce.number().int().min(1).max(100).default(100),
 })
 
-export const browseInput = z.object({ repository: repositoryName.optional() }).strict()
+export const architectureName = z.string().regex(/^[a-z0-9][a-z0-9_-]{0,31}$/)
+
+export const browseInput = z
+  .object({
+    repository: repositoryName.optional(),
+    architecture: architectureName.optional(),
+    query: z.string().max(128).default(''),
+  })
+  .strict()
 
 export const imageInput = z.object({
   repository: repositoryName,
@@ -56,7 +66,7 @@ export const deleteInput = z
     confirmation: repositoryName,
   })
   .strict()
-  .refine((v) => v.repository === v.confirmation)
+  .refine((value) => value.repository === value.confirmation)
 
 export const tagsInput = pageInput.extend({
   repository: repositoryName,
@@ -77,5 +87,13 @@ export const bulkDeleteInput = z
   .object({
     planId: z.uuid(),
     confirmation: repositoryName,
+  })
+  .strict()
+
+export const searchSchema = z
+  .object({
+    query: z.string().trim().max(128).default(''),
+    registry: z.string().max(128).optional(),
+    architecture: architectureName.optional(),
   })
   .strict()

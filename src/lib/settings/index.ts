@@ -1,9 +1,17 @@
 import 'server-only'
 
 import { env } from '@/lib/config/env'
+import { audit } from '@/lib/database/audit'
 import { database } from '@/lib/database/client'
 import { brandingInput } from '@/lib/validation/branding'
 import { type Branding } from '@/types/branding'
+
+type Update = {
+  settings: Branding
+  username: string
+  logo?: Buffer
+  remove?: boolean
+}
 
 type SettingsRow = {
   value: string
@@ -43,4 +51,56 @@ export function saveSettings(value: Branding): void {
       ON CONFLICT (id) DO UPDATE SET value = excluded.value
     `)
     .run(JSON.stringify(value))
+}
+
+export function updateSettings({ settings, username, logo, remove = false }: Update): void {
+  const db = database()
+
+  db.exec('BEGIN IMMEDIATE')
+
+  try {
+    if (logo) {
+      db.prepare(`
+        INSERT INTO settings (id, value)
+        VALUES ('brand-logo', ?)
+        ON CONFLICT (id) DO UPDATE SET value = excluded.value
+      `).run(logo.toString('base64'))
+    } else if (remove) {
+      db.prepare("DELETE FROM settings WHERE id = 'brand-logo'").run()
+    }
+
+    saveSettings(settings)
+    audit(username, 'settings.update', '')
+
+    db.exec('COMMIT')
+  } catch (error) {
+    db.exec('ROLLBACK')
+
+    throw error
+  }
+}
+
+export function removeLogo(username: string): void {
+  const db = database()
+
+  db.exec('BEGIN IMMEDIATE')
+
+  try {
+    const settings = getSettings()
+
+    db.prepare("DELETE FROM settings WHERE id = 'brand-logo'").run()
+
+    saveSettings({
+      ...settings,
+      logoPath: '',
+    })
+
+    audit(username, 'settings.logo.remove', '')
+
+    db.exec('COMMIT')
+  } catch (error) {
+    db.exec('ROLLBACK')
+
+    throw error
+  }
 }

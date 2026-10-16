@@ -27,8 +27,8 @@ export function Security({ status }: Props) {
           <h2 className="font-semibold">Save your recovery codes</h2>
 
           <p className="text-sm text-muted-foreground">
-            Store these somewhere safe. Each code works once if you lose access to your
-            authenticator. These codes will not be displayed again.
+            Store these recovery codes securely. Each code can be used once to access your account
+            if your authenticator is unavailable. These codes will not be displayed again.
           </p>
 
           <ul className="grid gap-2 font-mono text-sm sm:grid-cols-2">
@@ -38,7 +38,7 @@ export function Security({ status }: Props) {
           </ul>
 
           <Button onClick={() => security.setCodes([])} type="button" variant="outline">
-            I have saved my codes
+            Confirm
           </Button>
         </section>
       )}
@@ -97,7 +97,9 @@ export function Security({ status }: Props) {
         </h2>
 
         <p className="text-sm text-muted-foreground">
-          Sign in using your device's fingerprint, face recognition, PIN, or a security key.
+          {status.directoryAccount
+            ? 'Directory accounts require your directory password. Passkeys are not supported.'
+            : 'Sign in with your fingerprint, facial recognition, device PIN, or security key.'}
         </p>
 
         {status.passkeys.length > 0 ? (
@@ -130,7 +132,7 @@ export function Security({ status }: Props) {
           <p className="text-sm text-muted-foreground">No passkeys registered.</p>
         )}
 
-        {verified && (
+        {verified && !status.directoryAccount && (
           <form className="flex items-end gap-3" onSubmit={security.addPasskey}>
             <div className="grid min-w-0 flex-1 gap-2">
               <Label htmlFor="passkey-name">Passkey</Label>
@@ -160,7 +162,7 @@ export function Security({ status }: Props) {
         <p className="text-sm text-muted-foreground">
           {status.totpEnabled
             ? `Enabled for password sign-in. ${status.recoveryRemaining} recovery codes remaining.`
-            : 'Add a six-digit code as a second step when signing in with your password.'}
+            : 'Require a six-digit code from your authenticator app when signing in with your password.'}
         </p>
 
         {verified && !setup && (
@@ -172,7 +174,7 @@ export function Security({ status }: Props) {
             type="button"
             variant="outline"
           >
-            {status.totpEnabled ? 'Disable authenticator and sign out' : 'Set up authenticator'}
+            {status.totpEnabled ? 'Disable authenticator' : 'Set up authenticator'}
           </Button>
         )}
 

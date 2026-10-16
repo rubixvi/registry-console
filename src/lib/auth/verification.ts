@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { verifyPassword } from '@/lib/auth/password'
+import { verifyCredentials } from '@/lib/auth/credentials'
 import { getAuthenticator, verifySecondFactor } from '@/lib/auth/totp'
 import { users } from '@/lib/config/users'
 import { AppError } from '@/lib/security/error'
@@ -26,7 +26,7 @@ export async function verifyAccount(
 
   const user = configUser(username)
 
-  if (!(await verifyPassword(password, user.passwordHash))) {
+  if (!(await verifyCredentials(password, user))) {
     throw new AppError(401, 'Invalid password or verification code.')
   }
 

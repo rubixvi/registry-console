@@ -1,14 +1,15 @@
 'use client'
 
 import { type MouseEvent, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 
 import { apiRequest } from '@/lib/http/client'
-import { reloadPage } from '@/utils/reload'
 
 export function useConnection(id: string) {
+  const router = useRouter()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const [status, setStatus] = useState('')
 
   const endpoint = `/api/registries/${encodeURIComponent(id)}`
 
@@ -17,11 +18,10 @@ export function useConnection(id: string) {
 
     setBusy(true)
     setError('')
-    setStatus('')
 
     try {
       await apiRequest(`${endpoint}/status`)
-      setStatus('Connected successfully.')
+      toast.success('Connected successfully.')
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Connection failed.'
 
@@ -38,7 +38,6 @@ export function useConnection(id: string) {
 
     setBusy(true)
     setError('')
-    setStatus('')
 
     try {
       await apiRequest(endpoint, {
@@ -46,7 +45,9 @@ export function useConnection(id: string) {
         body: '{}',
       })
 
-      reloadPage('/')
+      toast.success('Connection removed.')
+      router.push('/')
+      router.refresh()
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Removal failed.'
 
@@ -55,5 +56,5 @@ export function useConnection(id: string) {
     }
   }
 
-  return { busy, error, status, test, remove }
+  return { busy, error, test, remove }
 }

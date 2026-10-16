@@ -1,11 +1,13 @@
 'use client'
 
 import { type SubmitEvent, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 
 import { apiRequest } from '@/lib/http/client'
-import { reloadPage } from '@/utils/reload'
 
 export function useSettings() {
+  const router = useRouter()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
@@ -25,11 +27,13 @@ export function useSettings() {
         body: form,
       })
 
-      reloadPage('/settings?saved=1')
+      toast.success('Settings saved.')
+      router.refresh()
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to save settings.'
 
       setError(message)
+    } finally {
       setBusy(false)
     }
   }
@@ -45,11 +49,13 @@ export function useSettings() {
         method: 'DELETE',
       })
 
-      reloadPage('/settings?saved=1')
+      toast.success('Settings saved.')
+      router.refresh()
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to remove logo.'
 
       setError(message)
+    } finally {
       setBusy(false)
     }
   }

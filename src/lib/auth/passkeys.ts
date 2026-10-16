@@ -46,6 +46,10 @@ export function findPasskey(id: string): PasskeyRow | undefined {
 }
 
 export async function regOptions(user: User) {
+  if (user.authProvider === 'ldap') {
+    throw new AppError(403, 'Directory accounts must sign in with their directory password.')
+  }
+
   const keys = userPasskeys(user)
 
   if (keys.length >= 10) {
@@ -79,6 +83,10 @@ export async function registerPasskey(
   userId: string,
   name: string
 ): Promise<void> {
+  if (user.authProvider === 'ldap') {
+    throw new AppError(403, 'Passkeys are unavailable for directory accounts.')
+  }
+
   const { origin, rpID } = passkeyHost()
   let result: Awaited<ReturnType<typeof verifyRegistrationResponse>>
 
@@ -141,6 +149,7 @@ export async function authPasskey(
   const key = findPasskey(response.id)
 
   if (
+    user.authProvider === 'ldap' ||
     !key ||
     key.username !== user.username ||
     key.fingerprint !== securityId(user) ||
@@ -190,4 +199,10 @@ export async function authPasskey(
   if (update.changes !== 1) {
     throw new AppError(401, 'Passkey changed. Please try again.')
   }
+}
+
+export function removePasskey(user: User, id: string): void {
+  database()
+    .prepare('DELETE FROM passkeys WHERE id = ? AND username = ? AND fingerprint = ?')
+    .run(id, user.username, securityId(user))
 }

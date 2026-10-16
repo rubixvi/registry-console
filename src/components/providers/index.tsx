@@ -1,9 +1,9 @@
 'use client'
 
 import { type ReactNode } from 'react'
-import { Toaster } from 'sonner'
 
 import { ThemeProvider } from '@/components/providers/theme'
+import { Toaster } from '@/components/ui/sonner'
 
 type Props = {
   children: ReactNode

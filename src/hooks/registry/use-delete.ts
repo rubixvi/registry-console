@@ -1,11 +1,13 @@
 'use client'
 
 import { type ChangeEvent, type MouseEvent, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 
 import { apiRequest } from '@/lib/http/client'
-import { reloadPage } from '@/utils/reload'
 
 export function useDelete(id: string, repository: string, digest: string) {
+  const router = useRouter()
   const [confirmation, setConfirmation] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -32,7 +34,9 @@ export function useDelete(id: string, repository: string, digest: string) {
 
       const query = new URLSearchParams({ repository })
 
-      reloadPage(`/registries/${registryId}?${query}`)
+      toast.success('Manifest deleted.')
+      router.push(`/registries/${registryId}?${query}`)
+      router.refresh()
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Deletion failed.'
 

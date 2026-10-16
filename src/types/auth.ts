@@ -4,7 +4,8 @@ export type User = {
   id?: string
   username: string
   role: Role
-  passwordHash: string
+  passwordHash?: string
+  authProvider?: 'local' | 'ldap'
 }
 
 export type Identity = {

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-import { registryListing } from '@/lib/registry/listing'
+import { searchRegistry } from '@/lib/registry/search'
 import { getRegistry } from '@/lib/registry/store'
 import { api } from '@/lib/security/api'
 import { AppError } from '@/lib/security/error'
@@ -20,5 +20,9 @@ export const GET = api(async (request, context, identity) => {
 
   rateLimit(`registry-browse:${identity.username}`, 30, 60_000)
 
-  return NextResponse.json(await registryListing(registry, parsed.data.repository, refresh))
+  if (parsed.data.architecture) {
+    rateLimit(`registry-architecture:${identity.username}`, 6, 60_000)
+  }
+
+  return NextResponse.json(await searchRegistry(registry, parsed.data, refresh))
 })

@@ -5,7 +5,7 @@ import path from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { after, before, test } from 'node:test'
 
-import { mockConsoleRegistry } from '../scripts/fixtures/console-registry'
+import { mockConsole } from '../scripts/fixtures/mock-console'
 import { audit, auditPage } from '../src/lib/database/audit'
 import { database } from '../src/lib/database/client'
 import { executeDeletion, previewDeletion } from '../src/lib/registry/delete'
@@ -18,11 +18,11 @@ import { imageHistory } from '../src/utils/image-history'
 import { pullCommand } from '../src/utils/pull-command'
 
 const directory = mkdtempSync(path.join(tmpdir(), 'registry-console-features-'))
-let fixture: Awaited<ReturnType<typeof mockConsoleRegistry>>
+let fixture: Awaited<ReturnType<typeof mockConsole>>
 let registryId: string
 
 before(async () => {
-  fixture = await mockConsoleRegistry()
+  fixture = await mockConsole()
 
   Object.assign(process.env, {
     APP_ORIGIN: 'https://console.example.com',
@@ -56,6 +56,9 @@ test('registry schema migration preserves existing connections and permits publi
   assert.equal(existing.name, 'Existing')
   assert.equal(existing.readOnly, true)
   assert.equal(existing.pullUrl, '')
+  assert.equal(existing.provider, 'distribution')
+  assert.equal(existing.trivyEnabled, false)
+  assert.match(getRegistry('legacy').revision!, /^[0-9a-f-]{36}$/)
   registryId = addRegistry(
     registryInput.parse({
       name: 'Production',

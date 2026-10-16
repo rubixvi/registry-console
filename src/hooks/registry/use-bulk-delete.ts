@@ -1,6 +1,7 @@
 'use client'
 
 import { type KeyboardEvent, type MouseEvent, useRef, useState } from 'react'
+import { toast } from 'sonner'
 
 import { apiRequest } from '@/lib/http/client'
 import { type BulkDeletionResult, type DeletionPlan } from '@/types/deletion'
@@ -11,7 +12,7 @@ export function useBulkDelete(
   repository: string,
   scope: string,
   tags: string[],
-  refresh: () => void
+  refresh: () => void | Promise<void>
 ) {
   const [selection, setSelection] = useState<{ scope: string; tags: string[] }>({ scope, tags: [] })
   const anchor = useRef<{ scope: string; tag: string } | null>(null)
@@ -104,9 +105,15 @@ export function useBulkDelete(
         body: JSON.stringify({ planId: plan.id, confirmation }),
       })
 
+      if (result.failed > 0) {
+        toast.warning(`${result.deleted} manifests deleted. ${result.failed} failed.`)
+      } else {
+        toast.success(`${result.deleted} manifests deleted.`)
+      }
+
       setResult(result)
       setSelection({ scope, tags: [] })
-      refresh()
+      await refresh()
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Bulk deletion failed.')
     } finally {

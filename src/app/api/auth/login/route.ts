@@ -1,8 +1,8 @@
 import { type NextRequest, NextResponse } from 'next/server'
 
 import { auditAuthFailure } from '@/lib/auth/audit'
+import { verifyCredentials } from '@/lib/auth/credentials'
 import { limitSignIn } from '@/lib/auth/limit'
-import { verifyPassword } from '@/lib/auth/password'
 import { issueRequest } from '@/lib/auth/requests'
 import { loginResponse } from '@/lib/auth/response'
 import { getAuthenticator } from '@/lib/auth/totp'
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     verifying++
 
     try {
-      valid = await verifyPassword(password, user?.passwordHash)
+      valid = await verifyCredentials(password, user)
     } finally {
       verifying--
     }

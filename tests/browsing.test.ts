@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { after, before, test } from 'node:test'
 
-import { mockBrowsingRegistry } from '../scripts/fixtures/browsing-registry'
+import { mockBrowsing } from '../scripts/fixtures/mock-browsing'
 import { database } from '../src/lib/database/client'
 import {
   cachedResponse,
@@ -25,13 +25,13 @@ import { isTagOrder, sortTags } from '../src/utils/tag-order'
 import { selectTags } from '../src/utils/tag-selection'
 
 const directory = mkdtempSync(path.join(tmpdir(), 'registry-browsing-'))
-let fixture: Awaited<ReturnType<typeof mockBrowsingRegistry>>
+let fixture: Awaited<ReturnType<typeof mockBrowsing>>
 let registry: RegistryRecord
 const manifestPath = '/v2/team/app/manifests/latest'
 const scope = 'repository:team/app:pull'
 
 before(async () => {
-  fixture = await mockBrowsingRegistry()
+  fixture = await mockBrowsing()
 
   Object.assign(process.env, {
     APP_ORIGIN: 'https://console.example.com',

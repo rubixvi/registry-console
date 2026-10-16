@@ -11,7 +11,7 @@ if (process.argv.length !== 3 || !username || !/^[a-zA-Z0-9_.@-]{1,64}$/.test(us
 const filename = path.resolve(process.env.DATA_DIR || './data', 'console.sqlite')
 
 if (!existsSync(filename)) {
-  throw new Error('Database not found. Set DATA_DIR to the deployed application data directory.')
+  throw new Error('Database not found. Check DATA_DIR.')
 }
 
 const db = new DatabaseSync(filename)
@@ -51,6 +51,4 @@ try {
   db.close()
 }
 
-console.log(
-  'Account security reset. Existing sessions, passkeys, and authenticator enrollment were removed.'
-)
+console.log('Security reset. Sessions, passkeys, and authenticator setup cleared.')

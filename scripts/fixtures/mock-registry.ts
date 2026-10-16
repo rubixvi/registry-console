@@ -1,5 +1,7 @@
-import { createHash } from 'node:crypto'
 import { createServer } from 'node:http'
+
+import { contentDigest } from '../helpers/crypto.mjs'
+import { close, listen } from '../helpers/network.mjs'
 
 type TokenRequest = {
   scope: string
@@ -20,8 +22,7 @@ export async function mockRegistry() {
     history: [{ created_by: 'RUN echo hello' }],
   })
 
-  const configHash = createHash('sha256').update(config).digest('hex')
-  const configDigest = `sha256:${configHash}`
+  const configDigest = contentDigest(config)
 
   const manifest = JSON.stringify({
     schemaVersion: 2,
@@ -40,8 +41,7 @@ export async function mockRegistry() {
     ],
   })
 
-  const manifestHash = createHash('sha256').update(manifest).digest('hex')
-  const digest = `sha256:${manifestHash}`
+  const digest = contentDigest(manifest)
 
   const index = JSON.stringify({
     schemaVersion: 2,
@@ -59,8 +59,7 @@ export async function mockRegistry() {
     ],
   })
 
-  const indexHash = createHash('sha256').update(index).digest('hex')
-  const indexDigest = `sha256:${indexHash}`
+  const indexDigest = contentDigest(index)
   const basicAuthorization = `Basic ${Buffer.from('robot:registry-secret').toString('base64')}`
 
   const state: FixtureState = {
@@ -192,37 +191,14 @@ export async function mockRegistry() {
     response.end('{}')
   })
 
-  await new Promise<void>((resolve, reject) => {
-    server.once('error', reject)
-    server.listen(0, '127.0.0.1', () => {
-      server.removeListener('error', reject)
-      resolve()
-    })
-  })
+  const port = await listen(server)
 
-  const address = server.address()
-
-  if (!address || typeof address === 'string') {
-    server.close()
-    throw new Error('Fixture did not start.')
-  }
-
-  origin = `http://127.0.0.1:${address.port}`
+  origin = `http://127.0.0.1:${port}`
 
   return {
     origin,
     digest,
     state,
-    close: (): Promise<void> =>
-      new Promise((resolve, reject) => {
-        server.close((error) => {
-          if (error) {
-            reject(error)
-            return
-          }
-
-          resolve()
-        })
-      }),
+    close: () => close(server),
   }
 }

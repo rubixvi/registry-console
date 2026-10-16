@@ -1,35 +1,64 @@
-import { createHash } from 'node:crypto'
 import { createServer } from 'node:http'
 
-export async function mockConsoleRegistry() {
+import { contentDigest } from '../helpers/crypto.mjs'
+import { close, listen } from '../helpers/network.mjs'
+
+export async function mockConsole() {
   const config = JSON.stringify({
     created: '2026-10-01T09:00:00Z',
     os: 'linux',
     architecture: 'amd64',
     history: [
-      { created: '2026-09-30T00:00:00Z', created_by: 'ADD base', author: 'Builder' },
-      { created: '2026-10-01T08:00:00Z', created_by: 'ENV APP=console', empty_layer: true },
-      { created: '2026-10-01T09:00:00Z', created_by: 'RUN build', comment: 'Release image' },
+      {
+        created: '2026-09-30T00:00:00Z',
+        created_by: 'ADD base',
+        author: 'Builder',
+      },
+      {
+        created: '2026-10-01T08:00:00Z',
+        created_by: 'ENV APP=console',
+        empty_layer: true,
+      },
+      {
+        created: '2026-10-01T09:00:00Z',
+        created_by: 'RUN build',
+        comment: 'Release image',
+      },
     ],
   })
-  const configDigest = `sha256:${createHash('sha256').update(config).digest('hex')}`
+
+  const configDigest = contentDigest(config)
+
   const manifests = new Map<string, string>()
+
   const tags = new Map<string, string>()
+
   const deletes = new Map<string, number>()
+
   const deleted = new Set<string>()
 
   for (const name of ['app', 'worker', 'protected']) {
     const manifest = JSON.stringify({
       schemaVersion: 2,
       mediaType: 'application/vnd.oci.image.manifest.v1+json',
-      config: { digest: configDigest, size: Buffer.byteLength(config) },
+      config: {
+        digest: configDigest,
+        size: Buffer.byteLength(config),
+      },
       layers: [
-        { digest: `sha256:${'a'.repeat(64)}`, size: 1024 },
-        { digest: `sha256:${'b'.repeat(64)}`, size: 2048 },
+        {
+          digest: `sha256:${'a'.repeat(64)}`,
+          size: 1024,
+        },
+        {
+          digest: `sha256:${'b'.repeat(64)}`,
+          size: 2048,
+        },
       ],
       annotations: { name },
     })
-    const digest = `sha256:${createHash('sha256').update(manifest).digest('hex')}`
+
+    const digest = contentDigest(manifest)
 
     manifests.set(digest, manifest)
     tags.set(name, digest)
@@ -40,6 +69,7 @@ export async function mockConsoleRegistry() {
 
   const server = createServer((request, response) => {
     const url = new URL(request.url ?? '/', 'http://registry.test')
+
     const pathname = decodeURIComponent(url.pathname)
 
     response.setHeader('Content-Type', 'application/json')
@@ -68,7 +98,9 @@ export async function mockConsoleRegistry() {
 
     if (pathname.startsWith('/v2/team/app/manifests/')) {
       const reference = pathname.slice('/v2/team/app/manifests/'.length)
+
       const digest = tags.get(reference) ?? reference
+
       const manifest = manifests.get(digest)
 
       if (request.method === 'DELETE') {
@@ -78,6 +110,7 @@ export async function mockConsoleRegistry() {
           response.statusCode = 405
         } else if (manifest && !deleted.has(digest)) {
           deleted.add(digest)
+
           response.statusCode = 202
         } else {
           response.statusCode = 404
@@ -100,27 +133,13 @@ export async function mockConsoleRegistry() {
     response.end('{}')
   })
 
-  await new Promise<void>((resolve, reject) => {
-    server.once('error', reject)
-    server.listen(0, '127.0.0.1', resolve)
-  })
-
-  const address = server.address()
-
-  if (!address || typeof address === 'string') {
-    server.close()
-
-    throw new Error('Registry fixture did not start.')
-  }
+  const port = await listen(server)
 
   return {
-    origin: `http://127.0.0.1:${address.port}`,
+    origin: `http://127.0.0.1:${port}`,
     tags,
     deletes,
     deleted,
-    close: () =>
-      new Promise<void>((resolve, reject) =>
-        server.close((error) => (error ? reject(error) : resolve()))
-      ),
+    close: () => close(server),
   }
 }

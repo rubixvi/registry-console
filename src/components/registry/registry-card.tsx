@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ArrowUpRight, Container, Eye, LockKeyhole } from 'lucide-react'
+import { ArrowUpRight, Container, Eye } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { type Registry } from '@/types/registry'
@@ -29,11 +29,6 @@ export function RegistryCard({ registry }: Props) {
       <p className="mt-2 truncate text-sm text-muted-foreground">{registry.url}</p>
 
       <div className="mt-auto flex flex-wrap gap-2 pt-6">
-        <Badge>
-          <LockKeyhole aria-hidden="true" className="size-3" />
-          {registry.hasPassword ? 'Credentials configured' : 'No password configured'}
-        </Badge>
-
         {registry.readOnly && (
           <Badge>
             <Eye aria-hidden="true" className="size-3" />

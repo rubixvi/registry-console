@@ -1,7 +1,7 @@
 import 'server-only'
 
-import { createHash } from 'node:crypto'
-
+import { registryCacheIdentity } from '@/lib/registry/identity'
+import { keyedFingerprint } from '@/lib/security/fingerprint'
 import { type RegistryRecord, type TokenCache } from '@/types/registry'
 
 const MAX_TOKENS = 200
@@ -11,9 +11,7 @@ const EXPIRY_BUFFER_SECONDS = 15
 const tokens = new Map<string, TokenCache>()
 
 export function tokenKey(registry: RegistryRecord, scope = ''): string {
-  const credentials = [registry.id, registry.url, registry.username, registry.password, scope]
-
-  return createHash('sha256').update(JSON.stringify(credentials)).digest('hex')
+  return keyedFingerprint('registry-token', [registryCacheIdentity(registry), scope])
 }
 
 export function cachedToken(key: string): string | null {

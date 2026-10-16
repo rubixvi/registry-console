@@ -2,6 +2,7 @@
 
 import { type SyntheticEvent, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 
 import { apiRequest } from '@/lib/http/client'
 
@@ -28,6 +29,8 @@ export function useRegistryForm(id?: string) {
     const form = new FormData(formElement)
     const input = {
       name: form.get('name'),
+      provider: form.get('provider') ?? 'distribution',
+      namespace: form.get('namespace') ?? '',
       url: form.get('url'),
       pullUrl: form.get('pullUrl') ?? '',
       username: form.get('username'),
@@ -48,6 +51,7 @@ export function useRegistryForm(id?: string) {
         body: JSON.stringify(input),
       })
 
+      toast.success(id ? 'Connection updated.' : 'Registry connected.')
       setOpen(false)
       formElement.reset()
       router.refresh()

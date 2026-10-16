@@ -48,5 +48,13 @@ export function users(): User[] {
 }
 
 export function userFingerprint(user: User): string {
-  return createHash('sha256').update(JSON.stringify(user)).digest('hex')
+  const value =
+    user.authProvider === 'ldap'
+      ? {
+          ...user,
+          ldap: [process.env.LDAP_URL, process.env.LDAP_BASE_DN, process.env.LDAP_USER_FILTER],
+        }
+      : user
+
+  return createHash('sha256').update(JSON.stringify(value)).digest('hex')
 }

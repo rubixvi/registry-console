@@ -4,6 +4,7 @@ import { type SyntheticEvent, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { startRegistration } from '@simplewebauthn/browser'
 import { type PublicKeyCredentialCreationOptionsJSON } from '@simplewebauthn/server'
+import { toast } from 'sonner'
 
 import { apiRequest } from '@/lib/http/client'
 import { type TotpSetup } from '@/types/security'
@@ -50,6 +51,7 @@ export function useSecurity() {
 
       form.reset()
       setVerified(true)
+      toast.success('Identity verified.')
     })
   }
 
@@ -74,6 +76,7 @@ export function useSecurity() {
       })
 
       form.reset()
+      toast.success('Passkey added.')
       router.refresh()
     })
   }
@@ -81,6 +84,7 @@ export function useSecurity() {
   async function removePasskey(id: string): Promise<void> {
     await run(async () => {
       await apiRequest('/api/account/passkeys', { method: 'DELETE', body: JSON.stringify({ id }) })
+      toast.success('Passkey removed.')
       router.refresh()
     })
   }
@@ -102,6 +106,7 @@ export function useSecurity() {
         body: JSON.stringify({ code }),
       })
 
+      toast.success('Authenticator enabled. Save your recovery codes.')
       setCodes(result.recoveryCodes)
       setSetup(null)
       setVerified(false)

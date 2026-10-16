@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { RefreshCw } from 'lucide-react'
 
 import { DateFilter } from '@/components/audit/date'
-import { Controls } from '@/components/registry/controls'
+import { Pagination } from '@/components/registry/filters/pagination'
 import { ErrorMessage } from '@/components/shared/error-message'
 import { Loading } from '@/components/shared/loading'
 import { Button } from '@/components/ui/button'
@@ -159,7 +159,7 @@ export function AuditLog() {
           </p>
         )}
 
-        <Controls
+        <Pagination
           hasNext={Boolean(state.data?.next)}
           hasPrevious={state.hasPrevious}
           next={state.next}

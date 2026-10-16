@@ -13,7 +13,7 @@ type Props = {
   next: () => void
 }
 
-export function Controls({ page, hasPrevious, hasNext, previous, next, pageSize = 100 }: Props) {
+export function Pagination({ page, hasPrevious, hasNext, previous, next, pageSize = 100 }: Props) {
   return (
     <nav
       aria-label="Pagination"

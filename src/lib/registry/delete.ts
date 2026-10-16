@@ -1,13 +1,15 @@
 import 'server-only'
 
-import { createHash, randomUUID } from 'node:crypto'
+import { randomUUID } from 'node:crypto'
 
 import { audit } from '@/lib/database/audit'
 import { database } from '@/lib/database/client'
 import { registryRequest } from '@/lib/registry/client'
+import { registryIdentity } from '@/lib/registry/identity'
 import { imageManifest } from '@/lib/registry/image'
 import { getRegistry } from '@/lib/registry/store'
 import { AppError } from '@/lib/security/error'
+import { keyedFingerprint } from '@/lib/security/fingerprint'
 import {
   type BulkDeletionResult,
   type DeletionEntry,
@@ -19,22 +21,13 @@ import {
 import { type RegistryRecord } from '@/types/registry'
 
 function writable(registry: RegistryRecord): void {
-  if (registry.readOnly) {
+  if (registry.readOnly || registry.provider === 'dockerhub') {
     throw new AppError(403, 'This registry is read only.')
   }
 }
 
 function fingerprint(registry: RegistryRecord): string {
-  return createHash('sha256')
-    .update(
-      JSON.stringify({
-        url: registry.url,
-        username: registry.username,
-        password: registry.password,
-        readOnly: registry.readOnly,
-      })
-    )
-    .digest('hex')
+  return keyedFingerprint('deletion-plan', registryIdentity(registry))
 }
 
 async function batch<T, R>(items: T[], operation: (item: T) => Promise<R>): Promise<R[]> {

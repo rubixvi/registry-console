@@ -1,11 +1,9 @@
 import { NextResponse } from 'next/server'
 
-import { audit } from '@/lib/database/audit'
-import { database } from '@/lib/database/client'
 import { api } from '@/lib/security/api'
 import { AppError } from '@/lib/security/error'
 import { readBytes, readJson } from '@/lib/security/request'
-import { getSettings, saveSettings } from '@/lib/settings'
+import { getSettings, removeLogo, updateSettings } from '@/lib/settings'
 import { MAX_LOGO_BYTES, validateLogo } from '@/lib/settings/logo'
 import { brandingInput } from '@/lib/validation/branding'
 import { type Branding } from '@/types/branding'
@@ -72,57 +70,13 @@ export const PUT = api(async (request, _context, identity) => {
     settings = await readJson(request, brandingInput)
   }
 
-  const db = database()
-
-  db.exec('BEGIN IMMEDIATE')
-
-  try {
-    if (logo) {
-      db.prepare(`
-        INSERT INTO settings (id, value)
-        VALUES ('brand-logo', ?)
-        ON CONFLICT (id) DO UPDATE SET value = excluded.value
-      `).run(logo.toString('base64'))
-    } else if (remove) {
-      db.prepare("DELETE FROM settings WHERE id = 'brand-logo'").run()
-    }
-
-    saveSettings(settings)
-    audit(identity.username, 'settings.update', '')
-
-    db.exec('COMMIT')
-  } catch (error) {
-    db.exec('ROLLBACK')
-
-    throw error
-  }
+  updateSettings({ settings, username: identity.username, logo, remove })
 
   return NextResponse.json({ success: true })
 }, 'admin')
 
 export const DELETE = api(async (_request, _context, identity) => {
-  const db = database()
-
-  db.exec('BEGIN IMMEDIATE')
-
-  try {
-    const settings = getSettings()
-
-    db.prepare("DELETE FROM settings WHERE id = 'brand-logo'").run()
-
-    saveSettings({
-      ...settings,
-      logoPath: '',
-    })
-
-    audit(identity.username, 'settings.logo.remove', '')
-
-    db.exec('COMMIT')
-  } catch (error) {
-    db.exec('ROLLBACK')
-
-    throw error
-  }
+  removeLogo(identity.username)
 
   return NextResponse.json({ success: true })
 }, 'admin')
