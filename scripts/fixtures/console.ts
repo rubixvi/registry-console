@@ -1,309 +1,267 @@
-import { createCheck, createRequest } from '../helpers/testing'
-import { type mockConsole } from './mock-console'
+import assert from 'node:assert/strict'
 
-type Input = {
-  base: string
-  origin: string
-  cookie: string
-  readerCookie: string
-  fixture: Awaited<ReturnType<typeof mockConsole>>
-}
+import { type ConsoleProps } from './types'
 
-export async function checkConsole({
-  base,
-  origin,
-  cookie,
-  readerCookie,
-  fixture,
-}: Input): Promise<number> {
-  const check = createCheck()
+export async function checkConsole({ context, request, readerCookie, fixture }: ConsoleProps) {
+  await context.test('Console features', { concurrency: false }, async (t) => {
+    await t.test('audit access is restricted to administrators', async () => {
+      const anonymous = await request('/api/audit', { cookie: '' })
+      const viewer = await request('/api/audit', { cookie: readerCookie })
+      const viewerPage = await request('/audit', { cookie: readerCookie })
+      const adminPage = await request('/audit')
 
-  const request = createRequest({ base, origin, cookie })
+      assert.equal(anonymous.status, 401)
+      assert.equal(viewer.status, 403)
+      assert.equal(viewerPage.status, 307)
+      assert.equal(adminPage.status, 200)
+    })
 
-  check(
-    (await request('/api/audit', { cookie: '' })).status === 401,
-    'audit API requires authentication'
-  )
+    await t.test('audit cursors and date ranges are validated', async () => {
+      const cursor = await request('/api/audit?before=invalid')
+      const dates = await request('/api/audit?from=2026-10-02&to=2026-10-01')
 
-  check(
-    (await request('/api/audit', { cookie: readerCookie })).status === 403,
-    'viewers cannot read the audit API'
-  )
+      assert.equal(cursor.status, 400)
+      assert.equal(dates.status, 400)
+    })
 
-  check(
-    (await request('/audit', { cookie: readerCookie })).status === 307,
-    'viewers cannot open the audit page'
-  )
+    const input = {
+      name: 'Feature registry',
+      url: fixture.origin,
+      username: '',
+      password: '',
+      pullUrl: '',
+      readOnly: false,
+    }
 
-  check((await request('/audit')).status === 200, 'administrators can open the audit page')
+    const created = await request('/api/registries', { method: 'POST', body: input })
 
-  check((await request('/api/audit?before=invalid')).status === 400, 'audit cursors are validated')
+    assert.equal(created.status, 201, 'additional registry connection can be created')
 
-  check(
-    (await request('/api/audit?from=2026-10-02&to=2026-10-01')).status === 400,
-    'audit date ranges are validated'
-  )
+    const { id } = await created.json()
+    const api = `/api/registries/${id}`
+    const repository = 'team/app'
+    const query = new URLSearchParams({ repository, reference: 'latest' })
+    const selection = { repository, tags: ['latest', 'stable', 'worker', 'protected'] }
 
-  const input = {
-    name: 'Feature registry',
-    url: fixture.origin,
-    username: '',
-    password: '',
-    pullUrl: '',
-    readOnly: false,
-  }
+    t.after(async () => {
+      const response = await request(api, { method: 'DELETE', body: {} })
 
-  let response = await request('/api/registries', { method: 'POST', body: input })
+      assert.equal(response.status, 200, 'feature test connection can be removed')
+    })
 
-  check(response.status === 201, 'additional registry connection can be created')
+    await t.test('image views expose the default public pull URL', async () => {
+      const response = await request(`/registries/${id}?${query}`)
+      const html = await response.text()
+      const addresses = [...html.matchAll(/https?:\/\/[a-zA-Z0-9.:-]+/g)]
 
-  const { id } = await response.json()
+      assert.ok(
+        addresses.some(
+          ([address]) => new URL(address).origin === 'https://pull-default.example.com'
+        )
+      )
+      assert.ok(html.includes('href="/audit"'), 'admin sidebar includes audit navigation')
+    })
 
-  const api = `/api/registries/${id}`
+    await t.test('viewer navigation hides administrator pages', async () => {
+      const response = await request('/', { cookie: readerCookie })
+      const html = await response.text()
 
-  const page = `/registries/${id}`
+      assert.ok(!html.includes('href="/audit"'))
+      assert.ok(!html.includes('href="/settings"'))
+    })
 
-  const repository = 'team/app'
+    await t.test('public pull URLs are normalized without changing the API origin', async () => {
+      const updated = await request(api, {
+        method: 'PUT',
+        body: { ...input, pullUrl: 'https://public-registry.example.com/' },
+      })
 
-  const query = new URLSearchParams({ repository, reference: 'latest' })
+      assert.equal(updated.status, 200)
 
-  const defaultHtml = await (await request(`${page}?${query}`)).text()
+      const response = await request('/api/registries')
+      const connections = await response.json()
+      const stored = connections.find((connection: { id: string }) => connection.id === id)
 
-  check(
-    [...defaultHtml.matchAll(/https?:\/\/[a-zA-Z0-9.:-]+/g)].some(
-      ([address]) => new URL(address).origin === 'https://pull-default.example.com'
-    ),
-    'global public pull URL is available to the image view'
-  )
+      assert.equal(stored.pullUrl, 'https://public-registry.example.com')
+      assert.equal(stored.url, fixture.origin)
 
-  check(defaultHtml.includes('href="/audit"'), 'admin sidebar includes audit navigation')
-
-  const viewerHtml = await (await request('/', { cookie: readerCookie })).text()
-
-  check(!viewerHtml.includes('href="/audit"'), 'viewer navigation hides the audit page')
-
-  check(!viewerHtml.includes('href="/settings"'), 'viewer navigation hides administrator settings')
-
-  response = await request(api, {
-    method: 'PUT',
-    body: {
-      ...input,
-      pullUrl: 'https://public-registry.example.com/',
-    },
-  })
-
-  check(response.status === 200, 'per-registry public pull URL can be configured')
-
-  const connections = await (await request('/api/registries')).json()
-
-  const stored = connections.find((connection: { id: string }) => connection.id === id)
-
-  check(
-    stored.pullUrl === 'https://public-registry.example.com',
-    'public pull URL is normalized and persists'
-  )
-
-  check(stored.url === fixture.origin, 'public pull URL does not change the API connection origin')
-
-  check(
-    (
-      await request(api, {
+      const invalid = await request(api, {
         method: 'PUT',
         body: { ...input, pullUrl: 'https://user:secret@example.com' },
       })
-    ).status === 400,
-    'credential-bearing public URLs are rejected'
-  )
 
-  const image = await (await request(`${api}/image?${query}`)).json()
-
-  check(
-    image.history.length === 3 && image.history[0].command === 'RUN build',
-    'image API exposes readable history newest first'
-  )
-
-  check(
-    image.history[1].emptyLayer && image.history[1].size === null,
-    'metadata steps do not consume filesystem layers'
-  )
-
-  const search = await (
-    await request(`/api/search?registry=${id}&query=app&architecture=amd64`, {
-      cookie: readerCookie,
+      assert.equal(invalid.status, 400, 'credential-bearing public URLs are rejected')
     })
-  ).json()
 
-  check(
-    search.results.length === 1 && search.results[0].repository === repository,
-    'viewers can search repositories by name and architecture'
-  )
+    await t.test('image history is newest first and identifies metadata steps', async () => {
+      const response = await request(`${api}/image?${query}`)
+      const image = await response.json()
 
-  const filtered = await (
-    await request(`${api}/browse?repository=${repository}&architecture=arm64`)
-  ).json()
+      assert.equal(image.history.length, 3)
+      assert.equal(image.history[0].command, 'RUN build')
+      assert.equal(image.history[1].emptyLayer, true)
+      assert.equal(image.history[1].size, null)
+    })
 
-  check(filtered.items.length === 0, 'architecture filtering excludes unsupported tag platforms')
-
-  const scanQuery = new URLSearchParams({ repository, digest: image.digest })
-
-  const scan = await (await request(`${api}/scan?${scanQuery}`)).json()
-
-  check(scan.enabled === false, 'scanning is disabled unless explicitly enabled')
-
-  check(
-    (
-      await request(`${api}/scan`, {
-        method: 'POST',
-        body: { repository, digest: image.digest },
+    await t.test('viewers can search repositories by name and architecture', async () => {
+      const response = await request(`/api/search?registry=${id}&query=app&architecture=amd64`, {
         cookie: readerCookie,
       })
-    ).status === 403,
-    'viewers cannot start vulnerability scans'
-  )
+      const search = await response.json()
 
-  check(
-    (
-      await request(`${api}/scan`, {
+      assert.equal(search.results.length, 1)
+      assert.equal(search.results[0].repository, repository)
+    })
+
+    await t.test('architecture filtering excludes unsupported tag platforms', async () => {
+      const response = await request(`${api}/browse?repository=${repository}&architecture=arm64`)
+      const filtered = await response.json()
+
+      assert.equal(filtered.items.length, 0)
+    })
+
+    await t.test(
+      'scanning requires opt-in, administrator access and a trusted origin',
+      async () => {
+        const digest = fixture.tags.get('app')!
+        const scanQuery = new URLSearchParams({ repository, digest })
+        const status = await request(`${api}/scan?${scanQuery}`)
+        const scan = await status.json()
+        const body = { repository, digest }
+
+        assert.equal(scan.enabled, false, 'scanning is disabled unless explicitly enabled')
+
+        const viewer = await request(`${api}/scan`, { method: 'POST', body, cookie: readerCookie })
+        const admin = await request(`${api}/scan`, { method: 'POST', body })
+        const foreign = await request(`${api}/scan`, {
+          method: 'POST',
+          body,
+          origin: 'https://evil.example',
+        })
+
+        assert.equal(viewer.status, 403, 'viewers cannot start scans')
+        assert.equal(admin.status, 409, 'administrators cannot bypass scanner opt-in')
+        assert.equal(foreign.status, 403, 'scan starts reject cross-origin requests')
+      }
+    )
+
+    await t.test('bulk deletion validates permissions, origins and selected tags', async () => {
+      const viewerPreview = await request(`${api}/bulk`, {
         method: 'POST',
-        body: { repository, digest: image.digest },
+        body: selection,
+        cookie: readerCookie,
       })
-    ).status === 409,
-    'administrators cannot bypass the scanner opt-in'
-  )
-
-  check(
-    (
-      await request(`${api}/scan`, {
+      const viewerDelete = await request(`${api}/bulk`, {
+        method: 'DELETE',
+        body: {},
+        cookie: readerCookie,
+      })
+      const foreign = await request(`${api}/bulk`, {
         method: 'POST',
-        body: { repository, digest: image.digest },
+        body: selection,
         origin: 'https://evil.example',
       })
-    ).status === 403,
-    'scan starts reject cross-origin requests'
-  )
-
-  const preview = { repository, tags: ['latest', 'stable', 'worker', 'protected'] }
-
-  check(
-    (await request(`${api}/bulk`, { method: 'POST', body: preview, cookie: readerCookie }))
-      .status === 403,
-    'viewers cannot prepare bulk deletion'
-  )
-
-  check(
-    (await request(`${api}/bulk`, { method: 'DELETE', body: {}, cookie: readerCookie })).status ===
-      403,
-    'viewers cannot execute bulk deletion'
-  )
-
-  check(
-    (
-      await request(`${api}/bulk`, {
-        method: 'POST',
-        body: preview,
-        origin: 'https://evil.example',
-      })
-    ).status === 403,
-    'bulk deletion rejects cross-origin requests'
-  )
-
-  check(
-    (
-      await request(`${api}/bulk`, {
+      const duplicates = await request(`${api}/bulk`, {
         method: 'POST',
         body: { repository, tags: ['latest', 'latest'] },
       })
-    ).status === 400,
-    'duplicate selected tags are rejected'
-  )
 
-  await request(api, { method: 'PUT', body: { ...input, readOnly: true } })
+      assert.equal(viewerPreview.status, 403)
+      assert.equal(viewerDelete.status, 403)
+      assert.equal(foreign.status, 403)
+      assert.equal(duplicates.status, 400)
+    })
 
-  check(
-    (await request(`${api}/bulk`, { method: 'POST', body: preview })).status === 403,
-    'read-only connections reject bulk previews'
-  )
+    await t.test('read-only connections reject bulk previews', async (t) => {
+      t.after(async () => {
+        const response = await request(api, { method: 'PUT', body: input })
 
-  await request(api, { method: 'PUT', body: input })
+        assert.equal(response.status, 200, 'connection can be made writable')
+      })
 
-  response = await request(`${api}/bulk`, { method: 'POST', body: preview })
+      const updated = await request(api, { method: 'PUT', body: { ...input, readOnly: true } })
 
-  check(response.status === 200, 'administrator can prepare bulk deletion')
+      assert.equal(updated.status, 200, 'connection can be made read-only')
 
-  const plan = await response.json()
+      const response = await request(`${api}/bulk`, { method: 'POST', body: selection })
 
-  check(plan.entries.length === 3, 'shared manifest digests are deduplicated in the preview')
+      assert.equal(response.status, 403)
+    })
 
-  check(fixture.deletes.size === 0, 'preview does not delete any registry content')
+    await t.test('bulk deletion deduplicates digests and reports partial failures', async () => {
+      const preview = await request(`${api}/bulk`, { method: 'POST', body: selection })
 
-  check(
-    (
-      await request(`${api}/bulk`, {
+      assert.equal(preview.status, 200)
+
+      const plan = await preview.json()
+
+      assert.equal(plan.entries.length, 3, 'shared manifest digests are deduplicated')
+      assert.equal(fixture.deletes.size, 0, 'preview does not delete registry content')
+
+      const invalid = await request(`${api}/bulk`, {
         method: 'DELETE',
         body: { planId: plan.id, confirmation: 'wrong' },
       })
-    ).status === 400,
-    'repository confirmation is required'
-  )
 
-  response = await request(`${api}/bulk`, {
-    method: 'DELETE',
-    body: { planId: plan.id, confirmation: repository },
-  })
+      assert.equal(invalid.status, 400, 'repository confirmation is required')
 
-  check(response.status === 200, 'confirmed bulk deletion returns individual outcomes')
-
-  const result = await response.json()
-
-  check(result.deleted === 2 && result.failed === 1, 'partial deletion failures remain visible')
-
-  check(fixture.deletes.get(fixture.tags.get('app')!) === 1, 'a shared digest is deleted only once')
-
-  check(
-    (
-      await request(`${api}/bulk`, {
+      const deleted = await request(`${api}/bulk`, {
         method: 'DELETE',
         body: { planId: plan.id, confirmation: repository },
       })
-    ).status === 400,
-    'deletion plans cannot be replayed'
-  )
 
-  const remaining = await (await request(`${api}/tags?repository=team%2Fapp`)).json()
+      assert.equal(deleted.status, 200)
 
-  check(
-    remaining.items.length === 1 && remaining.items[0] === 'protected',
-    'only failed deletions remain in the tag list'
-  )
+      const result = await deleted.json()
 
-  const log = await (await request('/api/audit?action=manifest.bulk.complete')).json()
+      assert.equal(result.deleted, 2)
+      assert.equal(result.failed, 1)
+      assert.equal(
+        fixture.deletes.get(fixture.tags.get('app')!),
+        1,
+        'shared digest is deleted once'
+      )
 
-  check(
-    log.items.some(
-      (entry: { actor: string; target: string }) =>
-        entry.actor === 'admin' && JSON.parse(entry.target).failed === 1
-    ),
-    'bulk outcomes are visible in the administrator audit log'
-  )
+      const replay = await request(`${api}/bulk`, {
+        method: 'DELETE',
+        body: { planId: plan.id, confirmation: repository },
+      })
 
-  const first = await (await request('/api/audit?n=2')).json()
+      assert.equal(replay.status, 400, 'deletion plans cannot be replayed')
 
-  const second = await (await request(`/api/audit?n=2&before=${first.next}`)).json()
+      const remainingResponse = await request(`${api}/tags?repository=team%2Fapp`)
+      const remaining = await remainingResponse.json()
 
-  check(
-    first.items.length === 2 && second.items.length === 2 && first.items[1].id > second.items[0].id,
-    'audit pagination has stable descending cursors'
-  )
+      assert.deepEqual(remaining.items, ['protected'], 'only failed deletions remain')
+    })
 
-  check(
-    (await request('/api/audit?query=%25_%27')).status === 200,
-    'audit searches safely handle wildcard and quote characters'
-  )
+    await t.test('bulk outcomes appear in the administrator audit log', async () => {
+      const response = await request('/api/audit?action=manifest.bulk.complete')
+      const log = await response.json()
 
-  check(
-    (await request(api, { method: 'DELETE', body: {} })).status === 200,
-    'feature test connection can be removed'
-  )
+      assert.ok(
+        log.items.some(
+          (entry: { actor: string; target: string }) =>
+            entry.actor === 'admin' && JSON.parse(entry.target).failed === 1
+        )
+      )
+    })
 
-  return check.count
+    await t.test('audit pagination has stable descending cursors', async () => {
+      const firstResponse = await request('/api/audit?n=2')
+      const first = await firstResponse.json()
+      const secondResponse = await request(`/api/audit?n=2&before=${first.next}`)
+      const second = await secondResponse.json()
+
+      assert.equal(first.items.length, 2)
+      assert.equal(second.items.length, 2)
+      assert.ok(first.items[1].id > second.items[0].id)
+    })
+
+    await t.test('audit searches handle wildcard and quote characters', async () => {
+      const response = await request('/api/audit?query=%25_%27')
+
+      assert.equal(response.status, 200)
+    })
+  })
 }

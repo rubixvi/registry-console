@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
 
 import { limitSignIn } from '@/lib/auth/limit'
-import { authenticationOptions } from '@/lib/auth/passkeys'
+import { authenticationOptions } from '@/lib/auth/passkey'
 import { issueRequest } from '@/lib/auth/requests'
 import { apiError } from '@/lib/security/api'
 import { requireOrigin } from '@/lib/security/request'

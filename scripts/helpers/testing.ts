@@ -1,34 +1,9 @@
 import assert from 'node:assert/strict'
 
-type Props = {
-  base: string
-  origin: string
-  method?: string
-  cookie?: string
-  jar?: Map<string, string>
-}
+import { type RequestOptions, type RequestProps, type SignInProps } from './types'
 
-type Options = {
-  method?: string
-  body?: unknown
-  cookie?: string
-  origin?: string
-  fresh?: boolean
-}
-
-export function createCheck() {
-  function check(value: unknown, message: string): void {
-    assert.ok(value, message)
-    check.count++
-  }
-
-  check.count = 0
-
-  return check
-}
-
-export function createRequest({ base, origin, method = 'GET', cookie, jar }: Props) {
-  return async function request(url: string, options: Options = {}): Promise<Response> {
+export function createRequest({ base, origin, method = 'GET', cookie, jar }: RequestProps) {
+  return async function request(url: string, options: RequestOptions = {}): Promise<Response> {
     const headers = new Headers({
       Origin: options.origin ?? origin,
       'Content-Type': 'application/json',
@@ -64,4 +39,21 @@ export function createRequest({ base, origin, method = 'GET', cookie, jar }: Pro
 
     return response
   }
+}
+
+export async function signIn({ request, username, password }: SignInProps) {
+  const response = await request('/api/auth/login', {
+    method: 'POST',
+    body: { username, password },
+  })
+
+  assert.equal(response.status, 200, `${username} can sign in`)
+
+  const setCookie = response.headers.get('set-cookie') ?? ''
+  const cookie = setCookie.split(';')[0]
+
+  assert.match(cookie, /^(?:__Host-)?registry_session=.+/, 'login issues a session cookie')
+  await response.body?.cancel()
+
+  return { cookie, setCookie }
 }

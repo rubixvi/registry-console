@@ -6,7 +6,12 @@ import path from 'node:path'
 import { after, test } from 'node:test'
 import { NextResponse } from 'next/server'
 
-import { authPasskey, findPasskey, registerPasskey, regOptions } from '../src/lib/auth/passkeys'
+import {
+  authenticatePasskey,
+  findPasskey,
+  registerOptions,
+  registerPasskey,
+} from '../src/lib/auth/passkey'
 import { issueRequest, readRequest, requireSecurity } from '../src/lib/auth/requests'
 import {
   generateTotpSecret,
@@ -179,7 +184,7 @@ test('challenges are single-use, purpose-bound, expiring, and session-bound', ()
 
 test('passkeys verify real signatures, require device verification, and bind origin, challenge, owner, and user handle', async () => {
   const device = virtualPasskey()
-  const { options, userId } = await regOptions(user)
+  const { options, userId } = await registerOptions(user)
   const origin = process.env.APP_ORIGIN!
 
   await assert.rejects(
@@ -214,32 +219,34 @@ test('passkeys verify real signatures, require device verification, and bind ori
   const challenge = randomBytes(32).toString('base64url')
 
   await assert.rejects(
-    authPasskey(user, device.authentication(challenge, origin, handle, false), challenge)
+    authenticatePasskey(user, device.authentication(challenge, origin, handle, false), challenge)
   )
 
   await assert.rejects(
-    authPasskey(
+    authenticatePasskey(
       user,
       device.authentication(challenge, 'https://other.example.com', handle),
       challenge
     )
   )
 
-  await assert.rejects(authPasskey(user, device.authentication(challenge, origin, handle), 'wrong'))
+  await assert.rejects(
+    authenticatePasskey(user, device.authentication(challenge, origin, handle), 'wrong')
+  )
 
   await assert.rejects(
-    authPasskey(user, device.authentication(challenge, origin, 'wrong'), challenge)
+    authenticatePasskey(user, device.authentication(challenge, origin, 'wrong'), challenge)
   )
 
   const assertion = device.authentication(challenge, origin, handle)
 
-  await authPasskey(user, assertion, challenge)
+  await authenticatePasskey(user, assertion, challenge)
 
   assert.ok(findPasskey(device.id)?.last_used)
 
-  await assert.rejects(authPasskey(user, assertion, challenge))
+  await assert.rejects(authenticatePasskey(user, assertion, challenge))
 
-  await authPasskey(
+  await authenticatePasskey(
     {
       ...user,
       passwordHash: 'changed',
@@ -248,7 +255,7 @@ test('passkeys verify real signatures, require device verification, and bind ori
     challenge
   )
 
-  await authPasskey(
+  await authenticatePasskey(
     {
       ...user,
       role: 'viewer',
@@ -258,7 +265,7 @@ test('passkeys verify real signatures, require device verification, and bind ori
   )
 
   await assert.rejects(
-    authPasskey(
+    authenticatePasskey(
       {
         ...user,
         username: 'another-user',
@@ -272,5 +279,5 @@ test('passkeys verify real signatures, require device verification, and bind ori
 
   tampered.response.signature = randomBytes(70).toString('base64url')
 
-  await assert.rejects(authPasskey(user, tampered, challenge))
+  await assert.rejects(authenticatePasskey(user, tampered, challenge))
 })

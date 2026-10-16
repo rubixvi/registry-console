@@ -7,7 +7,7 @@ type Props = {
   children?: ReactNode
 }
 
-export function PageHeading({ eyebrow, title, description, children }: Props) {
+export function Heading({ eyebrow, title, description, children }: Props) {
   return (
     <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
       <div className="min-w-0">

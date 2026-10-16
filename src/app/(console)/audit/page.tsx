@@ -2,12 +2,12 @@ import { type Metadata } from 'next'
 import { redirect } from 'next/navigation'
 
 import { AuditLog } from '@/components/audit/log'
-import { PageHeading } from '@/components/layout/page-heading'
+import { Heading } from '@/components/layout/heading'
 import { getIdentity } from '@/lib/auth/session'
 
 export const metadata: Metadata = {
   title: 'Audit',
-  description: 'Review workspace activity and authentication events.',
+  description: 'Review workspace activity and events.',
 }
 
 export default async function AuditPage() {
@@ -17,10 +17,7 @@ export default async function AuditPage() {
 
   return (
     <>
-      <PageHeading
-        description="Review workspace activity and authentication events."
-        title="Audit"
-      />
+      <Heading description="Review workspace activity and events." title="Audit" />
 
       <AuditLog />
     </>

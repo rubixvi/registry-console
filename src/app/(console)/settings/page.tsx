@@ -2,7 +2,7 @@ import { type Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { ShieldCheck, Users } from 'lucide-react'
 
-import { PageHeading } from '@/components/layout/page-heading'
+import { Heading } from '@/components/layout/heading'
 import { BrandingForm } from '@/components/settings/branding'
 import { Badge } from '@/components/ui/badge'
 import { getIdentity } from '@/lib/auth/session'
@@ -24,7 +24,7 @@ export default async function SettingsPage() {
 
   return (
     <>
-      <PageHeading
+      <Heading
         description="Apply your branding across the workspace and login screen."
         title="Settings"
       />
@@ -55,7 +55,7 @@ export default async function SettingsPage() {
 
             <p className="mt-5 text-xs leading-6 text-muted-foreground">
               Manage usernames, password hashes, and roles using environment variables. Restart the
-              app to apply changes and sign out affected users.
+              application to apply changes.
             </p>
           </section>
 
@@ -82,7 +82,7 @@ export default async function SettingsPage() {
             </dl>
 
             <p className="mt-5 border-t pt-4 text-xs leading-6 text-muted-foreground">
-              Mark a connection as read only to disable deletion for everyone.
+              Mark a connection as read only to disable deletion.
             </p>
           </section>
         </div>
