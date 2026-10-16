@@ -1,4 +1,4 @@
-import { type NamespaceNode } from '@/types/namespace'
+import { type NamespaceNode } from '@/types/registry'
 
 export function namespaceTree(repositories: string[]): NamespaceNode[] {
   const roots: NamespaceNode[] = []

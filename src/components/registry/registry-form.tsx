@@ -134,6 +134,7 @@ export function RegistryForm({ registry }: Props) {
             >
               Cancel
             </Button>
+
             <Button className="min-w-24" disabled={busy} type="submit">
               {busy ? 'Saving…' : 'Save'}
             </Button>

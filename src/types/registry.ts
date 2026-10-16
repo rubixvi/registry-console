@@ -61,3 +61,10 @@ export type TokenCache = {
   value: string
   expires: number
 }
+
+export type NamespaceNode = {
+  name: string
+  path: string
+  repository: boolean
+  children: NamespaceNode[]
+}

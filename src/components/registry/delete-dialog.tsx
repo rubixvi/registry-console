@@ -39,23 +39,19 @@ export function DeleteDialog({ id, repository, digest }: Props) {
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button
-          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-          type="button"
-          variant="outline"
-        >
+        <Button type="button" variant="destructive">
           <Trash2 aria-hidden="true" />
-          Delete manifest
+          Delete
         </Button>
       </AlertDialogTrigger>
 
       <AlertDialogContent aria-busy={busy}>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete this image manifest?</AlertDialogTitle>
+          <AlertDialogTitle>Delete</AlertDialogTitle>
+
           <AlertDialogDescription>
             This permanently deletes the manifest by digest. All tags pointing to it in this
-            repository will stop working. Storage is reclaimed separately through registry garbage
-            collection.
+            repository will stop working.
           </AlertDialogDescription>
         </AlertDialogHeader>
 
@@ -63,6 +59,7 @@ export function DeleteDialog({ id, repository, digest }: Props) {
 
         <div className="grid gap-2">
           <Label htmlFor={confirmationId}>Type {repository} to confirm</Label>
+
           <Input
             autoCapitalize="none"
             autoComplete="off"
@@ -78,6 +75,7 @@ export function DeleteDialog({ id, repository, digest }: Props) {
 
         <AlertDialogFooter>
           <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
+
           <AlertDialogAction
             className="bg-destructive text-white hover:bg-destructive/90"
             disabled={!canDelete}

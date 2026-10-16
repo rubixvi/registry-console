@@ -2,9 +2,11 @@
 
 import Link from 'next/link'
 import { ArrowRight, RefreshCw, Search, Tag as TagIcon } from 'lucide-react'
+import { useSWRConfig } from 'swr'
 
 import { BulkDeleteDialog } from '@/components/registry/bulk-delete'
 import { Controls } from '@/components/registry/controls'
+import { Metadata } from '@/components/registry/metadata'
 import { ErrorMessage } from '@/components/shared/error-message'
 import { Loading } from '@/components/shared/loading'
 import { Button } from '@/components/ui/button'
@@ -32,10 +34,29 @@ type Props = {
 export function Tag({ id, repository, admin, readOnly, defaultOrder }: Props) {
   const ordering = useTagOrder(defaultOrder)
   const state = useRegistryPage(id, repository, ordering.order)
+  const { mutate } = useSWRConfig()
+
   const scope = `${id}/${repository}/${ordering.order}/${state.query}/${state.page}/${state.items.join(',')}`
-  const bulk = useBulkDelete(id, repository, scope, state.items, state.refresh)
+  const bulk = useBulkDelete(id, repository, scope, state.items, refresh)
+
   const canDelete = admin && !readOnly
   const registryPath = `/registries/${encodeURIComponent(id)}`
+
+  async function refresh(): Promise<void> {
+    await state.refresh()
+
+    await mutate(
+      (key) => {
+        if (typeof key !== 'string' || !key.startsWith(`/api${registryPath}/image?`)) {
+          return false
+        }
+
+        return new URLSearchParams(key.split('?')[1]).get('repository') === repository
+      },
+      undefined,
+      { revalidate: true }
+    )
+  }
 
   let content = (
     <p className="p-12 text-center text-sm text-muted-foreground">
@@ -80,7 +101,18 @@ export function Tag({ id, repository, admin, readOnly, defaultOrder }: Props) {
               }}
             >
               <TagIcon aria-hidden="true" className="size-4 shrink-0 text-primary" />
-              <code className="min-w-0 flex-1 break-all text-sm">{tag}</code>
+
+              <div className="min-w-0 flex-1">
+                <code className="break-all text-sm">{tag}</code>
+
+                <Metadata
+                  id={id}
+                  key={`${repository}/${tag}`}
+                  reference={tag}
+                  repository={repository}
+                />
+              </div>
+
               <ArrowRight aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
             </Link>
           </li>
@@ -96,10 +128,9 @@ export function Tag({ id, repository, admin, readOnly, defaultOrder }: Props) {
     >
       <div className="flex flex-wrap items-center justify-between gap-4 border-b p-5">
         <div>
-          <h2 className="font-semibold">Image tags</h2>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {state.data?.items.length ?? 0} tags · Search and ordering cover all tags.
-          </p>
+          <h2 className="font-semibold">Tags</h2>
+
+          <p className="mt-1 text-xs text-muted-foreground">{state.data?.items.length ?? 0} tags</p>
         </div>
 
         <div className="grid w-full grid-cols-[minmax(0,1fr)_auto] gap-2 sm:flex sm:w-auto">
@@ -110,15 +141,15 @@ export function Tag({ id, repository, admin, readOnly, defaultOrder }: Props) {
             }}
             value={ordering.order}
           >
-            <SelectTrigger aria-label="Tag order" className="w-full sm:w-44">
+            <SelectTrigger aria-label="Tag order" className="w-full sm:w-34">
               <SelectValue />
             </SelectTrigger>
 
             <SelectContent>
-              <SelectItem value="natural-asc">Numeric ascending</SelectItem>
-              <SelectItem value="natural-desc">Numeric descending</SelectItem>
-              <SelectItem value="alpha-asc">Alphabetical A–Z</SelectItem>
-              <SelectItem value="alpha-desc">Alphabetical Z–A</SelectItem>
+              <SelectItem value="natural-asc">Numeric ↑</SelectItem>
+              <SelectItem value="natural-desc">Numeric ↓</SelectItem>
+              <SelectItem value="alpha-asc">Alphabetic ↑</SelectItem>
+              <SelectItem value="alpha-desc">Alphabetic ↓</SelectItem>
             </SelectContent>
           </Select>
 
@@ -127,6 +158,7 @@ export function Tag({ id, repository, admin, readOnly, defaultOrder }: Props) {
               aria-hidden="true"
               className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
             />
+
             <Input
               aria-label="Filter tags"
               className="pl-9"
@@ -140,7 +172,7 @@ export function Tag({ id, repository, admin, readOnly, defaultOrder }: Props) {
             aria-label="Refresh tags"
             className="col-start-2 row-start-1 shrink-0"
             disabled={state.isValidating}
-            onClick={state.refresh}
+            onClick={refresh}
             size="icon"
             type="button"
             variant="outline"
@@ -166,7 +198,7 @@ export function Tag({ id, repository, admin, readOnly, defaultOrder }: Props) {
               }}
               type="checkbox"
             />
-            Select this page
+            Select all
           </label>
 
           <BulkDeleteDialog repository={repository} state={bulk} />

@@ -28,6 +28,7 @@ export default async function RegistryPage({ params, searchParams }: Props) {
 
   const { id } = await params
   const { repository, reference } = await searchParams
+
   const registry = getRegistries().find((registry) => registry.id === id)
 
   if (!registry) notFound()

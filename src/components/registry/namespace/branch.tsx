@@ -4,15 +4,15 @@ import { useState } from 'react'
 
 import { Node } from '@/components/registry/namespace/node'
 import { Button } from '@/components/ui/button'
-import { type NamespaceNode } from '@/types/namespace'
+import { type NamespaceNode } from '@/types/registry'
 
-type BranchProps = {
+type Props = {
   id: string
   nodes: NamespaceNode[]
   expanded: boolean
 }
 
-export function Branch({ id, nodes, expanded }: BranchProps) {
+export function Branch({ id, nodes, expanded }: Props) {
   const [limit, setLimit] = useState(100)
 
   return (

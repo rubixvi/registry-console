@@ -32,7 +32,7 @@ export function Connection({ registry, admin }: Props) {
       <div className="flex flex-wrap items-start gap-3">
         <Button disabled={busy} onClick={test} type="button" variant="outline">
           <PlugZap aria-hidden="true" />
-          Test connection
+          Test
         </Button>
 
         {admin && (
@@ -41,20 +41,15 @@ export function Connection({ registry, admin }: Props) {
 
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button
-                  className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                  disabled={busy}
-                  type="button"
-                  variant="ghost"
-                >
+                <Button disabled={busy} type="button" variant="destructive">
                   <Unplug aria-hidden="true" />
-                  Remove connection
+                  Remove
                 </Button>
               </AlertDialogTrigger>
 
               <AlertDialogContent aria-busy={busy}>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Remove this connection?</AlertDialogTitle>
+                  <AlertDialogTitle>Remove</AlertDialogTitle>
                   <AlertDialogDescription>
                     This removes {registry.name} from this workspace. Images in the registry are
                     retained.
@@ -70,7 +65,7 @@ export function Connection({ registry, admin }: Props) {
                     disabled={busy}
                     onClick={remove}
                   >
-                    {busy ? 'Removing…' : 'Remove connection'}
+                    {busy ? 'Removing…' : 'Remove'}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>

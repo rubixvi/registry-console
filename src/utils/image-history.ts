@@ -1,10 +1,10 @@
 import { imageHistorySchema } from '@/lib/validation/history'
-import { type ImageHistoryEntry, type ImageManifest } from '@/types/image'
+import { type HistoryEntry, type ImageManifest } from '@/types/image'
 
 export function imageHistory(
   config: unknown,
   layers: ImageManifest['layers'] = []
-): ImageHistoryEntry[] {
+): HistoryEntry[] {
   const parsed = imageHistorySchema.safeParse(config)
 
   if (!parsed.success || !parsed.data.history) return []

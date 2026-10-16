@@ -36,10 +36,10 @@ export function BulkDeleteDialog({ repository, state }: Props) {
           disabled={!state.selected.length || state.busy}
           onClick={() => void state.prepare()}
           type="button"
-          variant="outline"
+          variant="destructive"
         >
           <Trash2 aria-hidden="true" />
-          Delete selected ({state.selected.length})
+          Delete {state.selected.length > 0 && `(${state.selected.length})`}
         </Button>
       </AlertDialogTrigger>
 
@@ -48,19 +48,17 @@ export function BulkDeleteDialog({ repository, state }: Props) {
         className="max-h-[90dvh] overflow-y-auto sm:max-w-xl"
       >
         <AlertDialogHeader>
-          <AlertDialogTitle>
-            {state.result ? 'Deletion results' : 'Delete selected image manifests?'}
-          </AlertDialogTitle>
+          <AlertDialogTitle>{state.result ? 'Deletion results' : 'Delete image'}</AlertDialogTitle>
 
           <AlertDialogDescription>
             {state.result
               ? `Deleted ${state.result.deleted} manifests. ${state.result.failed} failed.`
-              : 'All tags sharing these manifests, including unselected tags, will stop working. Storage is reclaimed separately through registry garbage collection.'}
+              : 'All tags sharing these manifests, including unselected tags, will stop working.'}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
         {state.busy && !state.plan && (
-          <p className="text-sm text-muted-foreground">Resolving selected tags…</p>
+          <p className="text-sm text-muted-foreground">Resolving tags…</p>
         )}
 
         {state.plan && !state.result && (
@@ -131,7 +129,7 @@ export function BulkDeleteDialog({ repository, state }: Props) {
               disabled={!canDelete}
               onClick={state.remove}
             >
-              {state.busy ? 'Deleting…' : 'Delete manifests'}
+              {state.busy ? 'Deleting…' : 'Delete'}
             </AlertDialogAction>
           )}
         </AlertDialogFooter>

@@ -7,10 +7,12 @@ export type ImageDetails = {
   digest: string
   mediaType: string
   size: number
+  created: string | null
+  platformDetails: PlatformDetails[]
   platforms: string[]
   manifest: unknown
   config: unknown
-  history: ImageHistoryEntry[]
+  history: HistoryEntry[]
   labels: ImageLabel[]
 }
 
@@ -26,20 +28,28 @@ export type ImagePlatform = {
   variant?: string
 }
 
-export type ImageManifestEntry = {
+export type ManifestEntry = {
   digest: string
   platform?: ImagePlatform
+  annotations?: unknown
+}
+
+export type PlatformDetails = {
+  digest: string
+  platform: string
+  size: number
+  created: string | null
 }
 
 export type ImageSummary = {
   created: string
   platform: string
-  children: ImageManifestEntry[]
+  children: ManifestEntry[]
 }
 
 export type ImageManifest = z.infer<typeof manifestSchema>
 
-export type ImageHistoryEntry = {
+export type HistoryEntry = {
   step: number
   created: string | null
   command: string

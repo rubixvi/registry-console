@@ -19,7 +19,9 @@ type Props = {
 export function RegistrySelector({ registries }: Props) {
   const pathname = usePathname()
   const router = useRouter()
+
   const id = pathname.startsWith('/registries/') ? pathname.split('/')[2] : ''
+
   const current = registries.some((registry) => registry.id === id) ? id : 'all'
 
   function select(value: string): void {
@@ -31,6 +33,7 @@ export function RegistrySelector({ registries }: Props) {
       <SelectTrigger aria-label="Registry" className="border-white/15 bg-white/5 text-white w-full">
         <span className="flex min-w-0 items-center gap-2">
           <Network aria-hidden="true" className="size-4 shrink-0" />
+
           <SelectValue className="truncate" placeholder="Select registry" />
         </span>
       </SelectTrigger>

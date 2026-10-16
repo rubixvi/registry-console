@@ -7,27 +7,36 @@ import { registryRequest } from '@/lib/registry/client'
 import { AppError } from '@/lib/security/error'
 import { manifestSchema } from '@/lib/validation/image'
 import { referenceName, repositoryName } from '@/lib/validation/registry'
-import { type ImageDetails, type ImageManifest } from '@/types/image'
+import { type ImageDetails, type ImageManifest, type PlatformDetails } from '@/types/image'
 import { type RegistryRecord } from '@/types/registry'
 import { imageHistory } from '@/utils/image-history'
 import { imageLabels } from '@/utils/image-labels'
+import { createdAnnotation, imageCreated, isAttestation } from '@/utils/image-metadata'
 
 export async function imageManifest(
   registry: RegistryRecord,
   repository: string,
   reference: string,
   refresh = false
-): Promise<{ manifest: ImageManifest; digest: string; verified: boolean; mediaType: string }> {
+): Promise<{
+  manifest: ImageManifest
+  digest: string
+  verified: boolean
+  mediaType: string
+}> {
   repositoryName.parse(repository)
   referenceName.parse(reference)
 
   const encoded = repository.split('/').map(encodeURIComponent).join('/')
-
   const scope = `repository:${repository}:pull`
+
   const result = await registryRequest(
     registry,
     `/v2/${encoded}/manifests/${encodeURIComponent(reference)}`,
-    { scope, cache: refresh ? 'reload' : 'default' }
+    {
+      scope,
+      cache: refresh ? 'reload' : 'default',
+    }
   )
 
   let manifest: ImageManifest
@@ -59,6 +68,36 @@ export async function imageManifest(
   }
 }
 
+async function imageConfiguration(
+  registry: RegistryRecord,
+  repository: string,
+  manifest: ImageManifest,
+  refresh: boolean
+): Promise<unknown> {
+  if (!manifest.config) {
+    return null
+  }
+
+  const encoded = repository.split('/').map(encodeURIComponent).join('/')
+
+  const blob = await registryRequest(registry, `/v2/${encoded}/blobs/${manifest.config.digest}`, {
+    scope: `repository:${repository}:pull`,
+    cache: refresh ? 'reload' : 'default',
+  })
+
+  const digest = `sha256:${createHash('sha256').update(blob.text).digest('hex')}`
+
+  if (digest !== manifest.config.digest) {
+    throw new AppError(502, 'Image configuration digest verification failed.')
+  }
+
+  try {
+    return JSON.parse(blob.text)
+  } catch {
+    throw new AppError(502, 'Registry returned invalid image configuration.')
+  }
+}
+
 export async function imageDetails(
   registry: RegistryRecord,
   repository: string,
@@ -71,55 +110,111 @@ export async function imageDetails(
     reference,
     refresh
   )
-  const encoded = repository.split('/').map(encodeURIComponent).join('/')
-  const scope = `repository:${repository}:pull`
+
+  const blobs = new Map<string, number>()
+  const visited = new Set<string>()
+  const platformDetails: PlatformDetails[] = []
+  const deadline = Date.now() + 45_000
+
   let config: unknown = null
 
-  if (manifest.config) {
-    const blob = await registryRequest(registry, `/v2/${encoded}/blobs/${manifest.config.digest}`, {
-      scope,
-      cache: refresh ? 'reload' : 'default',
+  async function inspect(
+    current: ImageManifest,
+    currentDigest: string,
+    depth: number,
+    fallbackPlatform = ''
+  ): Promise<void> {
+    if (visited.has(currentDigest)) {
+      return
+    }
+
+    if (Date.now() >= deadline) {
+      throw new AppError(504, 'Image metadata inspection timed out. Refresh to try again.')
+    }
+
+    if (depth > 4 || visited.size >= 32) {
+      throw new AppError(413, 'Image index exceeds the supported metadata inspection limit.')
+    }
+
+    visited.add(currentDigest)
+
+    if (current.manifests) {
+      for (const child of current.manifests) {
+        if (isAttestation(child)) {
+          continue
+        }
+
+        const result = await imageManifest(registry, repository, child.digest, refresh)
+
+        const platform = child.platform
+          ? [child.platform.os, child.platform.architecture, child.platform.variant]
+              .filter(Boolean)
+              .join('/')
+          : fallbackPlatform
+
+        await inspect(result.manifest, result.digest, depth + 1, platform)
+      }
+
+      return
+    }
+
+    const currentConfig = await imageConfiguration(registry, repository, current, refresh)
+
+    if (currentDigest === digest) {
+      config = currentConfig
+    }
+
+    const object =
+      typeof currentConfig === 'object' && currentConfig !== null
+        ? (currentConfig as Record<string, unknown>)
+        : null
+
+    const layers = current.layers ?? []
+    const descriptors = current.config ? [current.config, ...layers] : layers
+
+    for (const descriptor of descriptors) {
+      const previous = blobs.get(descriptor.digest)
+
+      if (previous !== undefined && previous !== descriptor.size) {
+        throw new AppError(502, 'Image descriptors disagree on the size of a shared blob.')
+      }
+
+      blobs.set(descriptor.digest, descriptor.size)
+    }
+
+    const platform =
+      fallbackPlatform ||
+      (typeof object?.os === 'string' && typeof object.architecture === 'string'
+        ? [object.os, object.architecture, object.variant]
+            .filter((part) => typeof part === 'string')
+            .join('/')
+        : 'Not provided')
+
+    const created = imageCreated(object?.created) ?? createdAnnotation(current.annotations)
+
+    platformDetails.push({
+      digest: currentDigest,
+      platform,
+      created,
+      size: descriptors.reduce((total, descriptor) => total + descriptor.size, 0),
     })
-
-    const configHash = createHash('sha256').update(blob.text).digest('hex')
-    const configDigest = `sha256:${configHash}`
-
-    if (configDigest !== manifest.config.digest) {
-      throw new AppError(502, 'Image configuration digest verification failed.')
-    }
-
-    try {
-      config = JSON.parse(blob.text)
-    } catch {
-      throw new AppError(502, 'Registry returned invalid image configuration.')
-    }
   }
 
-  const layers = manifest.layers ?? []
-  const manifests = manifest.manifests ?? []
-  const configSize = manifest.config?.size ?? 0
-  const size = layers.reduce((total, layer) => total + layer.size, configSize)
-  const platforms: string[] = []
+  await inspect(manifest, digest, 0)
 
-  for (const entry of manifests) {
-    if (!entry.platform) continue
+  const dates = platformDetails.flatMap((entry) => (entry.created ? [entry.created] : [])).sort()
 
-    const { os, architecture, variant } = entry.platform
-    const parts = [os, architecture]
-
-    if (variant) {
-      parts.push(variant)
-    }
-
-    platforms.push(parts.join('/'))
-  }
+  const created = dates.at(-1) ?? createdAnnotation(manifest.annotations)
+  const platforms = [...new Set(platformDetails.map((entry) => entry.platform))]
 
   return {
     verified,
     digest,
     mediaType,
-    size,
+    size: [...blobs.values()].reduce((total, size) => total + size, 0),
+    created,
     platforms,
+    platformDetails,
     manifest,
     config,
     history: imageHistory(config, manifest.layers),

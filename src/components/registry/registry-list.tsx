@@ -14,7 +14,7 @@ type Props = {
 export function RegistryList({ registries, identity }: Props) {
   const isAdmin = identity.role === 'admin'
   const count = registries.length
-  const connectionLabel = count === 1 ? 'connection' : 'connections'
+  const connection = count === 1 ? 'connection' : 'connections'
 
   return (
     <>
@@ -22,7 +22,7 @@ export function RegistryList({ registries, identity }: Props) {
 
       <div className="mb-7 flex flex-wrap items-center justify-between gap-4">
         <p className="text-sm text-muted-foreground">
-          {count} configured {connectionLabel}
+          {count} configured {connection}
         </p>
 
         {isAdmin && <RegistryForm />}
@@ -44,7 +44,7 @@ export function RegistryList({ registries, identity }: Props) {
 
           <p className="mt-3 max-w-sm text-sm leading-6 text-muted-foreground">
             {isAdmin
-              ? 'Add a compatible registry to browse its repositories and image tags.'
+              ? 'Add a registry to browse its repositories.'
               : 'Ask an administrator to add a registry connection.'}
           </p>
         </section>

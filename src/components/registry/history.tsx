@@ -1,25 +1,27 @@
 import { History as HistoryIcon } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
-import { type ImageHistoryEntry, type ImageLabel } from '@/types/image'
+import { type HistoryEntry, type ImageLabel } from '@/types/image'
 import { formatBytes } from '@/utils/format-bytes'
 
 type Props = {
-  entries: ImageHistoryEntry[]
+  entries: HistoryEntry[]
   labels: ImageLabel[]
 }
 
 export function ImageHistory({ entries, labels }: Props) {
+  const steps = [...entries].reverse()
+
   return (
     <section className="overflow-hidden rounded-xl border bg-card">
       <div className="border-b p-5">
         <h2 className="flex items-center gap-2 font-semibold">
           <HistoryIcon aria-hidden="true" className="size-4 text-primary" />
-          Image history
+          History
         </h2>
 
         <p className="mt-1 text-xs text-muted-foreground">
-          Build steps, newest first. Sizes refer to compressed layers.
+          Build steps. Sizes refer to compressed layers.
         </p>
       </div>
 
@@ -28,15 +30,16 @@ export function ImageHistory({ entries, labels }: Props) {
           {labels.map((label) => (
             <div className="space-y-1" key={label.name}>
               <dt className="break-all font-mono text-xs text-muted-foreground">{label.name}</dt>
+
               <dd className="whitespace-pre-wrap break-all">{label.value}</dd>
             </div>
           ))}
         </dl>
       )}
 
-      {entries.length ? (
+      {steps.length > 0 ? (
         <ol className="max-h-160 divide-y overflow-auto">
-          {entries.map((entry) => (
+          {steps.map((entry) => (
             <li className="space-y-3 p-5" key={entry.step}>
               <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
                 <span>
@@ -45,7 +48,7 @@ export function ImageHistory({ entries, labels }: Props) {
                 </span>
 
                 {entry.emptyLayer ? (
-                  <Badge>Metadata only</Badge>
+                  <Badge>Metadata</Badge>
                 ) : (
                   <span>{entry.size === null ? 'Size not provided' : formatBytes(entry.size)}</span>
                 )}

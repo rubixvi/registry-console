@@ -12,6 +12,7 @@ import { useResource } from '@/hooks/shared/use-resource'
 import { type ImageDetails } from '@/types/image'
 import { type Registry } from '@/types/registry'
 import { formatBytes } from '@/utils/format-bytes'
+import { isAttestation } from '@/utils/image-metadata'
 import { imageSummary } from '@/utils/image-summary'
 import { pullCommand } from '@/utils/pull-command'
 
@@ -38,6 +39,7 @@ export function Inspector({ registry, repository, reference, admin, pullUrl }: P
   const summary = imageSummary(data)
   const command = pullCommand(registry.url, repository, reference, pullUrl)
   const hasChildren = summary.children.length > 0
+  const multiple = data.platformDetails.length > 1
   const canDelete = admin && !registry.readOnly
 
   const digestLabel = data.verified ? 'Digest verified' : 'Digest calculated'
@@ -51,7 +53,7 @@ export function Inspector({ registry, repository, reference, admin, pullUrl }: P
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <h2 className="flex items-center gap-2 font-semibold">
             <Layers3 aria-hidden="true" className="size-5 text-primary" />
-            Image overview
+            Overview
           </h2>
 
           <span className={`flex items-center gap-1.5 text-xs ${digestColour}`}>
@@ -62,10 +64,10 @@ export function Inspector({ registry, repository, reference, admin, pullUrl }: P
 
         <dl className="grid gap-6 text-sm sm:grid-cols-3">
           <div>
-            <dt className="text-xs text-muted-foreground">Compressed size</dt>
-            <dd className="mt-2 font-medium">
-              {hasChildren ? 'Per platform manifest' : formatBytes(data.size)}
-            </dd>
+            <dt className="text-xs text-muted-foreground">
+              {multiple ? 'Total compressed size' : 'Compressed size'}
+            </dt>
+            <dd className="mt-2 font-medium">{formatBytes(data.size)}</dd>
           </div>
 
           <div>
@@ -74,8 +76,16 @@ export function Inspector({ registry, repository, reference, admin, pullUrl }: P
           </div>
 
           <div>
-            <dt className="text-xs text-muted-foreground">Created</dt>
-            <dd className="mt-2 break-all font-medium">{summary.created}</dd>
+            <dt className="text-xs text-muted-foreground">
+              {multiple ? 'Latest reported build' : 'Created'}
+            </dt>
+            <dd className="mt-2 break-all font-medium">
+              {data.created ? (
+                <time dateTime={data.created}>{summary.created}</time>
+              ) : (
+                summary.created
+              )}
+            </dd>
           </div>
 
           <div className="sm:col-span-3">
@@ -88,15 +98,22 @@ export function Inspector({ registry, repository, reference, admin, pullUrl }: P
             <dd className="mt-2 break-all font-mono text-xs">{data.mediaType}</dd>
           </div>
         </dl>
+
+        {multiple && (
+          <p className="mt-4 text-xs text-muted-foreground">
+            Shared blobs are counted once in the total size. Attestations are excluded.
+          </p>
+        )}
       </section>
 
       {hasChildren && (
         <section className="rounded-xl border bg-card p-6">
-          <h2 className="mb-4 font-semibold">Platform manifests</h2>
+          <h2 className="mb-4 font-semibold">Manifests</h2>
 
           <ul className="space-y-3">
             {summary.children.map((child) => {
               let platform = 'Manifest'
+              const metadata = data.platformDetails.find((entry) => entry.digest === child.digest)
 
               if (child.platform) {
                 const { os, architecture, variant } = child.platform
@@ -109,6 +126,8 @@ export function Inspector({ registry, repository, reference, admin, pullUrl }: P
                 platform = parts.join('/')
               }
 
+              if (isAttestation(child)) platform = 'Build attestation'
+
               return (
                 <li key={child.digest}>
                   <Link
@@ -119,6 +138,19 @@ export function Inspector({ registry, repository, reference, admin, pullUrl }: P
                     }}
                   >
                     <span className="mb-1 block text-sm font-medium">{platform}</span>
+                    {metadata && (
+                      <span className="mb-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                        <span>Compressed size {formatBytes(metadata.size)}</span>
+                        <span>
+                          Created{' '}
+                          {metadata.created ? (
+                            <time dateTime={metadata.created}>{metadata.created}</time>
+                          ) : (
+                            'not provided'
+                          )}
+                        </span>
+                      </span>
+                    )}
                     <code className="break-all text-xs text-muted-foreground">{child.digest}</code>
                   </Link>
                 </li>
@@ -140,9 +172,7 @@ export function Inspector({ registry, repository, reference, admin, pullUrl }: P
 
         {data.config !== null && (
           <details className="border-t p-5">
-            <summary className="cursor-pointer text-sm font-semibold">
-              Image configuration and history
-            </summary>
+            <summary className="cursor-pointer text-sm font-semibold">Image History</summary>
             <pre className="mt-4 max-h-96 overflow-auto rounded-lg bg-muted p-4 text-xs leading-6">
               {JSON.stringify(data.config, null, 2)}
             </pre>
