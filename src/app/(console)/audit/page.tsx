@@ -7,7 +7,7 @@ import { getIdentity } from '@/lib/auth/session'
 
 export const metadata: Metadata = {
   title: 'Audit',
-  description: 'Review workspace activity and authentication events.',
+  description: 'Review workspace activity and events.',
 }
 
 export default async function AuditPage() {
@@ -17,7 +17,7 @@ export default async function AuditPage() {
 
   return (
     <>
-      <Heading description="Review workspace activity and authentication events." title="Audit" />
+      <Heading description="Review workspace activity and events." title="Audit" />
 
       <AuditLog />
     </>
