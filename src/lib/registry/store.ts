@@ -56,7 +56,7 @@ export function getRegistry(id: string): RegistryRecord {
   return {
     id: row.id,
     name: row.name,
-    url: validateUrl(row.url),
+    url: validateUrl(row.url, row.provider),
     pullUrl: row.pull_url,
     username: row.username,
     password: row.password,
@@ -77,7 +77,7 @@ export function addRegistry(input: RegistryInput): string {
   }
 
   const id = randomUUID()
-  const url = validateUrl(input.url)
+  const url = validateUrl(input.url, input.provider)
   const password = encryptSecret(input.password)
   const settings = dockerHubSettings(input, url)
 
@@ -113,7 +113,7 @@ export function addRegistry(input: RegistryInput): string {
 
 export function updateRegistry(id: string, input: RegistryInput): string {
   const current = registryRow(id)
-  const url = validateUrl(input.url)
+  const url = validateUrl(input.url, input.provider)
   const password = encryptSecret(input.password)
   const settings = dockerHubSettings(input, url)
 

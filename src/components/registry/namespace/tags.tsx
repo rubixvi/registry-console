@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { useResource } from '@/hooks/shared/use-resource'
 import { type RegistryPage } from '@/types/registry'
+import { tagLabel } from '@/utils/tag-label'
 
 type Props = {
   id: string
@@ -63,7 +64,7 @@ export function Tags({ id, repository }: Props) {
                 }}
                 title={tag}
               >
-                {tag}
+                {tagLabel(tag)}
               </Link>
             </Badge>
           ))}

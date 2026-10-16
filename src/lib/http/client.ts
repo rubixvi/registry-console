@@ -28,7 +28,9 @@ export async function apiRequest<T>(url: string, options?: RequestInit): Promise
   try {
     body = await response.json()
   } catch {
-    throw new Error('Server returned an invalid response.')
+    throw new Error(
+      `Server returned a non-JSON response (HTTP ${response.status}). Check the server or proxy logs.`
+    )
   }
 
   if (!response.ok) {

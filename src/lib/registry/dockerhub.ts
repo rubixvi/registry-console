@@ -45,8 +45,8 @@ function namespaceFor(registry: RegistryRecord): string {
     throw new AppError(400, 'Invalid Docker Hub connection settings.')
   }
 
-  validateUrl(registry.url)
-  validateUrl(DOCKER_HUB_API)
+  validateUrl(registry.url, registry.provider)
+  validateUrl(DOCKER_HUB_API, registry.provider)
 
   return registry.namespace!
 }

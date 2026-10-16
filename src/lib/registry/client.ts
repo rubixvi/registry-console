@@ -35,7 +35,7 @@ export async function registryRequest(
   path: string,
   options: RegistryOptions = {}
 ): Promise<RegistryResponse> {
-  const origin = validateUrl(registry.url)
+  const origin = validateUrl(registry.url, registry.provider)
 
   if (!path.startsWith('/v2/') || new URL(path, origin).origin !== origin) {
     throw new AppError(400, 'Invalid registry path.')
@@ -83,7 +83,7 @@ async function fetchRegistry(
   inflight++
 
   try {
-    const origin = validateUrl(registry.url)
+    const origin = validateUrl(registry.url, registry.provider)
 
     if (!path.startsWith('/v2/') || new URL(path, origin).origin !== origin) {
       throw new AppError(400, 'Invalid registry path.')
@@ -206,7 +206,7 @@ async function fetchRegistry(
           throw new AppError(502, 'Registry blob redirect limit exceeded.')
         }
 
-        const destination = validateBlobRedirect(location)
+        const destination = validateBlobRedirect(location, origin)
 
         response = await fetch(destination, {
           headers: { Accept: 'application/json' },

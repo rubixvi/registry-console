@@ -82,7 +82,7 @@ export function ImageScan({ id, repository, digest, admin = false, compact = fal
           Vulnerabilities
         </h2>
 
-        {admin && (
+        {admin && data.status !== 'complete' && (
           <Button
             disabled={busy || data.status === 'running'}
             onClick={scan}
@@ -122,7 +122,7 @@ export function ImageScan({ id, repository, digest, admin = false, compact = fal
           )}
 
           <p className="text-xs text-muted-foreground">
-            Counts include findings on each scanned platform. Results are retained for 24 hours.
+            Counts include findings on each scanned platform.
           </p>
         </>
       )}

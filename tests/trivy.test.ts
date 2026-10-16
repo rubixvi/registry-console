@@ -314,7 +314,7 @@ test('scanner failures are bounded and configuration changes fail a prepared job
     env().TRIVY_PATH = previous
   }
 
-  const job = prepareScan(registry, 'team/app', digest, 'admin')
+  const job = prepareScan(registry, 'team/app', `sha256:${'f'.repeat(64)}`, 'admin')
 
   database()
     .prepare('UPDATE registries SET username = ?, revision = ? WHERE id = ?')
