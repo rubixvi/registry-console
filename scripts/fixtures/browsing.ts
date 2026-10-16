@@ -1,169 +1,159 @@
-import { createCheck, createRequest } from '../helpers/testing'
-import { type mockBrowsing } from './mock-browsing'
+import assert from 'node:assert/strict'
 
-type Props = {
-  base: string
-  origin: string
-  cookie: string
-  readerCookie: string
-  fixture: Awaited<ReturnType<typeof mockBrowsing>>
-}
+import { type BrowsingProps } from './types'
 
-export async function checkBrowsing({
-  base,
-  origin,
-  cookie,
-  readerCookie,
-  fixture,
-}: Props): Promise<number> {
-  const check = createCheck()
+export async function checkBrowsing({ context, request, readerCookie, fixture }: BrowsingProps) {
+  await context.test('Browsing', { concurrency: false }, async (t) => {
+    const input = {
+      name: 'Browsing checks',
+      url: fixture.origin,
+      pullUrl: '',
+      username: '',
+      password: '',
+      readOnly: false,
+    }
 
-  const request = createRequest({ base, origin, cookie })
+    const created = await request('/api/registries', { method: 'POST', body: input })
 
-  const input = {
-    name: 'Browsing checks',
-    url: fixture.origin,
-    pullUrl: '',
-    username: '',
-    password: '',
-    readOnly: false,
-  }
+    assert.equal(created.status, 201, 'browsing connection can be created')
 
-  const created = await request('/api/registries', { method: 'POST', body: input })
+    const { id } = await created.json()
+    const api = `/api/registries/${id}`
 
-  check(created.status === 201, 'browsing connection can be created')
+    t.after(async () => {
+      const response = await request(api, { method: 'DELETE', body: {} })
 
-  const { id } = await created.json()
+      assert.equal(response.status, 200, 'browsing test connection is removed')
+    })
 
-  const api = `/api/registries/${id}`
+    await t.test('complete listings require authentication', async () => {
+      const response = await request(`${api}/browse`, { cookie: '' })
 
-  check(
-    (await request(`${api}/browse`, { cookie: '' })).status === 401,
-    'complete listings require authentication'
-  )
+      assert.equal(response.status, 401)
+    })
 
-  check(
-    (await request(`${api}/browse?repository=..%2Fprivate`)).status === 400,
-    'complete listings validate repository names'
-  )
+    await t.test('complete listings validate query parameters', async () => {
+      const invalidRepository = await request(`${api}/browse?repository=..%2Fprivate`)
+      const unknownParameter = await request(`${api}/browse?unknown=true`)
 
-  check(
-    (await request(`${api}/browse?unknown=true`)).status === 400,
-    'complete listings reject unsupported parameters'
-  )
+      assert.equal(invalidRepository.status, 400, 'repository names are validated')
+      assert.equal(unknownParameter.status, 400, 'unsupported parameters are rejected')
+    })
 
-  const response = await request(`${api}/browse`, { cookie: readerCookie })
+    await t.test('viewers receive the complete paginated catalogue', async () => {
+      const response = await request(`${api}/browse`, { cookie: readerCookie })
+      const catalogue = await response.json()
 
-  const catalogue = await response.json()
+      assert.equal(catalogue.items.length, 210)
+      assert.ok(catalogue.items.includes('team/backend/api'))
+      assert.equal(response.headers.get('cache-control'), 'no-store')
+    })
 
-  check(
-    catalogue.items.length === 210 && catalogue.items.includes('team/backend/api'),
-    'viewers receive the complete paginated catalogue'
-  )
+    await t.test('server cache avoids repeated catalogue requests', async () => {
+      const initial = await request(`${api}/browse`)
 
-  check(
-    response.headers.get('cache-control') === 'no-store',
-    'authenticated API responses remain uncached by browsers'
-  )
+      assert.equal(initial.status, 200)
 
-  const catalogueRequests = fixture.requests.get('/v2/_catalog')
+      const before = fixture.requests.get('/v2/_catalog')
 
-  await request(`${api}/browse`)
+      assert.ok(before && before > 0, 'catalogue has been fetched from the upstream registry')
 
-  check(
-    fixture.requests.get('/v2/_catalog') === catalogueRequests,
-    'server cache avoids repeated registry catalogue requests'
-  )
+      const repeated = await request(`${api}/browse`)
 
-  const tags = await (await request(`${api}/browse?repository=team%2Fapp`)).json()
+      assert.equal(repeated.status, 200)
+      assert.equal(fixture.requests.get('/v2/_catalog'), before)
+    })
 
-  check(
-    tags.items.length === 206 && tags.items.includes('v205'),
-    'tags from every upstream page are available for sorting'
-  )
+    await t.test('all upstream tag pages are available for sorting', async () => {
+      const response = await request(`${api}/browse?repository=team%2Fapp`)
+      const tags = await response.json()
 
-  fixture.state.repositories.push('fresh/repository')
+      assert.equal(tags.items.length, 206)
+      assert.ok(tags.items.includes('v205'))
+    })
 
-  const cached = await (await request(`${api}/browse`)).json()
+    await t.test('explicit refresh bypasses the cached catalogue', async () => {
+      const initial = await request(`${api}/browse`)
 
-  check(cached.items.length === 210, 'mutable cached catalogue retains its bounded lifetime')
+      assert.equal(initial.status, 200)
+      fixture.state.repositories.push('fresh/repository')
 
-  const freshResponse = await request(`${api}/browse`, { fresh: true })
+      const cachedResponse = await request(`${api}/browse`)
+      const cached = await cachedResponse.json()
 
-  const fresh = await freshResponse.json()
+      assert.equal(cached.items.length, 210, 'cached catalogue retains its bounded lifetime')
 
-  check(
-    fresh.items.length === 211,
-    `explicit refresh retrieves fresh upstream pages (received ${fresh.items?.length ?? JSON.stringify(fresh)})`
-  )
+      const freshResponse = await request(`${api}/browse`, { fresh: true })
+      const fresh = await freshResponse.json()
 
-  const image = await (await request(`${api}/image?repository=team%2Fapp&reference=v1`)).json()
+      assert.equal(fresh.items.length, 211, 'refresh retrieves fresh upstream pages')
+    })
 
-  check(
-    image.labels.some(
-      (label: { name: string; value: string }) =>
-        label.name === 'com.example.team' && label.value === '<script>example</script>'
-    ),
-    'configured history labels are returned as text'
-  )
+    await t.test('only configured custom labels are returned as text', async () => {
+      const response = await request(`${api}/image?repository=team%2Fapp&reference=v1`)
+      const image = await response.json()
 
-  check(
-    !image.labels.some((label: { name: string }) => label.name === 'com.example.hidden'),
-    'unconfigured custom labels are omitted'
-  )
+      assert.ok(
+        image.labels.some(
+          (label: { name: string; value: string }) =>
+            label.name === 'com.example.team' && label.value === '<script>example</script>'
+        )
+      )
+      assert.ok(
+        !image.labels.some((label: { name: string }) => label.name === 'com.example.hidden')
+      )
+    })
 
-  await request(api, { method: 'PUT', body: { ...input, readOnly: true } })
+    await t.test('selection controls retain read-only protection', async (t) => {
+      t.after(async () => {
+        const response = await request(api, { method: 'PUT', body: input })
 
-  check(
-    (
-      await request(`${api}/bulk`, {
+        assert.equal(response.status, 200, 'connection can be made writable')
+      })
+
+      const updated = await request(api, { method: 'PUT', body: { ...input, readOnly: true } })
+
+      assert.equal(updated.status, 200, 'connection can be made read-only')
+
+      const response = await request(`${api}/bulk`, {
         method: 'POST',
         body: { repository: 'team/app', tags: ['v1'] },
       })
-    ).status === 403,
-    'new selection controls retain read-only protection'
-  )
 
-  await request(api, { method: 'PUT', body: input })
+      assert.equal(response.status, 403)
+    })
 
-  const preview = await request(`${api}/bulk`, {
-    method: 'POST',
-    body: {
-      repository: 'team/app',
-      tags: ['v1', 'v2'],
-    },
-  })
+    await t.test('bulk deletion deduplicates aliases and invalidates cached data', async () => {
+      const primedTags = await request(`${api}/browse?repository=team%2Fapp`)
+      const primedImage = await request(`${api}/image?repository=team%2Fapp&reference=v1`)
 
-  const plan = await preview.json()
+      assert.equal(primedTags.status, 200)
+      assert.equal(primedImage.status, 200)
 
-  check(
-    preview.status === 200 && plan.entries.length === 1,
-    'bulk previews still deduplicate selected aliases'
-  )
+      const preview = await request(`${api}/bulk`, {
+        method: 'POST',
+        body: { repository: 'team/app', tags: ['v1', 'v2'] },
+      })
 
-  check(
-    (
-      await request(`${api}/bulk`, {
+      assert.equal(preview.status, 200)
+
+      const plan = await preview.json()
+
+      assert.equal(plan.entries.length, 1, 'selected aliases share one manifest')
+
+      const deleted = await request(`${api}/bulk`, {
         method: 'DELETE',
         body: { planId: plan.id, confirmation: 'team/app' },
       })
-    ).status === 200,
-    'confirmed bulk deletion succeeds'
-  )
 
-  const remaining = await (await request(`${api}/browse?repository=team%2Fapp`)).json()
+      assert.equal(deleted.status, 200, 'confirmed bulk deletion succeeds')
 
-  check(remaining.items.length === 0, 'deletion invalidates cached tag pages')
+      const remainingResponse = await request(`${api}/browse?repository=team%2Fapp`)
+      const remaining = await remainingResponse.json()
+      const image = await request(`${api}/image?repository=team%2Fapp&reference=v1`)
 
-  check(
-    (await request(`${api}/image?repository=team%2Fapp&reference=v1`)).status === 404,
-    'deletion invalidates cached image manifests'
-  )
-
-  check(
-    (await request(api, { method: 'DELETE', body: {} })).status === 200,
-    'browsing test connection is removed'
-  )
-
-  return check.count
+      assert.equal(remaining.items.length, 0, 'deletion invalidates cached tag pages')
+      assert.equal(image.status, 404, 'deletion invalidates cached image manifests')
+    })
+  })
 }

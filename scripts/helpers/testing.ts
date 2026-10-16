@@ -16,17 +16,6 @@ type Options = {
   fresh?: boolean
 }
 
-export function createCheck() {
-  function check(value: unknown, message: string): void {
-    assert.ok(value, message)
-    check.count++
-  }
-
-  check.count = 0
-
-  return check
-}
-
 export function createRequest({ base, origin, method = 'GET', cookie, jar }: Props) {
   return async function request(url: string, options: Options = {}): Promise<Response> {
     const headers = new Headers({
@@ -64,4 +53,29 @@ export function createRequest({ base, origin, method = 'GET', cookie, jar }: Pro
 
     return response
   }
+}
+
+export type TestRequest = ReturnType<typeof createRequest>
+
+type SignInProps = {
+  request: TestRequest
+  username: string
+  password: string
+}
+
+export async function signIn({ request, username, password }: SignInProps) {
+  const response = await request('/api/auth/login', {
+    method: 'POST',
+    body: { username, password },
+  })
+
+  assert.equal(response.status, 200, `${username} can sign in`)
+
+  const setCookie = response.headers.get('set-cookie') ?? ''
+  const cookie = setCookie.split(';')[0]
+
+  assert.match(cookie, /^(?:__Host-)?registry_session=.+/, 'login issues a session cookie')
+  await response.body?.cancel()
+
+  return { cookie, setCookie }
 }
