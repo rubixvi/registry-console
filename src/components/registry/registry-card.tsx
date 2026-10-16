@@ -28,14 +28,14 @@ export function RegistryCard({ registry }: Props) {
       <h2 className="truncate font-semibold">{registry.name}</h2>
       <p className="mt-2 truncate text-sm text-muted-foreground">{registry.url}</p>
 
-      <div className="mt-auto flex flex-wrap gap-2 pt-6">
-        {registry.readOnly && (
+      {registry.readOnly && (
+        <div className="mt-auto flex flex-wrap gap-2 pt-6">
           <Badge>
             <Eye aria-hidden="true" className="size-3" />
             Read only
           </Badge>
-        )}
-      </div>
+        </div>
+      )}
     </Link>
   )
 }

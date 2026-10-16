@@ -145,9 +145,7 @@ test('empty passwords never bind and directory failures never disclose diagnosti
 
 test('directory sessions are short and passkeys cannot bypass directory authentication', async (context) => {
   const now = Date.now()
-
   context.mock.method(Date, 'now', () => now)
-
   const session = createSession(user)
 
   assert.ok(session.expires > now)
