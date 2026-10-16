@@ -1,8 +1,7 @@
 import { type TestContext } from 'node:test'
 
 import { type virtualPasskey } from '../../tests/fixtures/passkey'
-import { type Integration } from '../helpers/integration'
-import { type TestRequest } from '../helpers/testing'
+import { type Integration, type TestRequest } from '../helpers/types'
 import { type mockBrowsing } from './mock-browsing'
 import { type mockConsole } from './mock-console'
 import { type mockRegistry } from './mock-registry'
@@ -16,10 +15,6 @@ export type FixtureProps<T> = CheckProps & {
   readerCookie: string
   fixture: T
 }
-
-export type BrowsingFixture = Awaited<ReturnType<typeof mockBrowsing>>
-export type ConsoleFixture = Awaited<ReturnType<typeof mockConsole>>
-export type RegistryFixture = Awaited<ReturnType<typeof mockRegistry>>
 
 export type AccessProps = CheckProps & {
   password: string
@@ -90,3 +85,7 @@ export type DeletionProps = CheckProps & {
 }
 
 export type LimitProps = CheckProps & AuthenticationProps
+
+export type BrowsingFixture = Awaited<ReturnType<typeof mockBrowsing>>
+export type ConsoleFixture = Awaited<ReturnType<typeof mockConsole>>
+export type RegistryFixture = Awaited<ReturnType<typeof mockRegistry>>

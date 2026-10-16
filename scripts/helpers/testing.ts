@@ -1,23 +1,9 @@
 import assert from 'node:assert/strict'
 
-type Props = {
-  base: string
-  origin: string
-  method?: string
-  cookie?: string
-  jar?: Map<string, string>
-}
+import { type RequestOptions, type RequestProps, type SignInProps } from './types'
 
-type Options = {
-  method?: string
-  body?: unknown
-  cookie?: string
-  origin?: string
-  fresh?: boolean
-}
-
-export function createRequest({ base, origin, method = 'GET', cookie, jar }: Props) {
-  return async function request(url: string, options: Options = {}): Promise<Response> {
+export function createRequest({ base, origin, method = 'GET', cookie, jar }: RequestProps) {
+  return async function request(url: string, options: RequestOptions = {}): Promise<Response> {
     const headers = new Headers({
       Origin: options.origin ?? origin,
       'Content-Type': 'application/json',
@@ -53,14 +39,6 @@ export function createRequest({ base, origin, method = 'GET', cookie, jar }: Pro
 
     return response
   }
-}
-
-export type TestRequest = ReturnType<typeof createRequest>
-
-type SignInProps = {
-  request: TestRequest
-  username: string
-  password: string
 }
 
 export async function signIn({ request, username, password }: SignInProps) {

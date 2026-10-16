@@ -10,6 +10,7 @@ import { mockConsole } from '../fixtures/mock-console'
 import { mockRegistry } from '../fixtures/mock-registry'
 import { encryptSecret, hashPassword } from './crypto.mjs'
 import { availablePort } from './network.mjs'
+import { type InspectionProps } from './types'
 
 async function stopServer(child?: ChildProcess): Promise<void> {
   if (!child?.pid || child.exitCode !== null || child.signalCode !== null) {
@@ -152,14 +153,6 @@ export async function startIntegration(context: TestContext) {
   }
 
   throw new Error(`Startup timed out\n${logs}`)
-}
-
-export type Integration = Awaited<ReturnType<typeof startIntegration>>
-
-type InspectionProps = {
-  server: Integration
-  cookie: string
-  id: string
 }
 
 export async function waitForInspection({ server, cookie, id }: InspectionProps) {
