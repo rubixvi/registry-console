@@ -2,7 +2,8 @@ import assert from 'node:assert/strict'
 import { createHmac } from 'node:crypto'
 
 import { virtualPasskey } from '../../tests/fixtures/passkey'
-import { createRequest, signIn, type TestRequest } from '../helpers/testing'
+import { createRequest, signIn } from '../helpers/testing'
+import { type TestRequest } from '../helpers/types'
 import {
   type Account,
   type AuthenticationProps,
