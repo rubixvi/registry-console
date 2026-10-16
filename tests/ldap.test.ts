@@ -143,11 +143,16 @@ test('empty passwords never bind and directory failures never disclose diagnosti
   assert.equal(await verifyLdapPassword('reader', 'wrong'), false)
 })
 
-test('directory sessions are short and passkeys cannot bypass directory authentication', async () => {
+test('directory sessions are short and passkeys cannot bypass directory authentication', async (context) => {
   const now = Date.now()
+
+  context.mock.method(Date, 'now', () => now)
+
   const session = createSession(user)
 
-  assert.ok(session.expires <= now + 15 * 60_000 + 100)
+  assert.ok(session.expires > now)
+  assert.ok(session.expires <= now + 15 * 60_000)
+
   await assert.rejects(regOptions(user), /directory password/)
   await assert.rejects(
     authPasskey(user, { id: 'missing' } as never, 'challenge'),
