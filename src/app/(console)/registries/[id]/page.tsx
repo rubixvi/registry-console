@@ -39,9 +39,10 @@ export default async function RegistryPage(props: RegistryProps) {
 
   const admin = identity.role === 'admin'
 
-  const registryPath = `/registries/${encodeURIComponent(id)}`
-  const repositoryHref = {
-    pathname: registryPath,
+  const path = `/registries/${encodeURIComponent(id)}`
+
+  const repoLink = {
+    pathname: path,
     query: { repository },
   }
 
@@ -90,7 +91,7 @@ export default async function RegistryPage(props: RegistryProps) {
         <Link
           aria-current={!repository ? 'page' : undefined}
           className="break-all hover:text-primary"
-          href={registryPath}
+          href={path}
         >
           {registry.name}
         </Link>
@@ -101,7 +102,7 @@ export default async function RegistryPage(props: RegistryProps) {
             <Link
               aria-current={!reference ? 'page' : undefined}
               className="break-all hover:text-primary"
-              href={repositoryHref}
+              href={repoLink}
             >
               {repository}
             </Link>
@@ -131,7 +132,7 @@ export default async function RegistryPage(props: RegistryProps) {
       {repository && (
         <Link
           className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary"
-          href={reference ? repositoryHref : registryPath}
+          href={reference ? repoLink : path}
         >
           <ArrowLeft aria-hidden="true" className="size-4" />
           {reference ? 'Back to tags' : 'Back to repositories'}
