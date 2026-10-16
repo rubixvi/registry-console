@@ -30,11 +30,16 @@ export function ImageScan({ id, repository, digest, admin = false, compact = fal
     revalidateOnFocus: false,
     shouldRetryOnError: false,
     dedupingInterval: 10_000,
-    refreshInterval: (current) => (current?.status === 'running' ? 3000 : 0),
+    refreshInterval: (current) =>
+      current?.status === 'running'
+        ? 3000
+        : current?.enabled && current.status !== 'complete'
+          ? 30_000
+          : 0,
   })
 
   async function scan(): Promise<void> {
-    if (busy || data?.status === 'running') return
+    if (busy || data?.status === 'running' || data?.status === 'complete') return
 
     setBusy(true)
 
@@ -45,7 +50,11 @@ export function ImageScan({ id, repository, digest, admin = false, compact = fal
       })
 
       await mutate(result, { revalidate: false })
-      toast.success('Vulnerability scan started.')
+      toast.success(
+        result.status === 'complete'
+          ? 'Stored vulnerability report loaded.'
+          : 'Vulnerability scan started.'
+      )
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Unable to start the scan.')
     } finally {
@@ -120,10 +129,6 @@ export function ImageScan({ id, repository, digest, admin = false, compact = fal
               Trivy.
             </p>
           )}
-
-          <p className="text-xs text-muted-foreground">
-            Counts include findings on each scanned platform.
-          </p>
         </>
       )}
     </section>

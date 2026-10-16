@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { deleteManifest } from '@/lib/registry/delete'
 import { imageDetails } from '@/lib/registry/image'
 import { getRegistry } from '@/lib/registry/store'
+import { scheduleScan } from '@/lib/registry/trivy'
 import { api } from '@/lib/security/api'
 import { AppError } from '@/lib/security/error'
 import { readJson } from '@/lib/security/request'
@@ -21,6 +22,8 @@ export const GET = api(async (request, context) => {
   const { repository, reference } = parsed.data
   const refresh = request.headers.get('x-registry-refresh') === '1'
   const details = await imageDetails(registry, repository, reference, refresh)
+
+  scheduleScan(registry, repository, details.digest)
 
   return NextResponse.json(details)
 })

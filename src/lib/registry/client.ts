@@ -9,6 +9,7 @@ import {
   rememberResponse,
 } from '@/lib/registry/cache'
 import { parseChallenge } from '@/lib/registry/challenge'
+import { checkBackoff, limitRegistry } from '@/lib/registry/throttle'
 import { cachedToken, forgetToken, rememberToken, tokenKey } from '@/lib/registry/token-cache'
 import { decryptSecret } from '@/lib/security/crypto'
 import { AppError } from '@/lib/security/error'
@@ -42,15 +43,16 @@ export async function registryRequest(
   }
 
   const deletion = options.method === 'DELETE'
+  const readable = !options.method || options.method === 'GET'
 
   if (deletion) {
     invalidateRegistry(registry.id)
-  } else if (options.cache === 'reload') {
+  } else if (readable && options.cache === 'reload') {
     invalidateResponse(registry, path, options.scope)
   }
 
   try {
-    if (!deletion && options.cache !== 'reload') {
+    if (readable && options.cache !== 'reload') {
       const cached = cachedResponse(registry, path, options.scope)
 
       if (cached) return cached
@@ -59,7 +61,7 @@ export async function registryRequest(
     const generation = cacheGeneration()
     const response = await fetchRegistry(registry, path, options)
 
-    if (!deletion) {
+    if (readable) {
       rememberResponse(registry, path, options.scope, response, generation)
     }
 
@@ -88,6 +90,8 @@ async function fetchRegistry(
     if (!path.startsWith('/v2/') || new URL(path, origin).origin !== origin) {
       throw new AppError(400, 'Invalid registry path.')
     }
+
+    checkBackoff(origin)
 
     const url = origin + path
     const { method = 'GET', scope } = options
@@ -162,6 +166,10 @@ async function fetchRegistry(
       if (!tokenResp.ok) {
         await tokenResp.body?.cancel()
 
+        if (tokenResp.status === 429) {
+          throw limitRegistry(origin, tokenResp.headers)
+        }
+
         throw new AppError(502, 'Registry token authentication failed.')
       }
 
@@ -222,6 +230,14 @@ async function fetchRegistry(
 
       const { status } = response
 
+      if (status === 429) {
+        throw limitRegistry(origin, response.headers)
+      }
+
+      if (method === 'HEAD' && (status === 405 || status === 501)) {
+        throw new AppError(405, 'Registry does not support manifest HEAD requests.')
+      }
+
       if (status === 404) {
         throw new AppError(404, 'Registry resource was not found.')
       }
@@ -244,8 +260,12 @@ async function fetchRegistry(
       throw new AppError(502, 'Registry request failed. Check its status and configuration.')
     }
 
+    if (method === 'HEAD') {
+      await response.body?.cancel()
+    }
+
     return {
-      text: await readBounded(response, MAX_RESPONSE_BYTES),
+      text: method === 'HEAD' ? '' : await readBounded(response, MAX_RESPONSE_BYTES),
       headers: response.headers,
     }
   } catch (error) {

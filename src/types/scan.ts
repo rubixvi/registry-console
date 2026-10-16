@@ -28,3 +28,10 @@ export type ScanStatus = {
   report?: ScanReport
   error?: string
 }
+
+export type ScanTarget = {
+  id: string
+  registryId: string
+  repository: string
+  digest: string
+}

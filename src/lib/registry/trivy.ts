@@ -7,7 +7,15 @@ import path from 'node:path'
 
 import { env } from '@/lib/config/env'
 import { audit } from '@/lib/database/audit'
-import { database } from '@/lib/database/client'
+import {
+  adoptScan,
+  claimScan,
+  discardScan,
+  finishScan,
+  getScan,
+  queueScan,
+  scanDue,
+} from '@/lib/database/scan'
 import { validateUrl } from '@/lib/registry/allowlist'
 import { assertDockerHubRepository } from '@/lib/registry/dockerhub'
 import { registryIdentity } from '@/lib/registry/identity'
@@ -22,7 +30,6 @@ import { type RegistryRecord } from '@/types/registry'
 import { type ScanStatus } from '@/types/scan'
 
 const MAX_REPORT_BYTES = 16 * 1024 * 1024
-const RETENTION = 24 * 60 * 60_000
 
 export type ScanJob = {
   id: string
@@ -33,18 +40,28 @@ export type ScanJob = {
   expires: number
 }
 
-type ScanRow = {
-  status: ScanStatus['status']
-  value: string
-  expires: number
+function scanKey(registry: RegistryRecord, digest: string): string {
+  return keyedFingerprint('trivy-image-report', [registryIdentity(registry), digest])
 }
 
-function scanKey(registry: RegistryRecord, repository: string, digest: string): string {
-  return keyedFingerprint('trivy-report', [registryIdentity(registry), repository, digest])
+function reportKey(registry: RegistryRecord, repository: string, digest: string): string {
+  const id = scanKey(registry, digest)
+
+  if (!getScan(id)) {
+    const previous = keyedFingerprint('trivy-report', [
+      registryIdentity(registry),
+      repository,
+      digest,
+    ])
+
+    adoptScan(id, previous)
+  }
+
+  return id
 }
 
 function scanAllowed(registry: RegistryRecord): boolean {
-  validateUrl(registry.url)
+  validateUrl(registry.url, registry.provider)
 
   return env().TRIVY_ENABLED === 'true'
 }
@@ -62,11 +79,9 @@ export function scanStatus(
     return { enabled: false, status: 'not-scanned' }
   }
 
-  const row = database()
-    .prepare('SELECT status, value, expires FROM image_scans WHERE id = ?')
-    .get(scanKey(registry, repository, digest)) as ScanRow | undefined
+  const row = getScan(reportKey(registry, repository, digest))
 
-  if (!row || (row.expires <= Date.now() && row.status !== 'running')) {
+  if (!row) {
     return { enabled: true, status: 'not-scanned' }
   }
 
@@ -79,6 +94,43 @@ export function scanStatus(
   }
 
   return { enabled: true, status: row.status, ...JSON.parse(row.value) }
+}
+
+export function needsScan(registry: RegistryRecord, repository: string, digest: string): boolean {
+  repositoryName.parse(repository)
+  digestName.parse(digest)
+  assertDockerHubRepository(registry, repository)
+
+  return scanAllowed(registry) && scanDue(reportKey(registry, repository, digest))
+}
+
+export function scheduleScan(
+  registry: RegistryRecord,
+  repository: string,
+  digest: string
+): boolean {
+  if (env().TRIVY_ENABLED !== 'true') return false
+
+  repositoryName.parse(repository)
+  digestName.parse(digest)
+  assertDockerHubRepository(registry, repository)
+  scanAllowed(registry)
+
+  return queueScan({
+    id: reportKey(registry, repository, digest),
+    registryId: registry.id,
+    repository,
+    digest,
+  })
+}
+
+export function matchesScan(
+  registry: RegistryRecord,
+  repository: string,
+  digest: string,
+  id: string
+): boolean {
+  return reportKey(registry, repository, digest) === id
 }
 
 export function prepareScan(
@@ -102,45 +154,10 @@ export function prepareScan(
     )
   }
 
-  const db = database()
-  const now = Date.now()
-  const id = scanKey(registry, repository, digest)
-  const expires = now + (env().TRIVY_TIMEOUT_SECONDS + 60) * 1000
+  const id = reportKey(registry, repository, digest)
+  const expires = Date.now() + (env().TRIVY_TIMEOUT_SECONDS + 60) * 1000
 
-  db.exec('BEGIN IMMEDIATE')
-
-  try {
-    db.prepare('DELETE FROM image_scans WHERE expires <= ?').run(now)
-
-    const running = db.prepare("SELECT id FROM image_scans WHERE status = 'running'").get()
-
-    if (running) {
-      throw new AppError(
-        409,
-        'A scan is already running. Wait for it to finish before starting another.'
-      )
-    }
-
-    db.prepare(`
-      DELETE FROM image_scans WHERE id IN (
-        SELECT id FROM image_scans ORDER BY updated DESC LIMIT -1 OFFSET 49
-      )
-    `).run()
-
-    db.prepare(`
-      INSERT INTO image_scans (id, registry_id, status, value, expires, updated)
-      VALUES (?, ?, 'running', '{}', ?, ?)
-      ON CONFLICT(id) DO UPDATE SET status = 'running', value = '{}',
-        expires = excluded.expires, updated = excluded.updated
-    `).run(id, registry.id, expires, now)
-
-    db.exec('COMMIT')
-  } catch (error) {
-    db.exec('ROLLBACK')
-    throw error
-  }
-
-  audit(actor, 'image.scan.started', `${registry.id}/${repository}@${digest}`)
+  claimScan({ id, registryId: registry.id, repository, digest, actor, expires })
 
   return { id, registryId: registry.id, repository, digest, actor, expires }
 }
@@ -157,7 +174,7 @@ export async function executeTrivy(
   assertDockerHubRepository(registry, repository)
 
   const config = env()
-  const origin = new URL(validateUrl(registry.url))
+  const origin = new URL(validateUrl(registry.url, registry.provider))
 
   const target = `${origin.host}/${repository}@${digest}`
   const directory = await mkdtemp(path.join(tmpdir(), 'registry-trivy-'))
@@ -313,12 +330,15 @@ export async function executeTrivy(
 }
 
 export async function runScan(job: ScanJob): Promise<void> {
-  const db = database()
+  const stored = getScan(job.id)
+
+  if (stored?.status !== 'running' || stored.expires !== job.expires) return
 
   try {
     const registry = getRegistry(job.registryId)
 
-    if (!scanAllowed(registry) || scanKey(registry, job.repository, job.digest) !== job.id) {
+    if (!scanAllowed(registry) || scanKey(registry, job.digest) !== job.id) {
+      discardScan(job.id)
       throw new AppError(409, 'The connection changed. Start the scan again.')
     }
 
@@ -350,6 +370,13 @@ export async function runScan(job: ScanJob): Promise<void> {
       appendTrivyReport(report, output, entry.platform)
     }
 
+    const current = getRegistry(job.registryId)
+
+    if (!scanAllowed(current) || scanKey(current, job.digest) !== job.id) {
+      discardScan(job.id)
+      throw new AppError(409, 'The connection changed. Start the scan again.')
+    }
+
     report.scannedAt = new Date().toISOString()
     report.vulnerabilities.sort((a, b) => {
       const order = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'UNKNOWN']
@@ -357,27 +384,15 @@ export async function runScan(job: ScanJob): Promise<void> {
       return order.indexOf(a.severity) - order.indexOf(b.severity)
     })
 
-    db.prepare(`
-      UPDATE image_scans SET status = 'complete', value = ?, expires = ?, updated = ?
-      WHERE id = ? AND status = 'running' AND expires = ?
-    `).run(JSON.stringify({ report }), Date.now() + RETENTION, Date.now(), job.id, job.expires)
-
-    audit(job.actor, 'image.scan.complete', `${job.registryId}/${job.repository}@${job.digest}`)
+    if (finishScan(job.id, job.expires, { report })) {
+      audit(job.actor, 'image.scan.complete', `${job.registryId}/${job.repository}@${job.digest}`)
+    }
   } catch (error) {
     const message =
       error instanceof AppError ? error.message : 'The vulnerability report could not be validated.'
 
-    db.prepare(`
-      UPDATE image_scans SET status = 'failed', value = ?, expires = ?, updated = ?
-      WHERE id = ? AND status = 'running' AND expires = ?
-    `).run(
-      JSON.stringify({ error: message }),
-      Date.now() + RETENTION,
-      Date.now(),
-      job.id,
-      job.expires
-    )
-
-    audit(job.actor, 'image.scan.failed', `${job.registryId}/${job.repository}@${job.digest}`)
+    if (finishScan(job.id, job.expires, { error: message })) {
+      audit(job.actor, 'image.scan.failed', `${job.registryId}/${job.repository}@${job.digest}`)
+    }
   }
 }

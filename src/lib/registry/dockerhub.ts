@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { validateUrl } from '@/lib/registry/allowlist'
 import { cachedResponse, cacheGeneration, rememberResponse } from '@/lib/registry/cache'
 import { DOCKER_HUB_API, DOCKER_HUB_REGISTRY } from '@/lib/registry/dockerhub-settings'
+import { checkBackoff, limitRegistry } from '@/lib/registry/throttle'
 import { cachedToken, forgetToken, rememberToken, tokenKey } from '@/lib/registry/token-cache'
 import { decryptSecret } from '@/lib/security/crypto'
 import { AppError } from '@/lib/security/error'
@@ -58,6 +59,8 @@ export function assertDockerHubRepository(registry: RegistryRecord, repository: 
 }
 
 async function hubFetch(path: string, init?: RequestInit): Promise<Response> {
+  checkBackoff(DOCKER_HUB_API)
+
   const response = await fetch(`${DOCKER_HUB_API}${path}`, {
     ...init,
     cache: 'no-store',
@@ -69,7 +72,7 @@ async function hubFetch(path: string, init?: RequestInit): Promise<Response> {
     await response.body?.cancel()
 
     if (response.status === 429) {
-      throw new AppError(429, 'Docker Hub rate limit reached. Try again later.', 60)
+      throw limitRegistry(DOCKER_HUB_API, response.headers)
     }
 
     throw new AppError(502, 'Docker Hub denied the request. Check the namespace and access token.')

@@ -5,7 +5,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { syncBuiltinESMExports } from 'node:module'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { after, before, mock, test } from 'node:test'
+import { after, afterEach, before, mock, test } from 'node:test'
 
 import { env } from '../src/lib/config/env'
 import { database } from '../src/lib/database/client'
@@ -118,6 +118,10 @@ before(() => {
   )
 
   syncBuiltinESMExports()
+})
+
+afterEach(() => {
+  database().prepare('DELETE FROM scan_attempts').run()
 })
 
 after(() => {

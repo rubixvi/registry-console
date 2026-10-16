@@ -41,7 +41,7 @@ export type RegistryPageInput = {
 }
 
 export type RegistryOptions = {
-  method?: 'GET' | 'DELETE'
+  method?: 'GET' | 'HEAD' | 'DELETE'
   scope?: string
   cache?: 'default' | 'reload'
 }

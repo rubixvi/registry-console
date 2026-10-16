@@ -18,10 +18,10 @@ export function Metadata({ id, repository, reference, trivyEnabled, children }: 
 
   return (
     <div
-      className="grid min-w-0 flex-1 grid-cols-1 items-center gap-y-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-x-4"
+      className="grid min-w-0 flex-1 grid-cols-1 items-center gap-y-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-x-4 truncate"
       ref={container}
     >
-      <div className="min-w-0 space-y-1">
+      <div className="min-w-0 space-y-1 truncate">
         {children}
 
         <div className="text-xs text-muted-foreground">

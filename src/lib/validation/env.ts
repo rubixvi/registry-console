@@ -36,6 +36,7 @@ export const envSchema = z.object({
   LDAP_BIND_PASSWORD_ENCRYPTED: z.string().max(16_384).default(''),
   LDAP_USER_FILTER: z.string().max(2048).default('(uid={username})'),
   LDAP_SESSION_MINUTES: z.coerce.number().int().min(5).max(60).default(15),
+  TRIVY_SCANS_PER_HOUR: z.coerce.number().int().min(1).max(60).default(16),
   TRIVY_ENABLED: z.enum(['true', 'false']).default('false'),
   TRIVY_PATH: z.string().max(2048).default('/usr/local/bin/trivy'),
   TRIVY_TIMEOUT_SECONDS: z.coerce.number().int().min(30).max(600).default(180),
