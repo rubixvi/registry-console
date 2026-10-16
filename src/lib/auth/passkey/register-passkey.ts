@@ -4,7 +4,7 @@ import { type RegistrationResponseJSON, verifyRegistrationResponse } from '@simp
 
 import { securityId } from '@/lib/auth/accounts'
 import { findPasskey, passkeyHost, userPasskeys } from '@/lib/auth/passkey'
-import { database } from '@/lib/database/client'
+import { insertPasskey } from '@/lib/database/passkey/passkey'
 import { AppError } from '@/lib/security/error'
 import { type User } from '@/types/auth'
 
@@ -20,6 +20,7 @@ export async function registerPasskey(
   }
 
   const { origin, rpID } = passkeyHost()
+
   let result: Awaited<ReturnType<typeof verifyRegistrationResponse>>
 
   try {
@@ -48,20 +49,14 @@ export async function registerPasskey(
 
   const { credential } = result.registrationInfo
 
-  database()
-    .prepare(`
-      INSERT INTO passkeys (id, username, fingerprint, user_id, public_key, counter, transports, name, created)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `)
-    .run(
-      credential.id,
-      user.username,
-      securityId(user),
-      userId,
-      Buffer.from(credential.publicKey).toString('base64url'),
-      credential.counter,
-      JSON.stringify(credential.transports ?? []),
-      name,
-      new Date().toISOString()
-    )
+  insertPasskey({
+    id: credential.id,
+    username: user.username,
+    fingerprint: securityId(user),
+    userId,
+    publicKey: credential.publicKey,
+    counter: credential.counter,
+    transports: credential.transports ?? [],
+    name,
+  })
 }

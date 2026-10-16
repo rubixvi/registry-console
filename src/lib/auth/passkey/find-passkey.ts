@@ -1,8 +1,8 @@
 import 'server-only'
 
-import { database } from '@/lib/database/client'
+import { getPasskey } from '@/lib/database/passkey/passkey'
 import { type PasskeyRow } from '@/types/security'
 
 export function findPasskey(id: string): PasskeyRow | undefined {
-  return database().prepare('SELECT * FROM passkeys WHERE id = ?').get(id) as PasskeyRow | undefined
+  return getPasskey(id)
 }

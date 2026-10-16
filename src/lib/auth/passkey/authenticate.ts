@@ -8,7 +8,7 @@ import {
 
 import { securityId } from '@/lib/auth/accounts'
 import { findPasskey, passkeyHost } from '@/lib/auth/passkey'
-import { database } from '@/lib/database/client'
+import { updatePasskey } from '@/lib/database/passkey/passkey'
 import { AppError } from '@/lib/security/error'
 import { type User } from '@/types/auth'
 
@@ -30,6 +30,7 @@ export async function authenticatePasskey(
   }
 
   const { origin, rpID } = passkeyHost()
+
   let result: Awaited<ReturnType<typeof verifyAuthenticationResponse>>
 
   try {
@@ -54,20 +55,14 @@ export async function authenticatePasskey(
     throw new AppError(401, 'Passkey sign-in could not be verified.')
   }
 
-  const update = database()
-    .prepare(`
-      UPDATE passkeys SET counter = ?, last_used = ?
-      WHERE id = ? AND fingerprint = ? AND counter = ?
-    `)
-    .run(
-      result.authenticationInfo.newCounter,
-      new Date().toISOString(),
-      key.id,
-      key.fingerprint,
-      key.counter
-    )
+  const updated = updatePasskey({
+    id: key.id,
+    fingerprint: key.fingerprint,
+    counter: result.authenticationInfo.newCounter,
+    previous: key.counter,
+  })
 
-  if (update.changes !== 1) {
+  if (!updated) {
     throw new AppError(401, 'Passkey changed. Please try again.')
   }
 }
