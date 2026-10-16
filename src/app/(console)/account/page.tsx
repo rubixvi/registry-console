@@ -2,8 +2,8 @@ import { type Metadata } from 'next'
 import { redirect } from 'next/navigation'
 
 import { Security } from '@/components/account/security'
-import { PageHeading } from '@/components/layout/page-heading'
-import { passkeySummaries } from '@/lib/auth/passkeys'
+import { Heading } from '@/components/layout/heading'
+import { passkeyInfo } from '@/lib/auth/passkey'
 import { getIdentity } from '@/lib/auth/session'
 import { getAuthenticator } from '@/lib/auth/totp'
 import { configUser } from '@/lib/auth/verification'
@@ -23,11 +23,11 @@ export default async function AccountPage() {
 
   return (
     <>
-      <PageHeading description="Manage your passkeys and authenticator app." title="Security" />
+      <Heading description="Manage your passkeys and authenticator app." title="Security" />
 
       <Security
         status={{
-          passkeys: passkeySummaries(user),
+          passkeys: passkeyInfo(user),
           directoryAccount: user.authProvider === 'ldap',
           totpEnabled: Boolean(authenticator),
           recoveryRemaining: authenticator

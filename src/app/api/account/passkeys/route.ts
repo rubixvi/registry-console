@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-import { removePasskey } from '@/lib/auth/passkeys'
+import { removePasskey } from '@/lib/auth/passkey'
 import { requireSecurity } from '@/lib/auth/requests'
 import { configUser } from '@/lib/auth/verification'
 import { audit } from '@/lib/database/audit'

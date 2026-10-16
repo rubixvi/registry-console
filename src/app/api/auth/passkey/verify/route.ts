@@ -2,7 +2,7 @@ import { type NextRequest, type NextResponse } from 'next/server'
 
 import { auditAuthFailure } from '@/lib/auth/audit'
 import { limitSignIn } from '@/lib/auth/limit'
-import { authPasskey, findPasskey } from '@/lib/auth/passkeys'
+import { authenticatePasskey, findPasskey } from '@/lib/auth/passkey'
 import { readRequest } from '@/lib/auth/requests'
 import { loginResponse } from '@/lib/auth/response'
 import { configUser } from '@/lib/auth/verification'
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     actor = user.username
 
-    await authPasskey(user, credential, pending.value)
+    await authenticatePasskey(user, credential, pending.value)
 
     return loginResponse(user, 'passkey')
   } catch (error) {

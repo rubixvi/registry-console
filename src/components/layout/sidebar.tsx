@@ -1,7 +1,7 @@
 import Link from 'next/link'
 
 import { LogoutButton } from '@/components/auth/logout-button'
-import { BrandMark } from '@/components/layout/brand-mark'
+import { Brand } from '@/components/layout/brand'
 import { Navigation } from '@/components/layout/navigation'
 import { RegistrySelector } from '@/components/registry/filters/selector'
 import { buttonVariants } from '@/components/ui/button'
@@ -24,7 +24,7 @@ export function Sidebar({ branding, identity, registries }: Props) {
     <aside className="flex shrink-0 flex-col bg-(--brand-background) px-5 py-4 text-white lg:fixed lg:inset-y-0 lg:left-0 lg:w-64 lg:py-6">
       <div className="flex items-center justify-between gap-3">
         <Link aria-label="Registry home" className="min-w-0" href="/">
-          <BrandMark branding={branding} />
+          <Brand branding={branding} />
         </Link>
 
         <div className="shrink-0 lg:hidden">

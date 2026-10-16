@@ -2,7 +2,7 @@ import { type Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { ShieldCheck, Users } from 'lucide-react'
 
-import { PageHeading } from '@/components/layout/page-heading'
+import { Heading } from '@/components/layout/heading'
 import { BrandingForm } from '@/components/settings/branding'
 import { Badge } from '@/components/ui/badge'
 import { getIdentity } from '@/lib/auth/session'
@@ -24,7 +24,7 @@ export default async function SettingsPage() {
 
   return (
     <>
-      <PageHeading
+      <Heading
         description="Apply your branding across the workspace and login screen."
         title="Settings"
       />

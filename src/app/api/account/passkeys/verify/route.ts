@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-import { registerPasskey } from '@/lib/auth/passkeys'
+import { registerPasskey } from '@/lib/auth/passkey'
 import { clearRequest, readRequest, requireSecurity } from '@/lib/auth/requests'
 import { configUser } from '@/lib/auth/verification'
 import { audit } from '@/lib/database/audit'

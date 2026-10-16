@@ -7,7 +7,7 @@ type Props = {
   branding: Branding
 }
 
-export function BrandMark({ branding }: Props) {
+export function Brand({ branding }: Props) {
   return (
     <div className="flex min-w-0 items-center gap-3">
       {branding.logoPath ? (

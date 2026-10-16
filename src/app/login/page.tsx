@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { LockKeyhole } from 'lucide-react'
 
 import { LoginForm } from '@/components/auth/login-form'
-import { BrandMark } from '@/components/layout/brand-mark'
+import { Brand } from '@/components/layout/brand'
 import { getIdentity } from '@/lib/auth/session'
 import { getSettings } from '@/lib/settings'
 
@@ -17,7 +17,7 @@ export default async function LoginPage() {
     <main className="grid min-h-dvh lg:grid-cols-2">
       <section className="relative hidden flex-col justify-between overflow-hidden bg-(--brand-background) p-8 text-white lg:flex">
         <div className="relative z-10">
-          <BrandMark branding={branding} />
+          <Brand branding={branding} />
         </div>
 
         {branding.footer && (

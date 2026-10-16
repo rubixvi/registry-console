@@ -2,7 +2,7 @@ import { type Metadata } from 'next'
 import Link from 'next/link'
 import { ArrowLeft, ChevronRight } from 'lucide-react'
 
-import { PageHeading } from '@/components/layout/page-heading'
+import { Heading } from '@/components/layout/heading'
 import { Connection } from '@/components/registry/controls/connection'
 import { Inspector } from '@/components/registry/image/inspector'
 import { Repository } from '@/components/registry/repository'
@@ -118,13 +118,13 @@ export default async function RegistryPage(props: RegistryProps) {
         )}
       </nav>
 
-      <PageHeading
+      <Heading
         description={registry.url}
         eyebrow={repository ? 'Repository' : 'Registry'}
         title={repository || registry.name}
       >
         {registry.readOnly && <Badge>Read only</Badge>}
-      </PageHeading>
+      </Heading>
 
       {!repository && <Connection admin={admin} registry={registry} />}
 

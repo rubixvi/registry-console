@@ -12,7 +12,7 @@ import {
   ldapConfiguration,
   verifyLdapPassword,
 } from '../src/lib/auth/ldap'
-import { authPasskey, regOptions } from '../src/lib/auth/passkeys'
+import { authenticatePasskey, registerOptions } from '../src/lib/auth/passkey'
 import { createSession } from '../src/lib/auth/session'
 import { env } from '../src/lib/config/env'
 import { database } from '../src/lib/database/client'
@@ -151,9 +151,9 @@ test('directory sessions are short and passkeys cannot bypass directory authenti
   assert.ok(session.expires > now)
   assert.ok(session.expires <= now + 15 * 60_000)
 
-  await assert.rejects(regOptions(user), /directory password/)
+  await assert.rejects(registerOptions(user), /directory password/)
   await assert.rejects(
-    authPasskey(user, { id: 'missing' } as never, 'challenge'),
+    authenticatePasskey(user, { id: 'missing' } as never, 'challenge'),
     /could not be verified/
   )
 })

@@ -3,7 +3,7 @@
 import { type ReactNode, useState } from 'react'
 import { Network } from 'lucide-react'
 
-import { PageHeading } from '@/components/layout/page-heading'
+import { Heading } from '@/components/layout/heading'
 import { RegistrySearch } from '@/components/registry/filters/search'
 import { RegistryCard } from '@/components/registry/registry-card'
 import { RegistryForm } from '@/components/registry/registry-form'
@@ -100,7 +100,7 @@ export function RegistryList({ registries, identity }: Props) {
 
   return (
     <>
-      <PageHeading description="Browse and manage your connected registries." title="Registries" />
+      <Heading description="Browse and manage your connected registries." title="Registries" />
 
       <div className="mb-7 flex flex-wrap items-center justify-between gap-4">
         <p aria-live="polite" className="text-sm text-muted-foreground">
