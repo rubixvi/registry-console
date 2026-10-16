@@ -81,7 +81,6 @@ test('architecture inspection limits never return partial results', async (conte
       return Response.json({ tags: ['latest', 'stable', 'release'] })
     }
 
-    // A valid manifest without an architecture cannot match the requested filter.
     return Response.json({ schemaVersion: 2, layers: [] })
   })
 

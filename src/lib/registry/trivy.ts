@@ -239,7 +239,6 @@ export async function executeTrivy(
       const child = spawn(config.TRIVY_PATH, args, {
         shell: false,
         cwd: directory,
-        // Do not pass application secrets or inherited Trivy/Docker settings.
         env: {
           NODE_ENV: 'production',
           PATH: '/usr/local/bin:/usr/bin:/bin',

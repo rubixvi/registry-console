@@ -105,8 +105,6 @@ const id = addRegistry({
 const registry = getRegistry(id)
 
 before(() => {
-  // Execute JavaScript fixtures through Node on every platform. All other
-  // commands use the real spawn path, including the missing-executable test.
   mock.method(
     childProcess,
     'spawn',

@@ -4,8 +4,6 @@ import { randomUUID } from 'node:crypto'
 
 import { type RegistryRecord } from '@/types/registry'
 
-// Persisted connections have a revision. This bounded fallback also isolates
-// transient records used by callers and fixtures without hashing credentials.
 const transient = new Map<string, string>()
 
 function credentialMarker(registry: RegistryRecord): string {
@@ -49,7 +47,5 @@ export function registryIdentity(registry: RegistryRecord) {
 }
 
 export function registryCacheIdentity(registry: RegistryRecord) {
-  // A process-local marker also isolates manually constructed records whose
-  // credential values change without going through the persistent store.
   return { ...registryIdentity(registry), credentials: credentialMarker(registry) }
 }
