@@ -5,7 +5,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { syncBuiltinESMExports } from 'node:module'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { after, before, mock, test } from 'node:test'
+import { after, afterEach, before, mock, test } from 'node:test'
 
 import { env } from '../src/lib/config/env'
 import { database } from '../src/lib/database/client'
@@ -60,9 +60,9 @@ const credentials = JSON.parse(
 )
 
 fs.writeFileSync(
-  ${JSON.stringify(capture)},
+  process.argv[2],
   JSON.stringify({
-    args: process.argv.slice(2),
+    args: process.argv.slice(3),
     env: Object.keys(process.env),
     credentials,
     temporary: process.cwd(),
@@ -110,7 +110,7 @@ before(() => {
     'spawn',
     (command: string, args: readonly string[], options: childProcess.SpawnOptions) => {
       if (fixtures.has(command)) {
-        return originalSpawn(process.execPath, [command, ...args], options)
+        return originalSpawn(process.execPath, [command, capture, ...args], options)
       }
 
       return originalSpawn(command, args, options)
@@ -118,6 +118,10 @@ before(() => {
   )
 
   syncBuiltinESMExports()
+})
+
+afterEach(() => {
+  database().prepare('DELETE FROM scan_attempts').run()
 })
 
 after(() => {
@@ -314,7 +318,7 @@ test('scanner failures are bounded and configuration changes fail a prepared job
     env().TRIVY_PATH = previous
   }
 
-  const job = prepareScan(registry, 'team/app', digest, 'admin')
+  const job = prepareScan(registry, 'team/app', `sha256:${'f'.repeat(64)}`, 'admin')
 
   database()
     .prepare('UPDATE registries SET username = ?, revision = ? WHERE id = ?')

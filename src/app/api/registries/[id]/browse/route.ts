@@ -18,10 +18,10 @@ export const GET = api(async (request, context, identity) => {
     request.headers.get('x-registry-refresh') === '1' ||
     request.headers.get('cache-control')?.toLowerCase().includes('no-cache') === true
 
-  rateLimit(`registry-browse:${identity.username}`, 30, 60_000)
+  rateLimit(`registry-browse:${identity.username}`, 300, 60_000)
 
   if (parsed.data.architecture) {
-    rateLimit(`registry-architecture:${identity.username}`, 6, 60_000)
+    rateLimit(`registry-architecture:${identity.username}`, 30, 60_000)
   }
 
   return NextResponse.json(await searchRegistry(registry, parsed.data, refresh))

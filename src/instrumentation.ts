@@ -20,4 +20,10 @@ export async function register(): Promise<void> {
   }
 
   securityAccounts(configured)
+
+  if (env().TRIVY_ENABLED === 'true') {
+    const { startScanWorker } = await import('@/lib/registry/trivy-worker')
+
+    startScanWorker()
+  }
 }

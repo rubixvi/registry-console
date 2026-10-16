@@ -97,6 +97,40 @@ export const DATABASE_SCHEMA = `
   );
 
   CREATE INDEX IF NOT EXISTS image_scan_expiry ON image_scans (expires);
+  CREATE INDEX IF NOT EXISTS image_scan_running ON image_scans (status, expires);
+
+  CREATE TABLE IF NOT EXISTS scan_queue (
+    id TEXT PRIMARY KEY,
+    registry_id TEXT NOT NULL,
+    repository TEXT NOT NULL,
+    digest TEXT NOT NULL,
+    available INTEGER NOT NULL DEFAULT 0,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    updated INTEGER NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS scan_queue_pending ON scan_queue (available, updated);
+
+  CREATE TABLE IF NOT EXISTS scan_attempts (
+    id TEXT PRIMARY KEY,
+    started INTEGER NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS scan_attempt_started ON scan_attempts (started);
+
+  CREATE TABLE IF NOT EXISTS scan_workers (
+    id TEXT PRIMARY KEY,
+    owner TEXT NOT NULL,
+    expires INTEGER NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS scan_discovery (
+    id TEXT PRIMARY KEY,
+    scope TEXT NOT NULL,
+    value TEXT NOT NULL,
+    available INTEGER NOT NULL,
+    updated INTEGER NOT NULL
+  );
 
   CREATE TABLE IF NOT EXISTS limits (
     id TEXT PRIMARY KEY,

@@ -1,7 +1,14 @@
 import 'server-only'
 
 import { env } from '@/lib/config/env'
+import {
+  DOCKER_HUB_API,
+  DOCKER_HUB_AUTH,
+  DOCKER_HUB_BLOBS,
+  DOCKER_HUB_REGISTRY,
+} from '@/lib/registry/dockerhub-settings'
 import { AppError } from '@/lib/security/error'
+import { type RegistryProvider } from '@/types/registry'
 
 const ALLOWED_PROTOCOLS = new Set(['http:', 'https:'])
 
@@ -13,7 +20,7 @@ export function allowedOrigins(raw: string): string[] {
     .map((origin) => new URL(origin).origin)
 }
 
-export function validateUrl(raw: string): string {
+export function validateUrl(raw: string, provider?: RegistryProvider): string {
   let url: URL
 
   try {
@@ -35,9 +42,11 @@ export function validateUrl(raw: string): string {
     throw new AppError(400, 'HTTP registries are disabled. Use HTTPS.')
   }
 
-  const origins = allowedOrigins(config.REGISTRY_ALLOWED_ORIGINS)
+  const trusted =
+    url.origin === DOCKER_HUB_REGISTRY ||
+    (provider === 'dockerhub' && url.origin === DOCKER_HUB_API)
 
-  if (!origins.includes(url.origin)) {
+  if (!trusted && !allowedOrigins(config.REGISTRY_ALLOWED_ORIGINS).includes(url.origin)) {
     throw new AppError(400, 'Registry origin is not in REGISTRY_ALLOWED_ORIGINS.')
   }
 
@@ -58,7 +67,11 @@ export function validateToken(raw: string, registryOrigin: string): URL {
 
   const credentials = Boolean(url.username || url.password)
   const protocol = ALLOWED_PROTOCOLS.has(url.protocol)
-  const origin = origins.includes(url.origin)
+  const trusted =
+    registryOrigin === DOCKER_HUB_REGISTRY &&
+    url.origin === DOCKER_HUB_AUTH &&
+    url.pathname === '/token'
+  const origin = trusted || origins.includes(url.origin)
   const blocked = url.protocol === 'http:' && config.ALLOW_HTTP_REGISTRIES !== 'true'
 
   if (credentials || url.hash || !protocol || !origin || blocked) {
@@ -68,7 +81,7 @@ export function validateToken(raw: string, registryOrigin: string): URL {
   return url
 }
 
-export function validateBlobRedirect(raw: string): URL {
+export function validateBlobRedirect(raw: string, registryOrigin?: string): URL {
   let url: URL
 
   try {
@@ -77,12 +90,14 @@ export function validateBlobRedirect(raw: string): URL {
     throw new AppError(502, 'Invalid registry blob redirect.')
   }
 
+  const trusted = registryOrigin === DOCKER_HUB_REGISTRY && DOCKER_HUB_BLOBS.has(url.origin)
+
   if (
     url.protocol !== 'https:' ||
     url.username ||
     url.password ||
     url.hash ||
-    !allowedOrigins(env().REGISTRY_BLOB_ORIGINS).includes(url.origin)
+    (!trusted && !allowedOrigins(env().REGISTRY_BLOB_ORIGINS).includes(url.origin))
   ) {
     throw new AppError(502, 'Registry blob redirect origin is not in REGISTRY_BLOB_ORIGINS.')
   }

@@ -8,7 +8,7 @@ import { rateLimit } from '@/lib/security/rate-limit'
 import { searchSchema } from '@/lib/validation/registry'
 
 export const GET = api(async (request, _context, identity) => {
-  rateLimit(`workspace-search:${identity.username}`, 6, 60_000)
+  rateLimit(`workspace-search:${identity.username}`, 30, 60_000)
 
   const parsed = searchSchema.safeParse(Object.fromEntries(request.nextUrl.searchParams))
 

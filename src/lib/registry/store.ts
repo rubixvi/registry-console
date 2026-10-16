@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto'
 
 import { env } from '@/lib/config/env'
 import { database } from '@/lib/database/client'
+import { discardQueue } from '@/lib/database/scan'
 import { validateUrl } from '@/lib/registry/allowlist'
 import { invalidateRegistry } from '@/lib/registry/cache'
 import { dockerHubSettings } from '@/lib/registry/dockerhub-settings'
@@ -56,7 +57,7 @@ export function getRegistry(id: string): RegistryRecord {
   return {
     id: row.id,
     name: row.name,
-    url: validateUrl(row.url),
+    url: validateUrl(row.url, row.provider),
     pullUrl: row.pull_url,
     username: row.username,
     password: row.password,
@@ -77,7 +78,7 @@ export function addRegistry(input: RegistryInput): string {
   }
 
   const id = randomUUID()
-  const url = validateUrl(input.url)
+  const url = validateUrl(input.url, input.provider)
   const password = encryptSecret(input.password)
   const settings = dockerHubSettings(input, url)
 
@@ -113,7 +114,7 @@ export function addRegistry(input: RegistryInput): string {
 
 export function updateRegistry(id: string, input: RegistryInput): string {
   const current = registryRow(id)
-  const url = validateUrl(input.url)
+  const url = validateUrl(input.url, input.provider)
   const password = encryptSecret(input.password)
   const settings = dockerHubSettings(input, url)
 
@@ -145,6 +146,7 @@ export function updateRegistry(id: string, input: RegistryInput): string {
       current.id
     )
 
+  discardQueue(current.id)
   invalidateRegistry(current.id)
 
   return current.id
@@ -154,6 +156,7 @@ export function removeRegistry(id: string): void {
   const current = registryRow(id)
 
   database().prepare('DELETE FROM registries WHERE id = ?').run(current.id)
+  discardQueue(current.id)
   invalidateRegistry(current.id)
 }
 

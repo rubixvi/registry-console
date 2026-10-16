@@ -122,7 +122,9 @@ export function RegistryForm({ registry }: Props) {
               type="url"
             />
             <p className="text-xs text-muted-foreground" id={`${id}-url-help`}>
-              The registry must be permitted by the server configuration.
+              {provider === 'dockerhub'
+                ? 'Docker Hub is automatically permitted.'
+                : 'The registry must be permitted by the server configuration.'}
             </p>
           </div>
 

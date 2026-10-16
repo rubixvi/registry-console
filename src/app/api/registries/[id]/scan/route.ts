@@ -31,9 +31,16 @@ export const POST = api(async (request, context, identity) => {
   const { id } = await context.params
   const { repository, digest } = await readJson(request, input)
 
-  rateLimit(`trivy-start:${identity.username}`, 4, 60_000)
+  rateLimit(`trivy-start:${identity.username}`, 16, 60_000)
 
-  const job = prepareScan(getRegistry(id), repository, digest, identity.username)
+  const registry = getRegistry(id)
+  const status = scanStatus(registry, repository, digest)
+
+  if (status.status === 'complete') {
+    return NextResponse.json(status)
+  }
+
+  const job = prepareScan(registry, repository, digest, identity.username)
 
   after(() => runScan(job))
 

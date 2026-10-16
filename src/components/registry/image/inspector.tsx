@@ -170,6 +170,17 @@ export function Inspector({ registry, repository, reference, admin, pullUrl }: P
                     )}
 
                     <code className="break-all text-xs text-muted-foreground">{child.digest}</code>
+
+                    {registry.trivyEnabled && !isAttestation(child) && (
+                      <div className="mt-3">
+                        <ImageScan
+                          compact
+                          digest={child.digest}
+                          id={registry.id}
+                          repository={repository}
+                        />
+                      </div>
+                    )}
                   </Link>
                 </li>
               )

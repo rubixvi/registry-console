@@ -13,7 +13,7 @@ export const POST = api(async (request, context, identity) => {
   const registry = getRegistry(id)
   const { repository, tags } = await readJson(request, bulkPreviewInput)
 
-  rateLimit(`bulk-preview:${identity.username}`, 10, 60_000)
+  rateLimit(`bulk-preview:${identity.username}`, 30, 60_000)
 
   const plan = await previewDeletion(
     registry,
@@ -31,7 +31,7 @@ export const DELETE = api(async (request, context, identity) => {
   const registry = getRegistry(id)
   const { planId, confirmation } = await readJson(request, bulkDeleteInput)
 
-  rateLimit(`bulk-delete:${identity.username}`, 10, 60_000)
+  rateLimit(`bulk-delete:${identity.username}`, 30, 60_000)
 
   const result = await executeDeletion(
     registry,
