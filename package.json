@@ -37,7 +37,7 @@
     "clsx": "2.1.1",
     "ldapts": "9.2.0",
     "lucide-react": "1.57.0",
-    "next": "16.4.1",
+    "next": "16.4.2",
     "next-themes": "^0.4.6",
     "qrcode": "1.5.4",
     "radix-ui": "^1.8.1",
@@ -63,5 +63,5 @@
     "tsx": "4.23.15",
     "typescript": "7.0.2"
   },
-  "packageManager": "pnpm@12.11.2"
+  "packageManager": "pnpm@12.14.0"
 }
