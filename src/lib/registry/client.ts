@@ -9,8 +9,16 @@ import {
   rememberResponse,
 } from '@/lib/registry/cache'
 import { parseChallenge } from '@/lib/registry/challenge'
-import { checkBackoff, limitRegistry } from '@/lib/registry/throttle'
-import { cachedToken, forgetToken, rememberToken, tokenKey } from '@/lib/registry/token-cache'
+import { DOCKER_HUB_REGISTRY } from '@/lib/registry/dockerhub-settings'
+import { shareResponse } from '@/lib/registry/requests'
+import { checkBackoff, checkRegistry, limitRegistry, limitResponse } from '@/lib/registry/throttle'
+import {
+  cachedToken,
+  forgetToken,
+  loadToken,
+  rememberToken,
+  tokenKey,
+} from '@/lib/registry/token-cache'
 import { decryptSecret } from '@/lib/security/crypto'
 import { AppError } from '@/lib/security/error'
 import { readBounded } from '@/lib/security/request'
@@ -59,7 +67,14 @@ export async function registryRequest(
     }
 
     const generation = cacheGeneration()
-    const response = await fetchRegistry(registry, path, options)
+    const response = deletion
+      ? await fetchRegistry(registry, path, options)
+      : await shareResponse(
+          registry,
+          path,
+          `${options.method ?? 'GET'}:${options.scope ?? ''}`,
+          () => fetchRegistry(registry, path, options)
+        )
 
     if (readable) {
       rememberResponse(registry, path, options.scope, response, generation)
@@ -91,10 +106,12 @@ async function fetchRegistry(
       throw new AppError(400, 'Invalid registry path.')
     }
 
-    checkBackoff(origin)
-
     const url = origin + path
     const { method = 'GET', scope } = options
+
+    checkRegistry(registry, path, method)
+
+    const dockerHub = origin === DOCKER_HUB_REGISTRY
     const password = decryptSecret(registry.password)
     const key = tokenKey(registry, scope)
     const cached = cachedToken(key)
@@ -127,7 +144,7 @@ async function fetchRegistry(
     })
 
     if (response.status === 401) {
-      forgetToken(key)
+      forgetToken(key, cached)
 
       const challengeHeader = response.headers.get('www-authenticate')
 
@@ -156,46 +173,53 @@ async function fetchRegistry(
         tokenHeaders.set('Authorization', basicAuth)
       }
 
-      const tokenResp = await fetch(tokenUrl, {
-        headers: tokenHeaders,
-        cache: 'no-store',
-        redirect: 'manual',
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-      })
+      const token = await loadToken(key, async () => {
+        checkBackoff(dockerHub ? tokenUrl.origin : origin)
 
-      if (!tokenResp.ok) {
-        await tokenResp.body?.cancel()
+        const tokenResp = await fetch(tokenUrl, {
+          headers: tokenHeaders,
+          cache: 'no-store',
+          redirect: 'manual',
+          signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        })
 
-        if (tokenResp.status === 429) {
-          throw limitRegistry(origin, tokenResp.headers)
+        if (!tokenResp.ok) {
+          await tokenResp.body?.cancel()
+
+          if (tokenResp.status === 429) {
+            throw limitRegistry(dockerHub ? tokenUrl.origin : origin, tokenResp.headers)
+          }
+
+          throw new AppError(502, 'Registry token authentication failed.')
         }
 
-        throw new AppError(502, 'Registry token authentication failed.')
-      }
+        const tokenBody = await readBounded(tokenResp, MAX_TOKEN_BYTES)
 
-      const tokenBody = await readBounded(tokenResp, MAX_TOKEN_BYTES)
+        let tokenData: unknown
 
-      let tokenData: unknown
+        try {
+          tokenData = JSON.parse(tokenBody)
+        } catch {
+          throw new AppError(502, 'Registry token response is invalid.')
+        }
 
-      try {
-        tokenData = JSON.parse(tokenBody)
-      } catch {
-        throw new AppError(502, 'Registry token response is invalid.')
-      }
+        const parsed = tokenSchema.safeParse(tokenData)
 
-      const parsed = tokenSchema.safeParse(tokenData)
+        if (!parsed.success) {
+          throw new AppError(502, 'Registry token response is invalid.')
+        }
 
-      if (!parsed.success) {
-        throw new AppError(502, 'Registry token response is invalid.')
-      }
+        const value = parsed.data.token || parsed.data.access_token
 
-      const token = parsed.data.token || parsed.data.access_token
+        if (!value || /[\r\n]/.test(value)) {
+          throw new AppError(502, 'Registry token response is invalid.')
+        }
 
-      if (!token || /[\r\n]/.test(token)) {
-        throw new AppError(502, 'Registry token response is invalid.')
-      }
+        rememberToken(key, value, parsed.data.expires_in ?? 60)
 
-      rememberToken(key, token, parsed.data.expires_in ?? 60)
+        return value
+      })
+
       headers.set('Authorization', `Bearer ${token}`)
 
       response = await fetch(url, {
@@ -203,6 +227,8 @@ async function fetchRegistry(
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       })
     }
+
+    let responseOrigin = origin
 
     if (method === 'GET' && /^\/v2\/.+\/blobs\/sha256(?::|%3A)[a-f0-9]{64}$/i.test(path)) {
       for (let redirects = 0; [301, 302, 303, 307, 308].includes(response.status); redirects++) {
@@ -216,6 +242,10 @@ async function fetchRegistry(
 
         const destination = validateBlobRedirect(location, origin)
 
+        responseOrigin = destination.origin
+
+        if (dockerHub) checkBackoff(responseOrigin)
+
         response = await fetch(destination, {
           headers: { Accept: 'application/json' },
           cache: 'no-store',
@@ -226,13 +256,18 @@ async function fetchRegistry(
     }
 
     if (!response.ok) {
-      await response.body?.cancel()
-
       const { status } = response
 
       if (status === 429) {
-        throw limitRegistry(origin, response.headers)
+        if (dockerHub && responseOrigin !== origin) {
+          await response.body?.cancel()
+          throw limitRegistry(responseOrigin, response.headers)
+        }
+
+        throw await limitResponse(registry, path, method, response)
       }
+
+      await response.body?.cancel()
 
       if (method === 'HEAD' && (status === 405 || status === 501)) {
         throw new AppError(405, 'Registry does not support manifest HEAD requests.')

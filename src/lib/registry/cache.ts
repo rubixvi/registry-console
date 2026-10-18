@@ -49,7 +49,7 @@ export function cacheLifetime(path: string): number {
   }
 
   if (
-    /^\/v2\/namespaces\/[^/]+\/repositories$/.test(pathname) ||
+    /^\/v2\/namespaces\/[^/]+\/repositories(?:\/[^/]+\/tags(?:\/[^/]+)?)?$/.test(pathname) ||
     pathname === '/v2/_catalog' ||
     /\/(?:tags\/list|manifests\/[^/]+)$/.test(pathname)
   ) {

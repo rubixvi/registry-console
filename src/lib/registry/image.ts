@@ -3,6 +3,7 @@ import 'server-only'
 import { createHash } from 'node:crypto'
 
 import { env } from '@/lib/config/env'
+import { cachedResponse, cacheGeneration, rememberResponse } from '@/lib/registry/cache'
 import { registryRequest } from '@/lib/registry/client'
 import { assertDockerHubRepository } from '@/lib/registry/dockerhub'
 import { AppError } from '@/lib/security/error'
@@ -31,15 +32,16 @@ export async function imageManifest(
 
   const encoded = repository.split('/').map(encodeURIComponent).join('/')
   const scope = `repository:${repository}:pull`
+  const path = `/v2/${encoded}/manifests/${encodeURIComponent(reference)}`
+  const generation = cacheGeneration()
+  const cached = !refresh && cachedResponse(registry, path, scope)
 
-  const result = await registryRequest(
-    registry,
-    `/v2/${encoded}/manifests/${encodeURIComponent(reference)}`,
-    {
+  const result =
+    cached ||
+    (await registryRequest(registry, path, {
       scope,
       cache: refresh ? 'reload' : 'default',
-    }
-  )
+    }))
 
   let manifest: ImageManifest
 
@@ -60,6 +62,16 @@ export async function imageManifest(
 
   if (requested && reference !== digest) {
     throw new AppError(502, 'Manifest does not match the requested digest.')
+  }
+
+  if (!cached && !refresh && !requested) {
+    rememberResponse(
+      registry,
+      `/v2/${encoded}/manifests/${encodeURIComponent(digest)}`,
+      scope,
+      result,
+      generation
+    )
   }
 
   return {

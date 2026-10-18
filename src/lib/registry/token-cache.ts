@@ -9,6 +9,26 @@ const MAX_LIFETIME_SECONDS = 300
 const EXPIRY_BUFFER_SECONDS = 15
 
 const tokens = new Map<string, TokenCache>()
+const pending = new Map<string, Promise<string>>()
+
+export async function loadToken(key: string, load: () => Promise<string>): Promise<string> {
+  const cached = cachedToken(key)
+
+  if (cached) return cached
+
+  let request = pending.get(key)
+
+  if (!request) {
+    request = load()
+    pending.set(key, request)
+  }
+
+  try {
+    return await request
+  } finally {
+    if (pending.get(key) === request) pending.delete(key)
+  }
+}
 
 export function tokenKey(registry: RegistryRecord, scope = ''): string {
   return keyedFingerprint('registry-token', [registryCacheIdentity(registry), scope])
@@ -48,6 +68,6 @@ export function rememberToken(key: string, value: string, lifetime: number): voi
   })
 }
 
-export function forgetToken(key: string): void {
-  tokens.delete(key)
+export function forgetToken(key: string, expected?: string | null): void {
+  if (expected === undefined || tokens.get(key)?.value === expected) tokens.delete(key)
 }

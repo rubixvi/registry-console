@@ -2,6 +2,13 @@ import { type z } from 'zod'
 
 import { type manifestSchema } from '@/lib/validation/image'
 
+export type ImageMetadata = {
+  digest: string
+  created: string | null
+  pushedAt: string | null
+  runnable: boolean
+}
+
 export type ImageDetails = {
   verified: boolean
   digest: string

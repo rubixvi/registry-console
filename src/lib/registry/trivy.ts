@@ -374,7 +374,7 @@ export async function runScan(job: ScanJob): Promise<void> {
       throw new AppError(409, 'The connection changed. Start the scan again.')
     }
 
-    const details = await imageDetails(registry, job.repository, job.digest, true)
+    const details = await imageDetails(registry, job.repository, job.digest)
     const platforms = details.platformDetails
 
     if (!platforms.length || platforms.length > 8) {

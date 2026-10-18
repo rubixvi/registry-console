@@ -556,3 +556,16 @@ test('direct attestation digests are discarded before claiming or spending scan 
   assert.equal(count('image_scans'), 0)
   assert.equal(count('scan_queue'), 0)
 })
+
+test('background discovery waits when the scan budget is exhausted', async () => {
+  env().TRIVY_SCANS_PER_HOUR = 1
+
+  const job = prepareScan(registry, 'team/app', first, 'admin')
+
+  finishScan(job.id, job.expires, { report: emptyReport(first) })
+  await scanPending()
+
+  assert.equal(requests.length, 0)
+  assert.equal(scanned().length, 0)
+  assert.equal(count('scan_attempts'), 1)
+})

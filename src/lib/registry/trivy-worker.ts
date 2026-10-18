@@ -50,6 +50,8 @@ export async function scanPending(reference?: ScanTarget): Promise<void> {
   heartbeat.unref()
 
   try {
+    if (!enabled() || scanDelay() > 0) return
+
     if (!reference) {
       seedRegistry()
 
@@ -61,7 +63,9 @@ export async function scanPending(reference?: ScanTarget): Promise<void> {
           const registry = getRegistry(connection.id)
 
           registerDiscovery(registry.id, discoveryScope(registry))
-        } catch {}
+        } catch {
+          continue
+        }
       }
 
       const discovery = nextDiscovery()

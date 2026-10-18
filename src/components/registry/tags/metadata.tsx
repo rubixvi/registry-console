@@ -15,6 +15,7 @@ type Props = {
 
 export function Metadata({ id, repository, reference, trivyEnabled, children }: Props) {
   const { container, data, error } = useMetadata(id, repository, reference)
+  const date = data?.created ?? data?.pushedAt
 
   return (
     <div
@@ -29,9 +30,10 @@ export function Metadata({ id, repository, reference, trivyEnabled, children }: 
             <span title={error.message}>Metadata unavailable</span>
           ) : !data ? (
             <span>Loading image details…</span>
-          ) : data.created ? (
-            <time dateTime={data.created}>
-              {new Date(data.created).toLocaleString(undefined, {
+          ) : date ? (
+            <time dateTime={date}>
+              {!data.created && 'Pushed '}
+              {new Date(date).toLocaleString(undefined, {
                 year: 'numeric',
                 month: 'short',
                 day: 'numeric',
@@ -43,7 +45,7 @@ export function Metadata({ id, repository, reference, trivyEnabled, children }: 
         </div>
       </div>
 
-      {trivyEnabled && data && data.platformDetails.length > 0 && !error && (
+      {trivyEnabled && data?.runnable && !error && (
         <div className="flex min-w-0 items-center justify-start text-xs sm:justify-end">
           <ImageScan compact digest={data.digest} id={id} repository={repository} />
         </div>
