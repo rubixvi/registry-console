@@ -4,13 +4,15 @@ import { randomUUID } from 'node:crypto'
 
 import { validateUrl } from '@/lib/registry/allowlist'
 import { hubSettings } from '@/lib/registry/dockerhub-settings'
+import { githubSettings } from '@/lib/registry/github'
 import { encryptSecret } from '@/lib/security/crypto'
 import { type RegistryInput, type RegistryRow } from '@/types/registry'
 
 export function registryInput(id: string, input: RegistryInput): RegistryRow {
   const url = validateUrl(input.url, input.provider)
   const password = encryptSecret(input.password)
-  const settings = hubSettings(input, url)
+  const settings =
+    input.provider === 'github' ? githubSettings(input, url) : hubSettings(input, url)
 
   return {
     id,

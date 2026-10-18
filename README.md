@@ -1,6 +1,6 @@
 # Registry Console
 
-Registry Console is a self-hosted interface for Docker and OCI registries, including Docker Hub. It lets you browse repositories, filter and sort tags, inspect manifests and build history, review Trivy reports, and delete manifests with a preview of the affected tags.
+Registry Console is a self-hosted interface for Docker and OCI registries, including Docker Hub and GitHub Container Registry. It lets you browse repositories, filter and sort tags, inspect manifests and build history, review Trivy reports, and delete manifests with a preview of the affected tags.
 
 The console connects to your existing registries. Images stay in those registries; Docker clients continue to push and pull directly. Connection settings, accounts' security state, scan reports and audit events are stored in SQLite. Admin and viewer accounts share the configured connections.
 
@@ -12,7 +12,7 @@ The console connects to your existing registries. Images stay in those registrie
 
 ## Features
 
-- Multiple registry connections, repository search, tag filters and date sorting with newest first by default. Distribution registries support namespace trees; Docker Hub uses a flat namespace list.
+- Multiple registry connections, repository search, tag filters and date sorting with newest first by default. Distribution and GitHub registries support namespace trees; Docker Hub uses a flat namespace list.
 - Docker schema v2 and OCI manifests, multi-platform images, configuration, labels, layer sizes and build history. Public pull addresses can differ from internal connection addresses.
 - Trivy vulnerability reports for immutable digests, without a Docker socket. Build attestations and private Docker Hub repositories are excluded.
 - Individual and bulk manifest deletion with typed confirmation, a preview of all tags sharing each digest, and an audit trail.
@@ -217,7 +217,11 @@ Restart or recreate the console after changing environment configuration. The su
 | `AUTH_USERNAME`, `AUTH_PASSWORD_HASH` | Required for single-account mode | Local admin username and generated scrypt hash. |
 | `AUTH_EMAIL`, `AUTH_USER_ID` | Empty | Optional normalized account email and explicit immutable account UUID. |
 | `AUTH_USERS_JSON` | Empty | Explicit account list; replaces single-account configuration. |
-| `SSO_PROVIDERS_JSON` | `[]` | Trusted SSO provider configuration. See below. |
+| `GITHUB_ID`, `GITHUB_SECRET` | Empty | Enable GitHub sign-in when both are set. |
+| `GOOGLE_ID`, `GOOGLE_SECRET` | Empty | Enable Google sign-in when both are set. |
+| `AUTHENTIK_ID`, `AUTHENTIK_SECRET`, `AUTHENTIK_ISSUER` | Empty | Enable Authentik sign-in with the exact provider issuer. |
+| `ZITADEL_ID`, `ZITADEL_SECRET`, `ZITADEL_ISSUER` | Empty | Enable Zitadel sign-in with the exact instance issuer. |
+| `KEYCLOAK_ID`, `KEYCLOAK_SECRET`, `KEYCLOAK_ISSUER` | Empty | Enable Keycloak sign-in with the exact realm issuer. |
 | `SESSION_HOURS` | `8` | Local and SSO session lifetime, 1–24 hours. |
 | `TRUST_PROXY` | `false` | Trust the rightmost forwarded IP from a controlled proxy. |
 | `AUDIT_RETENTION_DAYS` | `90` | Audit retention by age, 1–3650 days. Older events are pruned on subsequent audit writes. |
@@ -271,21 +275,44 @@ Supported providers are Authentik, GitHub, Google, Zitadel and Keycloak. Configu
 
 For example, the Google redirect URI for `APP_ORIGIN=https://console.example.com` is `https://console.example.com/api/auth/sso/google/callback`. Do not register wildcard callbacks. Enable the standard authorization-code flow and the `openid`, `profile` and `email` scopes for OIDC clients. GitHub uses `read:user` and `user:email`; it requires the account's verified primary email.
 
-Configure only the providers you use:
+Configure only the providers you use. Set both the client ID and secret to enable a provider. Leave both empty to disable it. Incomplete credentials stop startup with a configuration error. Authentik, Zitadel and Keycloak also require their issuer.
 
 ```dotenv
-SSO_PROVIDERS_JSON='[
-  {"id":"authentik","name":"Authentik","issuer":"https://auth.example.com/application/o/console/","clientId":"REPLACE","clientSecret":"REPLACE"},
-  {"id":"github","name":"GitHub","clientId":"REPLACE","clientSecret":"REPLACE"},
-  {"id":"google","name":"Google","clientId":"REPLACE","clientSecret":"REPLACE"},
-  {"id":"zitadel","name":"Zitadel","issuer":"https://identity.example.com","clientId":"REPLACE","clientSecret":"REPLACE","authMethod":"basic"},
-  {"id":"keycloak","name":"Keycloak","issuer":"https://identity.example.com/realms/console","clientId":"REPLACE","clientSecret":"REPLACE"}
-]'
+GITHUB_ID=REPLACE
+GITHUB_SECRET=REPLACE
+
+GOOGLE_ID=REPLACE
+GOOGLE_SECRET=REPLACE
+
+AUTHENTIK_ID=REPLACE
+AUTHENTIK_SECRET=REPLACE
+AUTHENTIK_ISSUER=https://auth.example.com/application/o/console/
+
+ZITADEL_ID=REPLACE
+ZITADEL_SECRET=REPLACE
+ZITADEL_ISSUER=https://identity.example.com
+ZITADEL_AUTH_METHOD=basic
+
+KEYCLOAK_ID=REPLACE
+KEYCLOAK_SECRET=REPLACE
+KEYCLOAK_ISSUER=https://identity.example.com/realms/console
 ```
 
-Use the issuer reported by your provider's discovery document, including its path and trailing slash. `authMethod` is `post` by default; set it to `basic` if the client uses HTTP Basic token-endpoint authentication. For Zitadel, select the matching client-secret authentication method when creating its Web application. For Authentik and Keycloak, ensure the email scope exposes `email` and a truthful boolean `email_verified`. A provider that cannot verify the email is rejected.
+These variables replace `SSO_PROVIDERS_JSON`. Move each existing provider's credentials and options to its own variables, remove the JSON setting and recreate the console. Provider IDs and callback paths stay the same, so existing identity bindings are retained.
 
-Discovery, token, user-info and signing-key requests require HTTPS and cannot follow redirects. Endpoints must share the issuer origin, apart from the built-in Google and GitHub destinations. If your trusted provider publishes an endpoint on another host, add its exact origin through the provider's `origins` array, for example `"origins":["https://keys.example.com"]`. These origins are security-sensitive: they can receive credentials or supply identity data.
+Use the issuer reported by your provider's discovery document, including its path and trailing slash. GitHub and Google use fixed issuers. Optional settings use the same provider prefix, such as `ZITADEL_NAME`, `ZITADEL_AUTH_METHOD` and `ZITADEL_ORIGINS`.
+
+| Suffix | Default | Purpose |
+| --- | --- | --- |
+| `_NAME` | Provider name | Label shown on the sign-in button. |
+| `_AUTH_METHOD` | `post` | Token-endpoint client-secret authentication, either `post` or `basic`. |
+| `_ORIGINS` | Empty | Comma-separated exact HTTPS origins for trusted endpoints outside the issuer origin, up to eight. |
+
+For Zitadel, select the matching client-secret authentication method when creating its Web application. For Authentik and Keycloak, ensure the email scope exposes `email` and a truthful boolean `email_verified`. A provider that cannot verify the email is rejected.
+
+Discovery, token, user-info and signing-key requests require HTTPS and cannot follow redirects. Endpoints must share the issuer origin, apart from the built-in Google and GitHub destinations. If your trusted provider publishes an endpoint on another host, set its exact origin, for example `AUTHENTIK_ORIGINS=https://keys.example.com`. These origins are security-sensitive because they can receive credentials or supply identity data.
+
+The supplied Compose file reads these settings from `.env`. For a deployment that lists environment variables individually, pass the chosen provider's ID, secret and issuer through to the app service. Keep SSO credentials out of the scanner service. GitHub sign-in credentials are separate from a registry connection's package access token.
 
 The first successful sign-in matches the verified provider email to an explicitly configured console account. It then binds that account to the provider's immutable subject and issuer. Subsequent logins must match both the binding and configured email. An email is a matching attribute, not an immutable identity: a reassigned email or changed provider subject cannot silently take over an existing binding. No accounts or admin roles are created from provider claims. Provider access tokens and client secrets are never returned to the browser or stored as console sessions.
 
@@ -332,13 +359,20 @@ Docker Hub connections use a user or organisation namespace, such as `rubixvi` o
 
 Docker Hub is not forced to be read only. Deletion still depends on the connection setting, upstream permission and endpoint support. The console uses manifest deletion by digest through the Distribution API; it does not implement Docker Hub's separate tag-removal API. Upstream rate limits can still apply to admins. The console's browsing cache is reused unless an explicit refresh is requested; admin capacity is reserved in shared request and search queues.
 
+Choose **GitHub Container** to connect to `https://ghcr.io`. Set the namespace to the GitHub user or organisation that owns the packages. Provide your GitHub username and a separate personal access token (classic) with `read:packages`. For organisations that enforce SSO, authorise the token for that organisation. The console lists container packages through GitHub's API and reads tags, manifests and configuration through GHCR. Your own private user packages use the authenticated-user API; a different user's namespace uses GitHub's public package endpoints.
+
+GitHub connections can allow deletion. This requires `read:packages`, `delete:packages` and admin permission on the package. The console resolves the immutable digest to its active GitHub package version and deletes that version through the Packages API. Every tag attached to the version is affected. GitHub may refuse deletion, including for public versions with more than 5,000 downloads. The existing preview and confirmation steps apply.
+
+The fixed GHCR origin, GitHub Packages API and `pkg-containers.githubusercontent.com` blob origin are built in for GitHub connections. Redirected blob requests do not carry registry credentials. A GitHub connection's package token is stored encrypted with the other registry credentials and shared by console accounts with access to the workspace. It is independent of `GITHUB_ID` and `GITHUB_SECRET`, which configure console sign-in. The scanner receives only the selected connection's package credentials for a scan.
+
+
 Bulk deletion accepts up to 100 selected tags on the visible page. The preview resolves every repository tag to list all aliases of each selected digest, including unselected tags. If it cannot resolve the complete preview, deletion is not offered from that incomplete result. The plan belongs to the current admin session, lasts five minutes and can be used once. Tags can still change upstream after preview; concurrent registry writes are outside the console's transaction boundary.
 
 Deleting a manifest can invalidate every tag pointing to it. It does not run registry garbage collection. Removing a connection clears its console settings, scan records and deletion plans; it does not remove upstream images. See the [Distribution configuration guide](https://distribution.github.io/distribution/about/configuration/) for registry-side deletion and storage management.
 
 ## Trivy scanning
 
-`TRIVY_ENABLED=true` enables scanning globally, including discovery and queued image references. Only runnable immutable digests are scanned. Build attestations are excluded; multi-platform images are scanned for up to eight runnable platforms. Private Docker Hub repositories are excluded even when saved credentials can read them. Unconfirmed Docker Hub privacy also prevents a scan. Private Distribution images can be scanned using connection credentials.
+`TRIVY_ENABLED=true` enables scanning globally, including discovery and queued image references. Only runnable immutable digests are scanned. Build attestations are excluded; multi-platform images are scanned for up to eight runnable platforms. Private Docker Hub repositories are excluded even when saved credentials can read them. Unconfirmed Docker Hub privacy also prevents a scan. Private Distribution and GitHub images can be scanned using connection credentials.
 
 One scan runs at a time. Other jobs remain queued and the inspector displays the current scanner actor and lease deadline. The deadline is a timeout, not a completion estimate. Queued and running states poll every three seconds. Requesting the same running digest returns its existing state. Admins can choose **Override scan limit**, including for queued work; this bypasses the hourly budget and spacing, but preserves single-job execution and eligibility checks.
 

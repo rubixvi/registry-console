@@ -1,8 +1,8 @@
 import 'server-only'
 
 import { registryRequest } from '@/lib/registry/client'
-import { assertRepository } from '@/lib/registry/dockerhub'
 import { imageManifest } from '@/lib/registry/image'
+import { assertRepository } from '@/lib/registry/repository'
 import { AppError } from '@/lib/security/error'
 import { digestName, referenceName, repositoryName } from '@/lib/validation/registry'
 import { type RegistryRecord } from '@/types/registry'

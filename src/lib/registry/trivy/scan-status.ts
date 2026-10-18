@@ -1,7 +1,7 @@
 import 'server-only'
 
 import { activeScan, getScan, pendingScan, scanDelay } from '@/lib/database/scan'
-import { assertRepository } from '@/lib/registry/dockerhub'
+import { assertRepository } from '@/lib/registry/repository'
 import { reportKey } from '@/lib/registry/trivy/report-key'
 import { scanAllowed } from '@/lib/registry/trivy/scan-allowed'
 import { digestName, repositoryName } from '@/lib/validation/registry'

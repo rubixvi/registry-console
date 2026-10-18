@@ -7,7 +7,7 @@ import path from 'node:path'
 
 import { env } from '@/lib/config/env'
 import { validateUrl } from '@/lib/registry/allowlist'
-import { assertRepository } from '@/lib/registry/dockerhub'
+import { assertRepository } from '@/lib/registry/repository'
 import { requirePublic } from '@/lib/registry/scan-policy'
 import { MAX_REPORT_BYTES } from '@/lib/registry/trivy/constants'
 import { remoteTrivy } from '@/lib/registry/trivy/remote-trivy'

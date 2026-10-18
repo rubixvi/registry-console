@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useRegistryForm } from '@/hooks/registry/use-form'
-import { type Registry } from '@/types/registry'
+import { type Registry, type RegistryProvider } from '@/types/registry'
 
 type Props = {
   registry?: Registry
@@ -34,6 +34,7 @@ export function RegistryForm({ registry }: Props) {
   const id = useId()
   const [provider, setProvider] = useState(registry?.provider ?? 'distribution')
   const isEditing = Boolean(registry)
+  const hosted = provider !== 'distribution'
 
   return (
     <Dialog
@@ -62,7 +63,7 @@ export function RegistryForm({ registry }: Props) {
 
             <Select
               name="provider"
-              onValueChange={(value) => setProvider(value as 'distribution' | 'dockerhub')}
+              onValueChange={(value) => setProvider(value as RegistryProvider)}
               value={provider}
             >
               <SelectTrigger className="w-full" id={`${id}-provider`}>
@@ -72,11 +73,12 @@ export function RegistryForm({ registry }: Props) {
               <SelectContent position="popper">
                 <SelectItem value="distribution">Container</SelectItem>
                 <SelectItem value="dockerhub">Docker Hub</SelectItem>
+                <SelectItem value="github">GitHub Container</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          {provider === 'dockerhub' && (
+          {hosted && (
             <div className="grid gap-2">
               <Label htmlFor={`${id}-namespace`}>Namespace</Label>
               <Input
@@ -88,8 +90,9 @@ export function RegistryForm({ registry }: Props) {
                 required
               />
               <p className="text-xs text-muted-foreground">
-                Use an access token to access private repositories and manage images with the
-                required permissions.
+                {provider === 'github'
+                  ? 'Use a personal access token with read:packages. Deletion also requires delete:packages and package admin access.'
+                  : 'Use an access token to access private repositories and manage images with the required permissions.'}
               </p>
             </div>
           )}
@@ -111,19 +114,23 @@ export function RegistryForm({ registry }: Props) {
             <Input
               aria-describedby={`${id}-url-help`}
               defaultValue={
-                provider === 'dockerhub' ? 'https://registry-1.docker.io' : registry?.url
+                provider === 'dockerhub'
+                  ? 'https://registry-1.docker.io'
+                  : provider === 'github'
+                    ? 'https://ghcr.io'
+                    : registry?.url
               }
               id={`${id}-url`}
               key={provider}
               name="url"
               placeholder="https://registry.example.com"
-              readOnly={provider === 'dockerhub'}
+              readOnly={hosted}
               required
               type="url"
             />
             <p className="text-xs text-muted-foreground" id={`${id}-url-help`}>
-              {provider === 'dockerhub'
-                ? 'Docker Hub is automatically permitted.'
+              {hosted
+                ? `${provider === 'github' ? 'GitHub Container Registry' : 'Docker Hub'} is automatically permitted.`
                 : 'The registry must be permitted by the server configuration.'}
             </p>
           </div>
@@ -153,17 +160,19 @@ export function RegistryForm({ registry }: Props) {
                 id={`${id}-username`}
                 maxLength={128}
                 name="username"
+                required={provider === 'github'}
               />
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor={`${id}-password`}>Password</Label>
+              <Label htmlFor={`${id}-password`}>{hosted ? 'Access token' : 'Password'}</Label>
               <Input
                 aria-describedby={isEditing ? `${id}-password-help` : undefined}
                 autoComplete="new-password"
                 id={`${id}-password`}
                 maxLength={4096}
                 name="password"
+                required={provider === 'github'}
                 type="password"
               />
             </div>
@@ -171,8 +180,9 @@ export function RegistryForm({ registry }: Props) {
 
           {isEditing && (
             <p className="text-xs text-muted-foreground" id={`${id}-password-help`}>
-              Re-enter the current password or provide a new one. Leave blank to remove the stored
-              password.
+              {provider === 'github'
+                ? 'Re-enter the current package token or provide a new one.'
+                : 'Re-enter the current password or provide a new one. Leave blank to remove the stored password.'}
             </p>
           )}
 

@@ -4,7 +4,7 @@ import path from 'node:path'
 
 import { env } from '@/lib/config/env'
 import { claimScan } from '@/lib/database/scan'
-import { assertRepository } from '@/lib/registry/dockerhub'
+import { assertRepository } from '@/lib/registry/repository'
 import { reportKey } from '@/lib/registry/trivy/report-key'
 import { scanAllowed } from '@/lib/registry/trivy/scan-allowed'
 import { AppError } from '@/lib/security/error'

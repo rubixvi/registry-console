@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto'
 
 import { cachedResponse, cacheGeneration, rememberResponse } from '@/lib/registry/cache'
 import { registryRequest } from '@/lib/registry/client'
-import { assertRepository } from '@/lib/registry/dockerhub'
+import { assertRepository } from '@/lib/registry/repository'
 import { AppError } from '@/lib/security/error'
 import { manifestSchema } from '@/lib/validation/image'
 import { referenceName, repositoryName } from '@/lib/validation/registry'

@@ -1,4 +1,4 @@
-export type RegistryProvider = 'distribution' | 'dockerhub'
+export type RegistryProvider = 'distribution' | 'dockerhub' | 'github'
 
 export type RegistryProps = {
   params: Promise<{ id: string }>

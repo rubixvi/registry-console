@@ -34,7 +34,8 @@ export function scanInput(value) {
     origin.username ||
     origin.password ||
     (origin.protocol === 'http:' && process.env.ALLOW_HTTP_REGISTRIES !== 'true') ||
-    (!allowed.includes(origin.origin) && origin.origin !== 'https://registry-1.docker.io')
+    (!allowed.includes(origin.origin) &&
+      !['https://registry-1.docker.io', 'https://ghcr.io'].includes(origin.origin))
   ) {
     throw new Error('Registry origin is not approved for scanning.')
   }

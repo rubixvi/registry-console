@@ -27,7 +27,7 @@ export const registryInput = z
       .refine((value) => !value.includes(':') && !/[\r\n]/.test(value)),
     password: z.string().max(4096),
     readOnly: z.boolean(),
-    provider: z.enum(['distribution', 'dockerhub']).default('distribution'),
+    provider: z.enum(['distribution', 'dockerhub', 'github']).default('distribution'),
     namespace: z.string().trim().max(64).default(''),
   })
   .strict()

@@ -33,7 +33,7 @@ export async function remoteTrivy(
       repository,
       digest,
       platform,
-      provider: registry.provider ?? 'distribution',
+      provider: registry.provider === 'dockerhub' ? 'dockerhub' : 'distribution',
       username: registry.username,
       password: decryptSecret(registry.password),
       timeout: Math.floor(timeout),

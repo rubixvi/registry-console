@@ -1,6 +1,17 @@
 import { z } from 'zod'
 
 export const providerName = z.enum(['authentik', 'github', 'google', 'zitadel', 'keycloak'])
+const endpoint = z
+  .url()
+  .max(2048)
+  .refine((value) => {
+    if (!URL.canParse(value)) return false
+
+    const url = new URL(value)
+
+    return url.protocol === 'https:' && !url.username && !url.password && !url.search && !url.hash
+  }, 'Use HTTPS without credentials, query parameters or fragments.')
+
 export const emailSchema = z
   .string()
   .trim()
@@ -12,15 +23,23 @@ export const providerSchema = z
   .object({
     id: providerName,
     name: z.string().trim().min(1).max(64).optional(),
-    issuer: z.url().max(2048).optional(),
+    issuer: endpoint.optional(),
     clientId: z.string().min(1).max(2048),
     clientSecret: z.string().min(1).max(4096),
-    origins: z.array(z.url().max(2048)).max(8).default([]),
+    origins: z
+      .array(
+        endpoint
+          .refine(
+            (value) => URL.canParse(value) && new URL(value).pathname === '/',
+            'Use an exact origin without a path.'
+          )
+          .transform((value) => new URL(value).origin)
+      )
+      .max(8)
+      .default([]),
     authMethod: z.enum(['post', 'basic']).default('post'),
   })
   .strict()
-
-export const providersSchema = z.array(providerSchema).max(5)
 
 export const ssoInput = z.object({ action: z.enum(['login', 'verify']).default('login') }).strict()
 

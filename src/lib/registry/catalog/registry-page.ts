@@ -1,8 +1,10 @@
 import 'server-only'
 
 import { registryRequest } from '@/lib/registry/client'
-import { assertRepository, hubPage } from '@/lib/registry/dockerhub'
+import { hubPage } from '@/lib/registry/dockerhub'
+import { githubPage } from '@/lib/registry/github'
 import { nextCursor } from '@/lib/registry/pagination'
+import { assertRepository } from '@/lib/registry/repository'
 import { AppError } from '@/lib/security/error'
 import { catalogueSchema, tagsSchema } from '@/lib/validation/response/registry'
 import { type RegistryPage, type RegistryPageInput, type RegistryRecord } from '@/types/registry'
@@ -16,6 +18,10 @@ export async function registryPage(
 
   if (registry.provider === 'dockerhub') {
     return hubPage(registry, input, refresh)
+  }
+
+  if (registry.provider === 'github' && !repository) {
+    return githubPage(registry, input, refresh)
   }
 
   if (repository) {

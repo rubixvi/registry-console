@@ -1,53 +1,59 @@
 import 'server-only'
 
 import { env } from '@/lib/config/env'
-import { providersSchema } from '@/lib/validation/sso'
+import { providerSchema } from '@/lib/validation/sso'
 import { type Provider } from '@/types/sso'
 
-const names = {
-  authentik: 'Authentik',
-  github: 'GitHub',
-  google: 'Google',
-  zitadel: 'Zitadel',
-  keycloak: 'Keycloak',
-}
+const entries = [
+  ['authentik', 'AUTHENTIK', 'Authentik'],
+  ['github', 'GITHUB', 'GitHub'],
+  ['google', 'GOOGLE', 'Google'],
+  ['zitadel', 'ZITADEL', 'Zitadel'],
+  ['keycloak', 'KEYCLOAK', 'Keycloak'],
+] as const
 
-export function ssoProviders(): Provider[] {
-  let value: unknown
+export function ssoProviders(config = env()): Provider[] {
+  const providers: Provider[] = []
 
-  try {
-    value = JSON.parse(env().SSO_PROVIDERS_JSON)
-  } catch {
-    throw new Error('SSO_PROVIDERS_JSON must contain valid JSON.')
-  }
+  for (const [id, prefix, name] of entries) {
+    const clientId = config[`${prefix}_ID`]
+    const clientSecret = config[`${prefix}_SECRET`]
 
-  const providers = providersSchema.parse(value)
+    if (!clientId && !clientSecret) continue
 
-  if (new Set(providers.map((provider) => provider.id)).size !== providers.length) {
-    throw new Error('SSO provider IDs must be unique.')
-  }
-
-  for (const provider of providers) {
-    provider.name ??= names[provider.id]
-
-    const issuer =
-      provider.id === 'github'
-        ? 'https://github.com'
-        : provider.id === 'google'
-          ? 'https://accounts.google.com'
-          : provider.issuer
-
-    if (!issuer) throw new Error('Custom SSO providers require an issuer.')
-
-    for (const value of [issuer, ...provider.origins]) {
-      const url = new URL(value)
-
-      if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash) {
-        throw new Error('SSO endpoints require HTTPS without credentials or query parameters.')
-      }
+    if (!clientId || !clientSecret.trim()) {
+      throw new Error(`${prefix}_ID and ${prefix}_SECRET must both be set.`)
     }
 
-    provider.issuer = issuer
+    const issuer =
+      prefix === 'GITHUB'
+        ? 'https://github.com'
+        : prefix === 'GOOGLE'
+          ? 'https://accounts.google.com'
+          : config[`${prefix}_ISSUER`]
+
+    if (!issuer) throw new Error(`${prefix}_ISSUER is required when ${prefix} SSO is enabled.`)
+
+    const result = providerSchema.safeParse({
+      id,
+      name: config[`${prefix}_NAME`] || name,
+      issuer,
+      clientId,
+      clientSecret,
+      origins: config[`${prefix}_ORIGINS`]
+        .split(',')
+        .map((origin) => origin.trim())
+        .filter(Boolean),
+      authMethod: config[`${prefix}_AUTH_METHOD`],
+    })
+
+    if (!result.success) {
+      const fields = result.error.issues.map((issue) => issue.path.join('.')).join(', ')
+
+      throw new Error(`Invalid ${prefix} SSO configuration: ${fields}`)
+    }
+
+    providers.push(result.data)
   }
 
   return providers
