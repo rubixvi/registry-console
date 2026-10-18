@@ -10,4 +10,3 @@ release
 *.tsbuildinfo
 *.zip
 coverage
-tests
