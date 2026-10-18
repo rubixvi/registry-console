@@ -8,6 +8,7 @@ const __filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(__filename)
 
 const baseConfig: NextConfig = {
+  output: 'standalone',
   compiler: {
     reactRemoveProperties: isProduction,
     removeConsole: isProduction ? { exclude: ['error'] } : false,
