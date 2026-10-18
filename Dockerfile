@@ -10,9 +10,12 @@ WORKDIR /app
 
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN apk add --no-cache ca-certificates gcompat \
-    && corepack enable
-
+RUN apk update \
+    && apk upgrade --no-cache \
+    && apk add --no-cache ca-certificates gcompat \
+    && mkdir -p /app/data /usr/share/licenses/trivy \
+    && chown node:node /app/data \
+    && chmod 700 /app/data
 
 FROM base AS deps
 
