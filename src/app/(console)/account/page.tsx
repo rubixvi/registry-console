@@ -1,8 +1,8 @@
 import { type Metadata } from 'next'
 import { redirect } from 'next/navigation'
 
-import { Security } from '@/components/security'
 import { Heading } from '@/components/layout/heading'
+import { Security } from '@/components/security'
 import { passkeyInfo } from '@/lib/auth/passkey'
 import { getIdentity } from '@/lib/auth/session'
 import { getAuthenticator } from '@/lib/auth/totp'

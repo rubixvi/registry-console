@@ -11,17 +11,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAudit } from '@/hooks/audit/use-audit'
-
-function target(value: string): string {
-  try {
-    return JSON.stringify(JSON.parse(value), null, 2)
-  } catch {
-    return value
-  }
-}
+import { formatJson } from '@/utils/format-json'
 
 export function AuditLog() {
   const state = useAudit()
+
   const [from, setFrom] = useState<Date>()
   const [to, setTo] = useState<Date>()
 
@@ -141,7 +135,7 @@ export function AuditLog() {
                           </summary>
 
                           <pre className="mt-3 max-h-64 overflow-auto rounded-md bg-muted p-3 font-mono text-xs whitespace-pre-wrap break-all">
-                            {target(entry.target)}
+                            {formatJson(entry.target)}
                           </pre>
                         </details>
                       ) : (
