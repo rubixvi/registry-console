@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { Layers3, ShieldCheck } from 'lucide-react'
 
-import { Command } from '@/components/registry/controls/command'
+import { CopyButton } from '@/components/registry/controls/copy-button'
 import { DeleteDialog } from '@/components/registry/controls/delete-dialog'
 import { ImageHistory } from '@/components/registry/image/history'
 import { ImageScan } from '@/components/registry/security/scan'
@@ -56,7 +56,7 @@ export function Inspector({ registry, repository, reference, admin, pullUrl }: P
 
   return (
     <div className="space-y-6">
-      <Command command={command} />
+      <CopyButton command={command} />
 
       <section className="rounded-xl border bg-card p-6 shadow-xs">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
