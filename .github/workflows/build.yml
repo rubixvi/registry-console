@@ -1,3 +1,4 @@
+
 name: Build and publish
 
 on:
@@ -43,6 +44,15 @@ jobs:
           node-version: '24'
           cache: pnpm
 
+      - name: Restore Next.js cache
+        uses: actions/cache@v6.1.0
+        with:
+          path: .next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ hashFiles('pnpm-lock.yaml') }}-
+            ${{ runner.os }}-nextjs-
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -67,13 +77,17 @@ jobs:
         uses: docker/build-push-action@v7.4.0
         with:
           context: .
+          platforms: linux/amd64
           load: true
           push: false
           tags: registry-console:ci
+          pull: true
           build-args: |
             VCS_REF=${{ github.sha }}
             VERSION=ci
-          cache-from: type=gha,scope=image-amd64
+          cache-from: |
+            type=gha,scope=image-amd64
+            type=gha,scope=image-release
           cache-to: type=gha,scope=image-amd64,mode=max
 
       - name: Test container
@@ -147,12 +161,15 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
+          pull: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             VCS_REF=${{ github.sha }}
             VERSION=${{ steps.meta.outputs.version }}
-          cache-from: type=gha,scope=image-release
+          cache-from: |
+            type=gha,scope=image-release
+            type=gha,scope=image-amd64
           cache-to: type=gha,scope=image-release,mode=max
           provenance: true
           sbom: true
