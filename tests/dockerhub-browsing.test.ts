@@ -66,6 +66,11 @@ test('Docker Hub tag pages supply previews without downloading registry manifest
 
     requests++
     assert.equal(url.origin, 'https://hub.docker.com')
+
+    if (url.pathname === tagPath.replace('/tags', '')) {
+      return Response.json({ name: 'app', namespace: 'team', is_private: false })
+    }
+
     assert.equal(url.pathname, tagPath)
     assert.equal(url.searchParams.get('page_size'), '1')
 
@@ -81,13 +86,14 @@ test('Docker Hub tag pages supply previews without downloading registry manifest
   assert.deepEqual(first, { items: ['latest'], next: '2' })
   assert.deepEqual(second, { items: ['Release-2'], next: null })
   assert.deepEqual(await imageMetadata(registry, repository, 'latest'), {
+    isPrivate: false,
     digest,
     created: null,
     pushedAt: '2026-10-18T00:00:00.000Z',
     runnable: true,
   })
   assert.equal((await imageMetadata(registry, repository, 'Release-2')).digest, digest)
-  assert.equal(requests, 2)
+  assert.equal(requests, 3)
 })
 
 test('tag metadata without a top-level digest uses HEAD and excludes unknown platforms', async (context) => {
@@ -119,7 +125,11 @@ test('tag metadata without a top-level digest uses HEAD and excludes unknown pla
 
   assert.equal(metadata.digest, digest)
   assert.equal(metadata.runnable, false)
-  assert.deepEqual(methods, ['https://hub.docker.com GET', 'https://registry-1.docker.io HEAD'])
+  assert.deepEqual(methods, [
+    'https://hub.docker.com GET',
+    'https://hub.docker.com GET',
+    'https://registry-1.docker.io HEAD',
+  ])
 })
 
 test('Hub metadata validates names, namespace boundaries, artifacts and pagination', async (context) => {
@@ -152,8 +162,13 @@ test('Hub preview caches respect no-store, expiry, refresh and connection identi
   let control = 'no-store'
 
   context.mock.method(Date, 'now', () => now)
-  context.mock.method(globalThis, 'fetch', async () => {
+  context.mock.method(globalThis, 'fetch', async (raw: string | URL | Request) => {
     requests++
+
+    if (new URL(String(raw)).pathname === tagPath.replace('/tags', '')) {
+      return Response.json({ name: 'app', namespace: 'team', is_private: false })
+    }
+
     return Response.json(
       { results: [tag()], next: null },
       { headers: { 'Cache-Control': control } }
@@ -171,15 +186,15 @@ test('Hub preview caches respect no-store, expiry, refresh and connection identi
   now += 900
   await registryPage(registry, input)
   assert.equal((await imageMetadata(registry, repository, 'latest')).digest, digest)
-  assert.equal(requests, 3)
+  assert.equal(requests, 4)
 
   now += 101
   await registryPage(registry, input)
   await imageMetadata(registry, repository, 'latest')
-  assert.equal(requests, 4)
+  assert.equal(requests, 5)
   await registryPage(registry, input, true)
   await registryPage({ ...registry, id: 'another-connection' }, input)
-  assert.equal(requests, 6)
+  assert.equal(requests, 7)
 })
 
 test('concurrent identical requests share a fetch and retain independent response headers', async (context) => {
@@ -372,7 +387,7 @@ test('pull quota error bodies preserve Retry-After without blocking Hub tag brow
     registryRequest({ ...registry, id: 'same-anonymous-ip' }, manifestPath),
     /pull quota/
   )
-  assert.equal(requests, 2)
+  assert.equal(requests, 3)
 })
 
 test('Docker Hub abuse throttles still pause all registry requests until expiry', async (context) => {

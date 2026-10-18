@@ -69,7 +69,7 @@ test('Docker Hub registry origins work without a provider or allowlist while cus
   })
 
   assert.equal(getRegistry(id).url, DOCKER_HUB_REGISTRY)
-  assert.equal(getRegistry(id).readOnly, true)
+  assert.equal(getRegistry(id).readOnly, false)
   assert.equal(validateUrl(DOCKER_HUB_API, 'dockerhub'), DOCKER_HUB_API)
   assert.equal(validateUrl(DOCKER_HUB_REGISTRY), DOCKER_HUB_REGISTRY)
   assert.equal(validateUrl(DOCKER_HUB_REGISTRY, 'distribution'), DOCKER_HUB_REGISTRY)

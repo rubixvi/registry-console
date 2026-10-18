@@ -1,6 +1,12 @@
 import 'server-only'
 
-import { DOCKER_HUB_REGISTRY } from '@/lib/registry/dockerhub-settings'
+import {
+  DOCKER_HUB_API,
+  DOCKER_HUB_AUTH,
+  DOCKER_HUB_BLOBS,
+  DOCKER_HUB_REGISTRY,
+} from '@/lib/registry/dockerhub-settings'
+import { hasLimits } from '@/lib/security/context'
 import { AppError } from '@/lib/security/error'
 import { keyedFingerprint } from '@/lib/security/fingerprint'
 import { readBounded } from '@/lib/security/request'
@@ -19,10 +25,27 @@ function pullScope(registry: RegistryRecord): string {
   return keyedFingerprint('dockerhub-quota', registry.username.toLowerCase() || 'anonymous')
 }
 
-function message(scope: string): string {
-  return scope
-    ? 'Docker Hub pull quota reached. Manifest downloads are temporarily paused.'
-    : 'Registry rate limit reached. Requests are temporarily paused.'
+function message(origin: string, scope: string, paused = false): string {
+  if (scope) {
+    return paused
+      ? 'Docker Hub pull quota reached. Manifest requests are paused locally.'
+      : 'Docker Hub pull quota reached. Docker Hub returned HTTP 429.'
+  }
+
+  const service =
+    origin === DOCKER_HUB_REGISTRY
+      ? 'Docker Hub registry'
+      : origin === DOCKER_HUB_API
+        ? 'Docker Hub API'
+        : origin === DOCKER_HUB_AUTH
+          ? 'Docker Hub authentication'
+          : DOCKER_HUB_BLOBS.has(origin)
+            ? 'Docker Hub image storage'
+            : 'Upstream registry'
+
+  return paused
+    ? `${service} requests are paused locally after an upstream rate limit.`
+    : `${service} returned HTTP 429. Its rate limit rejected this request.`
 }
 
 export function checkRegistry(registry: RegistryRecord, path: string, method: string): void {
@@ -67,6 +90,8 @@ export async function limitResponse(
 }
 
 export function checkBackoff(origin: string, scope = ''): void {
+  if (!hasLimits()) return
+
   const key = scope ? `${origin}|${scope}` : origin
   const expires = backoffs.get(key)
 
@@ -75,7 +100,7 @@ export function checkBackoff(origin: string, scope = ''): void {
   const seconds = Math.ceil((expires - Date.now()) / 1000)
 
   if (seconds > 0) {
-    throw new AppError(429, message(scope), seconds)
+    throw new AppError(429, message(origin, scope, true), seconds)
   }
 
   backoffs.delete(key)
@@ -116,5 +141,9 @@ export function limitRegistry(origin: string, headers = new Headers(), scope = '
 
   backoffs.set(key, expires)
 
-  return new AppError(429, message(scope), Math.ceil((expires - now) / 1000))
+  return new AppError(
+    429,
+    message(origin, scope),
+    hasLimits() ? Math.ceil((expires - now) / 1000) : seconds
+  )
 }

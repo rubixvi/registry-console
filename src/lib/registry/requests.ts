@@ -2,6 +2,7 @@ import 'server-only'
 
 import { cacheGeneration } from '@/lib/registry/cache'
 import { registryCacheIdentity } from '@/lib/registry/identity'
+import { hasLimits } from '@/lib/security/context'
 import { keyedFingerprint } from '@/lib/security/fingerprint'
 import { type RegistryRecord, type RegistryResponse } from '@/types/registry'
 
@@ -18,6 +19,7 @@ export async function shareResponse(
     path,
     scope,
     cacheGeneration(),
+    hasLimits(),
   ])
   let request = pending.get(key)
 

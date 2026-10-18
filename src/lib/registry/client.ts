@@ -282,6 +282,13 @@ async function fetchRegistry(
       }
 
       if (status === 401 || status === 403) {
+        if (dockerHub && method === 'DELETE') {
+          throw new AppError(
+            403,
+            'Docker Hub denied deletion. Check delete access and remove any remaining tag or image references.'
+          )
+        }
+
         throw new AppError(502, 'Registry denied access. Check its credentials and permissions.')
       }
 

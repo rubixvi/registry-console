@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { hubTags } from '@/lib/registry/dockerhub'
+import { hubPrivacy, hubTags } from '@/lib/registry/dockerhub'
 import { hubRequest } from '@/lib/registry/dockerhub-client'
 import { imageDetails } from '@/lib/registry/image'
 import { imageDigest } from '@/lib/registry/image-digest'
@@ -18,11 +18,13 @@ export async function imageMetadata(
   refresh = false
 ): Promise<ImageMetadata> {
   referenceName.parse(reference)
+  const isPrivate = await hubPrivacy(registry, repository, refresh)
 
   if (registry.provider !== 'dockerhub' || reference.startsWith('sha256:')) {
     const details = await imageDetails(registry, repository, reference, refresh)
 
     return {
+      isPrivate,
       digest: details.digest,
       created: details.created,
       pushedAt: null,
@@ -49,6 +51,7 @@ export async function imageMetadata(
   const tag = parsed.data
 
   return {
+    isPrivate,
     digest: tag.digest ?? (await imageDigest(registry, repository, reference)),
     created: null,
     pushedAt: imageCreated(tag.tag_last_pushed) ?? imageCreated(tag.last_updated),

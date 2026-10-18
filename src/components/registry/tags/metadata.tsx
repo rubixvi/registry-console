@@ -45,7 +45,7 @@ export function Metadata({ id, repository, reference, trivyEnabled, children }: 
         </div>
       </div>
 
-      {trivyEnabled && data?.runnable && !error && (
+      {trivyEnabled && data?.runnable && data.isPrivate === false && !error && (
         <div className="flex min-w-0 items-center justify-start text-xs sm:justify-end">
           <ImageScan compact digest={data.digest} id={id} repository={repository} />
         </div>

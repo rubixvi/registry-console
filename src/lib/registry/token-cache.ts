@@ -1,6 +1,7 @@
 import 'server-only'
 
 import { registryCacheIdentity } from '@/lib/registry/identity'
+import { hasLimits } from '@/lib/security/context'
 import { keyedFingerprint } from '@/lib/security/fingerprint'
 import { type RegistryRecord, type TokenCache } from '@/types/registry'
 
@@ -16,17 +17,18 @@ export async function loadToken(key: string, load: () => Promise<string>): Promi
 
   if (cached) return cached
 
-  let request = pending.get(key)
+  const requestKey = `${key}:${hasLimits()}`
+  let request = pending.get(requestKey)
 
   if (!request) {
     request = load()
-    pending.set(key, request)
+    pending.set(requestKey, request)
   }
 
   try {
     return await request
   } finally {
-    if (pending.get(key) === request) pending.delete(key)
+    if (pending.get(requestKey) === request) pending.delete(requestKey)
   }
 }
 

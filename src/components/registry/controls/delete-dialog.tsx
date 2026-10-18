@@ -19,14 +19,16 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useDelete } from '@/hooks/registry/use-delete'
+import { type RegistryProvider } from '@/types/registry'
 
 type Props = {
   id: string
   repository: string
   digest: string
+  provider?: RegistryProvider
 }
 
-export function DeleteDialog({ id, repository, digest }: Props) {
+export function DeleteDialog({ id, repository, digest, provider }: Props) {
   const { confirmation, changeConfirmation, error, busy, remove } = useDelete(
     id,
     repository,
@@ -50,8 +52,9 @@ export function DeleteDialog({ id, repository, digest }: Props) {
           <AlertDialogTitle>Delete</AlertDialogTitle>
 
           <AlertDialogDescription>
-            This permanently deletes the manifest by digest. All tags pointing to it in this
-            repository will stop working.
+            {provider === 'dockerhub'
+              ? 'Docker Hub allows manifest deletion once its tags and other image references have been removed.'
+              : 'This permanently deletes the manifest by digest. All tags pointing to it in this repository will stop working.'}
           </AlertDialogDescription>
         </AlertDialogHeader>
 

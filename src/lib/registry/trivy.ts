@@ -21,6 +21,7 @@ import { validateUrl } from '@/lib/registry/allowlist'
 import { assertDockerHubRepository } from '@/lib/registry/dockerhub'
 import { registryIdentity } from '@/lib/registry/identity'
 import { imageDetails } from '@/lib/registry/image'
+import { requirePublic } from '@/lib/registry/scan-policy'
 import { getRegistry } from '@/lib/registry/store'
 import { appendTrivyReport, emptyReport } from '@/lib/registry/trivy-report'
 import { decryptSecret } from '@/lib/security/crypto'
@@ -180,6 +181,8 @@ export async function startScan(
     throw new AppError(409, 'Trivy scanning is disabled. Set TRIVY_ENABLED=true to enable it.')
   }
 
+  await requirePublic(registry, repository)
+
   const details = await imageDetails(registry, repository, digest)
 
   if (!details.platformDetails.length) {
@@ -204,6 +207,8 @@ export async function executeTrivy(
   repositoryName.parse(repository)
   digestName.parse(digest)
   assertDockerHubRepository(registry, repository)
+
+  await requirePublic(registry, repository)
 
   const config = env()
   const origin = new URL(validateUrl(registry.url, registry.provider))
@@ -373,6 +378,8 @@ export async function runScan(job: ScanJob): Promise<void> {
       discardScan(job.id)
       throw new AppError(409, 'The connection changed. Start the scan again.')
     }
+
+    await requirePublic(registry, job.repository)
 
     const details = await imageDetails(registry, job.repository, job.digest)
     const platforms = details.platformDetails

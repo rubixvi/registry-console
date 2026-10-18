@@ -7,11 +7,11 @@ import {
   invalidateResponse,
   rememberResponse,
 } from '@/lib/registry/cache'
-import { DOCKER_HUB_API, DOCKER_HUB_REGISTRY } from '@/lib/registry/dockerhub-settings'
 import { hubRequest } from '@/lib/registry/dockerhub-client'
+import { DOCKER_HUB_API, DOCKER_HUB_REGISTRY } from '@/lib/registry/dockerhub-settings'
 import { AppError } from '@/lib/security/error'
 import { repositoryName } from '@/lib/validation/registry'
-import { pageSchema, tagPageSchema } from '@/lib/validation/response/dockerhub'
+import { pageSchema, repositorySchema, tagPageSchema } from '@/lib/validation/response/dockerhub'
 import { type RegistryPage, type RegistryPageInput, type RegistryRecord } from '@/types/registry'
 
 function namespaceFor(registry: RegistryRecord): string {
@@ -35,7 +35,7 @@ export function assertDockerHubRepository(registry: RegistryRecord, repository: 
   }
 }
 
-export function hubTags(registry: RegistryRecord, repository: string): string {
+function hubPath(registry: RegistryRecord, repository: string): string {
   repositoryName.parse(repository)
   assertDockerHubRepository(registry, repository)
 
@@ -46,7 +46,41 @@ export function hubTags(registry: RegistryRecord, repository: string): string {
     throw new AppError(400, 'Invalid Docker Hub repository.')
   }
 
-  return `/v2/namespaces/${encodeURIComponent(namespace)}/repositories/${encodeURIComponent(name)}/tags`
+  return `/v2/namespaces/${encodeURIComponent(namespace)}/repositories/${encodeURIComponent(name)}`
+}
+
+export function hubTags(registry: RegistryRecord, repository: string): string {
+  return `${hubPath(registry, repository)}/tags`
+}
+
+export async function hubPrivacy(
+  registry: RegistryRecord,
+  repository: string,
+  refresh = false
+): Promise<boolean | null> {
+  if (registry.url !== DOCKER_HUB_REGISTRY && registry.provider !== 'dockerhub') return false
+
+  const connection =
+    registry.provider === 'dockerhub'
+      ? registry
+      : { ...registry, provider: 'dockerhub' as const, namespace: repository.split('/')[0] }
+  const path = hubPath(connection, repository)
+
+  try {
+    const result = await hubRequest(connection, path, refresh)
+    const body = repositorySchema.parse(JSON.parse(result.text))
+
+    if (
+      `${connection.namespace}/${body.name}` !== repository ||
+      (body.namespace !== undefined && body.namespace !== connection.namespace)
+    ) {
+      return null
+    }
+
+    return body.is_private ?? null
+  } catch {
+    return null
+  }
 }
 
 export async function dockerHubPage(
@@ -104,7 +138,7 @@ export async function dockerHubPage(
       next = String(page + 1)
     }
 
-    if (input.repository && !cached) {
+    if (!cached) {
       for (const entry of body.results) {
         rememberResponse(
           registry,

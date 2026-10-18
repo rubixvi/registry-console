@@ -115,7 +115,7 @@ test('Docker Hub rejects foreign pagination, namespace escapes, invalid origins,
     /must use/
   )
   await assert.rejects(
-    deleteManifest({ ...value, readOnly: false }, 'team/app', `sha256:${'a'.repeat(64)}`, 'admin'),
+    deleteManifest({ ...value, readOnly: true }, 'team/app', `sha256:${'a'.repeat(64)}`, 'admin'),
     /read only/
   )
 })

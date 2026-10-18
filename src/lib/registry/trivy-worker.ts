@@ -18,6 +18,7 @@ import {
   pauseDiscovery,
   registerDiscovery,
 } from '@/lib/database/scan-discovery'
+import { hubPrivacy } from '@/lib/registry/dockerhub'
 import { getRegistries, getRegistry, seedRegistry } from '@/lib/registry/store'
 import { matchesScan, needsScan, runScan, startScan } from '@/lib/registry/trivy'
 import { discoverRegistry, discoveryScope } from '@/lib/registry/trivy-discovery'
@@ -63,9 +64,7 @@ export async function scanPending(reference?: ScanTarget): Promise<void> {
           const registry = getRegistry(connection.id)
 
           registerDiscovery(registry.id, discoveryScope(registry))
-        } catch {
-          continue
-        }
+        } catch {}
       }
 
       const discovery = nextDiscovery()
@@ -107,6 +106,13 @@ export async function scanPending(reference?: ScanTarget): Promise<void> {
 
       if (!matchesScan(registry, target.repository, target.digest, target.id)) {
         discardScan(target.id)
+        return
+      }
+
+      const privacy = await hubPrivacy(registry, target.repository)
+
+      if (privacy !== false) {
+        if (privacy === true) discardScan(target.id)
         return
       }
 

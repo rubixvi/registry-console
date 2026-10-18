@@ -2,6 +2,7 @@ import 'server-only'
 
 import { saveDiscovery } from '@/lib/database/scan-discovery'
 import { registryPage } from '@/lib/registry/catalog'
+import { hubPrivacy } from '@/lib/registry/dockerhub'
 import { registryIdentity } from '@/lib/registry/identity'
 import { imageDigest } from '@/lib/registry/image-digest'
 import { getRegistry } from '@/lib/registry/store'
@@ -40,6 +41,15 @@ export async function discoverRegistry(
       const current = getRegistry(registry.id)
 
       if (discoveryScope(current) !== scope) return
+
+      if (state.repository && (await hubPrivacy(current, state.repository)) !== false) {
+        state.repository = ''
+        state.tags = []
+        state.cursor = ''
+        state.tagPages = 0
+        saveDiscovery(registry.id, scope, state, 60_000)
+        continue
+      }
 
       if (!state.repository) {
         if (!state.repositories.length) {

@@ -3,6 +3,7 @@ import { type z } from 'zod'
 import { type manifestSchema } from '@/lib/validation/image'
 
 export type ImageMetadata = {
+  isPrivate: boolean | null
   digest: string
   created: string | null
   pushedAt: string | null
@@ -10,6 +11,7 @@ export type ImageMetadata = {
 }
 
 export type ImageDetails = {
+  isPrivate?: boolean | null
   verified: boolean
   digest: string
   mediaType: string

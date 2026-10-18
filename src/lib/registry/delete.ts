@@ -5,11 +5,13 @@ import { randomUUID } from 'node:crypto'
 import { audit } from '@/lib/database/audit'
 import { consumePlan, findPlan, insertPlan } from '@/lib/database/deletion'
 import { registryRequest } from '@/lib/registry/client'
+import { assertDockerHubRepository } from '@/lib/registry/dockerhub'
 import { registryIdentity } from '@/lib/registry/identity'
 import { imageManifest } from '@/lib/registry/image'
 import { getRegistry } from '@/lib/registry/store'
 import { AppError } from '@/lib/security/error'
 import { keyedFingerprint } from '@/lib/security/fingerprint'
+import { digestName, repositoryName } from '@/lib/validation/registry'
 import {
   type BulkDeletionResult,
   type DeletionEntry,
@@ -20,7 +22,7 @@ import {
 import { type RegistryRecord } from '@/types/registry'
 
 function writable(registry: RegistryRecord): void {
-  if (registry.readOnly || registry.provider === 'dockerhub') {
+  if (registry.readOnly) {
     throw new AppError(403, 'This registry is read only.')
   }
 }
@@ -62,12 +64,15 @@ export async function deleteManifest(
   actor: string
 ): Promise<void> {
   writable(registry)
+  repositoryName.parse(repository)
+  digestName.parse(digest)
+  assertDockerHubRepository(registry, repository)
 
   const encoded = repository.split('/').map(encodeURIComponent).join('/')
 
   await registryRequest(registry, `/v2/${encoded}/manifests/${encodeURIComponent(digest)}`, {
     method: 'DELETE',
-    scope: `repository:${repository}:pull,delete`,
+    scope: `repository:${repository}:${registry.provider === 'dockerhub' ? 'pull,push,delete' : 'pull,delete'}`,
   })
 
   audit(actor, 'manifest.delete', `${registry.id}/${repository}@${digest}`)
