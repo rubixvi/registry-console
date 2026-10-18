@@ -87,6 +87,10 @@ COPY --from=builder --chown=node:node \
     /app/scripts/reset-security.mjs \
     ./scripts/
 
+COPY --from=builder --chown=node:node \
+    /app/scripts/helpers \
+    ./scripts/helpers
+
 RUN trivy --version
 
 USER node
