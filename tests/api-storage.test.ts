@@ -89,7 +89,12 @@ beforeEach(() => {
 
 after(() => {
   database().close()
-  rmSync(directory, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 })
+  rmSync(directory, {
+    recursive: true,
+    force: true,
+    maxRetries: 5,
+    retryDelay: 100,
+  })
 })
 
 test('branding, logo and audit changes commit together and roll back together', () => {
@@ -112,7 +117,12 @@ test('branding, logo and audit changes commit together and roll back together', 
   rejectAudit('settings.update')
 
   assert.throws(
-    () => updateSettings({ settings: original, username: owner.username, remove: true }),
+    () =>
+      updateSettings({
+        settings: original,
+        username: owner.username,
+        remove: true,
+      }),
     /test audit failure/
   )
   assert.deepEqual(getLogo(), logo)
@@ -182,7 +192,11 @@ test('two-factor login rolls back used codes and consumed challenges when sessio
   assert.equal((JSON.parse(getAuthenticator(owner)!.recovery) as string[]).length, 10)
   assert.ok(database().prepare('SELECT id FROM auth_requests WHERE id = ?').get(request.id))
   assert.equal(
-    (database().prepare('SELECT COUNT(*) AS count FROM sessions').get() as { count: number }).count,
+    (
+      database().prepare('SELECT COUNT(*) AS count FROM sessions').get() as {
+        count: number
+      }
+    ).count,
     1
   )
 

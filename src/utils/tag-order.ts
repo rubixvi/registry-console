@@ -2,7 +2,10 @@ export const TAG_ORDERS = ['natural-asc', 'natural-desc', 'alpha-asc', 'alpha-de
 
 export type TagOrder = (typeof TAG_ORDERS)[number]
 
-const numeric = new Intl.Collator('en', { numeric: true, sensitivity: 'variant' })
+const numeric = new Intl.Collator('en', {
+  numeric: true,
+  sensitivity: 'variant',
+})
 
 export function isTagOrder(value: unknown): value is TagOrder {
   return TAG_ORDERS.some((order) => order === value)

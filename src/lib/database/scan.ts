@@ -6,27 +6,16 @@ import { env } from '@/lib/config/env'
 import { audit } from '@/lib/database/audit'
 import { database } from '@/lib/database/client'
 import { AppError } from '@/lib/security/error'
-import { type ScanStatus, type ScanTarget } from '@/types/scan'
-
-type Scan = {
-  status: ScanStatus['status']
-  value: string
-  expires: number
-}
-
-type Claim = ScanTarget & {
-  actor: string
-  expires: number
-}
+import { type ScanClaim, type ScanRow, type ScanStatus, type ScanTarget } from '@/types/scan'
 
 const HOUR = 60 * 60_000
 const LEASE = 90_000
 const MAX_PENDING = 10_000
 
-export function getScan(id: string): Scan | undefined {
+export function getScan(id: string): ScanRow | undefined {
   return database()
     .prepare('SELECT status, value, expires FROM image_scans WHERE id = ?')
-    .get(id) as Scan | undefined
+    .get(id) as ScanRow | undefined
 }
 
 export function adoptScan(id: string, previous: string): void {
@@ -94,7 +83,15 @@ export function discardScan(id: string): void {
   database().prepare('DELETE FROM scan_queue WHERE id = ?').run(id)
 }
 
-export function claimScan({ id, registryId, repository, digest, actor, expires }: Claim): void {
+export function claimScan({
+  id,
+  registryId,
+  repository,
+  digest,
+  actor,
+  expires,
+  override = false,
+}: ScanClaim): void {
   const db = database()
   const now = Date.now()
 
@@ -116,7 +113,7 @@ export function claimScan({ id, registryId, repository, digest, actor, expires }
 
     const delay = scanDelay()
 
-    if (delay > 0) {
+    if (delay > 0 && !override) {
       throw new AppError(
         429,
         'The scan budget is currently used. This image can be scanned later.',
@@ -145,6 +142,10 @@ export function claimScan({ id, registryId, repository, digest, actor, expires }
     db.prepare('DELETE FROM scan_attempts WHERE started <= ?').run(now - HOUR)
     db.prepare('INSERT INTO scan_attempts (id, started) VALUES (?, ?)').run(randomUUID(), now)
     audit(actor, 'image.scan.started', `${registryId}/${repository}@${digest}`)
+
+    if (delay > 0 && override) {
+      audit(actor, 'image.scan.limit.overridden', `${registryId}/${repository}@${digest}`)
+    }
 
     db.exec('COMMIT')
   } catch (error) {

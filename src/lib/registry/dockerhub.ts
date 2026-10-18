@@ -1,41 +1,18 @@
 import 'server-only'
 
-import { z } from 'zod'
-
 import { validateUrl } from '@/lib/registry/allowlist'
-import { cachedResponse, cacheGeneration, rememberResponse } from '@/lib/registry/cache'
+import {
+  cachedResponse,
+  cacheGeneration,
+  invalidateResponse,
+  rememberResponse,
+} from '@/lib/registry/cache'
+import { hubRequest } from '@/lib/registry/dockerhub-client'
 import { DOCKER_HUB_API, DOCKER_HUB_REGISTRY } from '@/lib/registry/dockerhub-settings'
-import { checkBackoff, limitRegistry } from '@/lib/registry/throttle'
-import { cachedToken, forgetToken, rememberToken, tokenKey } from '@/lib/registry/token-cache'
-import { decryptSecret } from '@/lib/security/crypto'
 import { AppError } from '@/lib/security/error'
-import { readBounded } from '@/lib/security/request'
 import { repositoryName } from '@/lib/validation/registry'
+import { pageSchema, repositorySchema, tagPageSchema } from '@/lib/validation/response/dockerhub'
 import { type RegistryPage, type RegistryPageInput, type RegistryRecord } from '@/types/registry'
-
-const pageSchema = z.object({
-  next: z.string().nullable(),
-  results: z
-    .array(
-      z.object({
-        name: z
-          .string()
-          .regex(/^[a-z0-9]+(?:(?:[._]|__|[-]+)[a-z0-9]+)*$/)
-          .max(255),
-      })
-    )
-    .max(100),
-})
-
-const authSchema = z.object({
-  access_token: z
-    .string()
-    .min(1)
-    .max(32_768)
-    .regex(/^[^\r\n]+$/),
-})
-
-let inflight = 0
 
 function namespaceFor(registry: RegistryRecord): string {
   if (
@@ -58,55 +35,52 @@ export function assertDockerHubRepository(registry: RegistryRecord, repository: 
   }
 }
 
-async function hubFetch(path: string, init?: RequestInit): Promise<Response> {
-  checkBackoff(DOCKER_HUB_API)
+function hubPath(registry: RegistryRecord, repository: string): string {
+  repositoryName.parse(repository)
+  assertDockerHubRepository(registry, repository)
 
-  const response = await fetch(`${DOCKER_HUB_API}${path}`, {
-    ...init,
-    cache: 'no-store',
-    redirect: 'manual',
-    signal: AbortSignal.timeout(12_000),
-  })
+  const namespace = namespaceFor(registry)
+  const name = repository.slice(namespace.length + 1)
 
-  if (!response.ok) {
-    await response.body?.cancel()
-
-    if (response.status === 429) {
-      throw limitRegistry(DOCKER_HUB_API, response.headers)
-    }
-
-    throw new AppError(502, 'Docker Hub denied the request. Check the namespace and access token.')
+  if (!name || name.includes('/')) {
+    throw new AppError(400, 'Invalid Docker Hub repository.')
   }
 
-  return response
+  return `/v2/namespaces/${encodeURIComponent(namespace)}/repositories/${encodeURIComponent(name)}`
 }
 
-async function hubToken(registry: RegistryRecord): Promise<string | null> {
-  if (!registry.username && !registry.password) {
+export function hubTags(registry: RegistryRecord, repository: string): string {
+  return `${hubPath(registry, repository)}/tags`
+}
+
+export async function hubPrivacy(
+  registry: RegistryRecord,
+  repository: string,
+  refresh = false
+): Promise<boolean | null> {
+  if (registry.url !== DOCKER_HUB_REGISTRY && registry.provider !== 'dockerhub') return false
+
+  const connection =
+    registry.provider === 'dockerhub'
+      ? registry
+      : { ...registry, provider: 'dockerhub' as const, namespace: repository.split('/')[0] }
+  const path = hubPath(connection, repository)
+
+  try {
+    const result = await hubRequest(connection, path, refresh)
+    const body = repositorySchema.parse(JSON.parse(result.text))
+
+    if (
+      `${connection.namespace}/${body.name}` !== repository ||
+      (body.namespace !== undefined && body.namespace !== connection.namespace)
+    ) {
+      return null
+    }
+
+    return body.is_private ?? null
+  } catch {
     return null
   }
-
-  const key = tokenKey(registry, 'dockerhub-api')
-  const current = cachedToken(key)
-
-  if (current) {
-    return current
-  }
-
-  const response = await hubFetch('/v2/auth/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-    body: JSON.stringify({
-      identifier: registry.username,
-      secret: decryptSecret(registry.password),
-    }),
-  })
-
-  const body = authSchema.parse(JSON.parse(await readBounded(response, 64 * 1024)))
-
-  rememberToken(key, body.access_token, 60)
-
-  return body.access_token
 }
 
 export async function dockerHubPage(
@@ -121,40 +95,25 @@ export async function dockerHubPage(
     throw new AppError(400, 'Invalid Docker Hub page cursor.')
   }
 
-  const path = `/v2/namespaces/${encodeURIComponent(namespace)}/repositories`
-  const query = new URLSearchParams({ page: String(page), page_size: String(input.n) })
+  const path = input.repository
+    ? hubTags(registry, input.repository)
+    : `/v2/namespaces/${encodeURIComponent(namespace)}/repositories`
+  const query = new URLSearchParams({
+    page: String(page),
+    page_size: String(input.n),
+  })
   const requestPath = `${path}?${query}`
-  const scope = 'dockerhub-api'
-  const cached = !refresh && cachedResponse(registry, requestPath, scope)
+
+  if (refresh) invalidateResponse(registry, requestPath, 'dockerhub-api')
+
   const generation = cacheGeneration()
-
-  if (inflight >= 4) {
-    throw new AppError(503, 'Docker Hub request capacity reached. Retry shortly.')
-  }
-
-  inflight++
+  const cached = cachedResponse(registry, requestPath, 'dockerhub-api')
 
   try {
-    let text: string
-    let responseHeaders: Headers | undefined
-
-    if (cached) {
-      text = cached.text
-    } else {
-      const token = await hubToken(registry)
-      const headers = new Headers({ Accept: 'application/json' })
-
-      if (token) {
-        headers.set('Authorization', `Bearer ${token}`)
-      }
-
-      const response = await hubFetch(requestPath, { headers })
-
-      text = await readBounded(response, 2 * 1024 * 1024)
-      responseHeaders = response.headers
-    }
-
-    const body = pageSchema.parse(JSON.parse(text))
+    const result = await hubRequest(registry, requestPath)
+    const body = input.repository
+      ? tagPageSchema.parse(JSON.parse(result.text))
+      : pageSchema.parse(JSON.parse(result.text))
 
     if (body.results.length > input.n) {
       throw new AppError(502, 'Docker Hub ignored its requested page limit.')
@@ -179,23 +138,29 @@ export async function dockerHubPage(
       next = String(page + 1)
     }
 
-    if (responseHeaders) {
-      rememberResponse(registry, requestPath, scope, { text, headers: responseHeaders }, generation)
+    if (!cached) {
+      for (const entry of body.results) {
+        rememberResponse(
+          registry,
+          `${path}/${encodeURIComponent(entry.name)}`,
+          'dockerhub-api',
+          { text: JSON.stringify(entry), headers: result.headers },
+          generation
+        )
+      }
     }
 
     return {
-      items: body.results.map((entry) => repositoryName.parse(`${namespace}/${entry.name}`)),
+      items: body.results.map((entry) =>
+        input.repository ? entry.name : repositoryName.parse(`${namespace}/${entry.name}`)
+      ),
       next,
     }
   } catch (error) {
-    forgetToken(tokenKey(registry, 'dockerhub-api'))
-
     if (error instanceof AppError) {
       throw error
     }
 
-    throw new AppError(502, 'Unable to read a valid Docker Hub repository listing.')
-  } finally {
-    inflight--
+    throw new AppError(502, 'Unable to read a valid Docker Hub listing.')
   }
 }

@@ -36,7 +36,11 @@ export const DELETE = api(async (request, _context, identity) => {
 
   const response = NextResponse.json({ success: true })
 
-  response.cookies.set(sessionCookieName(), '', { ...cookieOptions(), maxAge: 0 })
+  response.cookies.set(sessionCookieName(), '', {
+    ...cookieOptions(),
+    maxAge: 0,
+  })
+
   clearRequest(response, 'security')
 
   return response

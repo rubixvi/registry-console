@@ -1,13 +1,19 @@
-import { NextResponse } from 'next/server'
+import { after, NextResponse } from 'next/server'
 
 import { deleteManifest } from '@/lib/registry/delete'
+import { hubPrivacy } from '@/lib/registry/dockerhub'
 import { imageDetails } from '@/lib/registry/image'
 import { getRegistry } from '@/lib/registry/store'
-import { scheduleScan } from '@/lib/registry/trivy'
+import { scanTarget, scheduleScan } from '@/lib/registry/trivy'
+import { scanPending } from '@/lib/registry/trivy-worker'
 import { api } from '@/lib/security/api'
+import { withLimits } from '@/lib/security/context'
 import { AppError } from '@/lib/security/error'
 import { readJson } from '@/lib/security/request'
 import { deleteInput, imageInput } from '@/lib/validation/registry'
+
+export const runtime = 'nodejs'
+export const maxDuration = 660
 
 export const GET = api(async (request, context) => {
   const { id } = await context.params
@@ -21,11 +27,20 @@ export const GET = api(async (request, context) => {
   const registry = getRegistry(id)
   const { repository, reference } = parsed.data
   const refresh = request.headers.get('x-registry-refresh') === '1'
+  const isPrivate = await hubPrivacy(registry, repository, refresh)
   const details = await imageDetails(registry, repository, reference, refresh)
 
-  scheduleScan(registry, repository, details.digest)
+  if (
+    isPrivate === false &&
+    details.platformDetails.length &&
+    scheduleScan(registry, repository, details.digest)
+  ) {
+    const target = scanTarget(registry, repository, details.digest)
 
-  return NextResponse.json(details)
+    after(() => withLimits(true, () => scanPending(target)))
+  }
+
+  return NextResponse.json({ ...details, isPrivate })
 })
 
 export const DELETE = api(async (request, context, identity) => {

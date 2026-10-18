@@ -13,6 +13,7 @@ export const POST = api(async (request, _context, identity) => {
   const response = NextResponse.json({ success: true })
 
   issueRequest(response, 'security', user, '', sessionId(request))
+
   audit(identity.username, 'security.verify.success', '')
 
   return response

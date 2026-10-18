@@ -14,19 +14,27 @@ import { checkRegistry, checkRegistryDeletion } from './fixtures/registry'
 import { startIntegration, waitForInspection } from './helpers/integration'
 import { createRequest, signIn } from './helpers/testing'
 
-await test('Production integration', { concurrency: false }, async (context) => {
+await test('Production integration', {
+  concurrency: false,
+}, async (context) => {
   const server = await startIntegration(context)
   const { base, origin, password, fixture } = server
   const anonymous = createRequest({ base, origin })
 
   await checkAccess({ context, request: anonymous, password })
 
-  const { cookie, setCookie } = await signIn({ request: anonymous, username: 'admin', password })
+  const { cookie, setCookie } = await signIn({
+    request: anonymous,
+    username: 'admin',
+    password,
+  })
+
   const { cookie: readerCookie } = await signIn({
     request: anonymous,
     username: 'reader',
     password,
   })
+
   const request = createRequest({ base, origin, cookie })
 
   await context.test('session cookies match the origin and retain security attributes', () => {
@@ -59,13 +67,26 @@ await test('Production integration', { concurrency: false }, async (context) => 
 
   await checkRegistry({ context, request, readerCookie, fixture, api })
   await checkApplication({ context, request, readerCookie, server })
-  await checkBrowsing({ context, request, readerCookie, fixture: server.browsingFixture })
-  await checkConsole({ context, request, readerCookie, fixture: server.consoleFixture })
+  await checkBrowsing({
+    context,
+    request,
+    readerCookie,
+    fixture: server.browsingFixture,
+  })
+  await checkConsole({
+    context,
+    request,
+    readerCookie,
+    fixture: server.consoleFixture,
+  })
   await waitForInspection({ server, cookie, id })
   await checkRegistryDeletion({ context, request, api, digest: fixture.digest })
 
   await context.test('logged-out session cookies cannot be replayed', async () => {
-    const logout = await request('/api/auth/logout', { method: 'POST', body: {} })
+    const logout = await request('/api/auth/logout', {
+      method: 'POST',
+      body: {},
+    })
     const replay = await request('/api/registries')
 
     assert.equal(logout.status, 200)
@@ -75,6 +96,16 @@ await test('Production integration', { concurrency: false }, async (context) => 
   await context.test('Account security lifecycle', () =>
     checkAuthentication({ base, origin, password })
   )
-  await checkAuthenticationAudit({ context, directory: server.directory, password })
-  await checkLoginLimits({ context, request: anonymous, base, origin, password })
+  await checkAuthenticationAudit({
+    context,
+    directory: server.directory,
+    password,
+  })
+  await checkLoginLimits({
+    context,
+    request: anonymous,
+    base,
+    origin,
+    password,
+  })
 })

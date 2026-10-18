@@ -1,12 +1,7 @@
 import 'server-only'
 
 import { database } from '@/lib/database/client'
-
-type Discovery = {
-  id: string
-  scope: string
-  value: string
-}
+import { type DiscoveryRow } from '@/types/scan'
 
 export function registerDiscovery(id: string, scope: string): void {
   database()
@@ -18,13 +13,13 @@ export function registerDiscovery(id: string, scope: string): void {
     .run(id, scope)
 }
 
-export function nextDiscovery(): Discovery | undefined {
+export function nextDiscovery(): DiscoveryRow | undefined {
   return database()
     .prepare(`
     SELECT id, scope, value FROM scan_discovery WHERE available <= ?
     ORDER BY available, updated, id LIMIT 1
   `)
-    .get(Date.now()) as Discovery | undefined
+    .get(Date.now()) as DiscoveryRow | undefined
 }
 
 export function saveDiscovery(id: string, scope: string, value: unknown, delay: number): void {

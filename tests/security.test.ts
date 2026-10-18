@@ -24,12 +24,21 @@ const password = 'security-regression-test-password'
 
 function hashPassword(): string {
   const salt = randomBytes(16)
-  const hash = scryptSync(password, salt, 32, { N: 32768, r: 8, p: 1, maxmem: 64 * 1024 * 1024 })
+  const hash = scryptSync(password, salt, 32, {
+    N: 32768,
+    r: 8,
+    p: 1,
+    maxmem: 64 * 1024 * 1024,
+  })
 
   return `scrypt$32768$8$1$${salt.toString('hex')}$${hash.toString('hex')}`
 }
 
-const owner = { username: 'owner', passwordHash: hashPassword(), role: 'admin' as const }
+const owner = {
+  username: 'owner',
+  passwordHash: hashPassword(),
+  role: 'admin' as const,
+}
 let member = {
   username: 'member',
   passwordHash: hashPassword(),

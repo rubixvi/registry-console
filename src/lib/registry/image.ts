@@ -3,43 +3,45 @@ import 'server-only'
 import { createHash } from 'node:crypto'
 
 import { env } from '@/lib/config/env'
+import { cachedResponse, cacheGeneration, rememberResponse } from '@/lib/registry/cache'
 import { registryRequest } from '@/lib/registry/client'
 import { assertDockerHubRepository } from '@/lib/registry/dockerhub'
 import { AppError } from '@/lib/security/error'
 import { manifestSchema } from '@/lib/validation/image'
 import { referenceName, repositoryName } from '@/lib/validation/registry'
-import { type ImageDetails, type ImageManifest, type PlatformDetails } from '@/types/image'
+import {
+  type ImageDetails,
+  type ImageManifest,
+  type ManifestResult,
+  type PlatformDetails,
+} from '@/types/image'
 import { type RegistryRecord } from '@/types/registry'
 import { imageHistory } from '@/utils/image-history'
 import { imageLabels } from '@/utils/image-labels'
-import { createdAnnotation, imageCreated, isAttestation } from '@/utils/image-metadata'
+import { createdAnnotation, imageCreated, isAttestation, isRunnable } from '@/utils/image-metadata'
 
 export async function imageManifest(
   registry: RegistryRecord,
   repository: string,
   reference: string,
   refresh = false
-): Promise<{
-  manifest: ImageManifest
-  digest: string
-  verified: boolean
-  mediaType: string
-}> {
+): Promise<ManifestResult> {
   repositoryName.parse(repository)
   assertDockerHubRepository(registry, repository)
   referenceName.parse(reference)
 
   const encoded = repository.split('/').map(encodeURIComponent).join('/')
   const scope = `repository:${repository}:pull`
+  const path = `/v2/${encoded}/manifests/${encodeURIComponent(reference)}`
+  const generation = cacheGeneration()
+  const cached = !refresh && cachedResponse(registry, path, scope)
 
-  const result = await registryRequest(
-    registry,
-    `/v2/${encoded}/manifests/${encodeURIComponent(reference)}`,
-    {
+  const result =
+    cached ||
+    (await registryRequest(registry, path, {
       scope,
       cache: refresh ? 'reload' : 'default',
-    }
-  )
+    }))
 
   let manifest: ImageManifest
 
@@ -60,6 +62,16 @@ export async function imageManifest(
 
   if (requested && reference !== digest) {
     throw new AppError(502, 'Manifest does not match the requested digest.')
+  }
+
+  if (!cached && !refresh && !requested) {
+    rememberResponse(
+      registry,
+      `/v2/${encoded}/manifests/${encodeURIComponent(digest)}`,
+      scope,
+      result,
+      generation
+    )
   }
 
   return {
@@ -172,7 +184,9 @@ export async function imageDetails(
     visited.add(currentDigest)
 
     if (current.manifests) {
-      const children = current.manifests.filter((child) => !isAttestation(child))
+      const children = current.manifests.filter(
+        (child) => !child.artifactType && !isAttestation(child)
+      )
       let cursor = 0
 
       for (const child of children) {
@@ -239,6 +253,10 @@ export async function imageDetails(
         ? (currentConfig as Record<string, unknown>)
         : null
 
+    const runnable = isRunnable(current, currentConfig)
+
+    if (!runnable && currentDigest !== digest) return
+
     const layers = current.layers ?? []
     const descriptors = current.config ? [current.config, ...layers] : layers
 
@@ -262,12 +280,14 @@ export async function imageDetails(
 
     const created = imageCreated(object?.created) ?? createdAnnotation(current.annotations)
 
-    platformDetails.push({
-      digest: currentDigest,
-      platform,
-      created,
-      size: descriptors.reduce((total, descriptor) => total + descriptor.size, 0),
-    })
+    if (runnable) {
+      platformDetails.push({
+        digest: currentDigest,
+        platform,
+        created,
+        size: descriptors.reduce((total, descriptor) => total + descriptor.size, 0),
+      })
+    }
   }
 
   await inspect(manifest, digest, 0)

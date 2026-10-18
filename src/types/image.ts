@@ -2,7 +2,16 @@ import { type z } from 'zod'
 
 import { type manifestSchema } from '@/lib/validation/image'
 
+export type ImageMetadata = {
+  isPrivate: boolean | null
+  digest: string
+  created: string | null
+  pushedAt: string | null
+  runnable: boolean
+}
+
 export type ImageDetails = {
+  isPrivate?: boolean | null
   verified: boolean
   digest: string
   mediaType: string
@@ -32,6 +41,7 @@ export type ManifestEntry = {
   digest: string
   platform?: ImagePlatform
   annotations?: unknown
+  artifactType?: string
 }
 
 export type PlatformDetails = {
@@ -48,6 +58,13 @@ export type ImageSummary = {
 }
 
 export type ImageManifest = z.infer<typeof manifestSchema>
+
+export type ManifestResult = {
+  manifest: ImageManifest
+  digest: string
+  verified: boolean
+  mediaType: string
+}
 
 export type HistoryEntry = {
   step: number

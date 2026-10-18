@@ -3,25 +3,26 @@ import 'server-only'
 import { randomUUID } from 'node:crypto'
 
 import { audit } from '@/lib/database/audit'
-import { database } from '@/lib/database/client'
+import { consumePlan, findPlan, insertPlan } from '@/lib/database/deletion'
 import { registryRequest } from '@/lib/registry/client'
+import { assertDockerHubRepository } from '@/lib/registry/dockerhub'
 import { registryIdentity } from '@/lib/registry/identity'
 import { imageManifest } from '@/lib/registry/image'
 import { getRegistry } from '@/lib/registry/store'
 import { AppError } from '@/lib/security/error'
 import { keyedFingerprint } from '@/lib/security/fingerprint'
+import { digestName, repositoryName } from '@/lib/validation/registry'
 import {
   type BulkDeletionResult,
   type DeletionEntry,
   type DeletionPlan,
   type DeletionResult,
-  type PlanRow,
   type StoredPlan,
 } from '@/types/deletion'
 import { type RegistryRecord } from '@/types/registry'
 
 function writable(registry: RegistryRecord): void {
-  if (registry.readOnly || registry.provider === 'dockerhub') {
+  if (registry.readOnly) {
     throw new AppError(403, 'This registry is read only.')
   }
 }
@@ -63,12 +64,15 @@ export async function deleteManifest(
   actor: string
 ): Promise<void> {
   writable(registry)
+  repositoryName.parse(repository)
+  digestName.parse(digest)
+  assertDockerHubRepository(registry, repository)
 
   const encoded = repository.split('/').map(encodeURIComponent).join('/')
 
   await registryRequest(registry, `/v2/${encoded}/manifests/${encodeURIComponent(digest)}`, {
     method: 'DELETE',
-    scope: `repository:${repository}:pull,delete`,
+    scope: `repository:${repository}:${registry.provider === 'dockerhub' ? 'pull,push,delete' : 'pull,delete'}`,
   })
 
   audit(actor, 'manifest.delete', `${registry.id}/${repository}@${digest}`)
@@ -109,21 +113,16 @@ export async function previewDeletion(
   const id = randomUUID()
   const expires = Date.now() + 5 * 60_000
   const entries = [...grouped.values()]
-  const db = database()
 
-  db.prepare('DELETE FROM deletion_plans WHERE expires <= ?').run(Date.now())
-  db.prepare(`
-    INSERT INTO deletion_plans (id, username, registry_id, session_id, repository, value, expires)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(
+  insertPlan({
     id,
-    actor,
-    registry.id,
-    session,
+    username: actor,
+    registry_id: registry.id,
+    session_id: session,
     repository,
-    JSON.stringify({ fingerprint: fingerprint(registry), entries }),
-    expires
-  )
+    value: JSON.stringify({ fingerprint: fingerprint(registry), entries }),
+    expires,
+  })
 
   audit(
     actor,
@@ -148,13 +147,7 @@ export async function executeDeletion(
 ): Promise<BulkDeletionResult> {
   writable(registry)
 
-  const db = database()
-  const row = db
-    .prepare(`
-      SELECT id, repository, value, expires FROM deletion_plans
-      WHERE id = ? AND username = ? AND registry_id = ? AND session_id = ? AND expires > ?
-    `)
-    .get(planId, actor, registry.id, session, Date.now()) as PlanRow | undefined
+  const row = findPlan(planId, actor, registry.id, session)
 
   if (!row) {
     throw new AppError(
@@ -173,11 +166,7 @@ export async function executeDeletion(
     throw new AppError(409, 'The connection changed. Preview the selection again.')
   }
 
-  const consumed = db
-    .prepare('DELETE FROM deletion_plans WHERE id = ? AND expires > ? RETURNING id')
-    .get(planId, Date.now())
-
-  if (!consumed) {
+  if (!consumePlan(planId)) {
     throw new AppError(400, 'This deletion preview has already been used or expired.')
   }
 
@@ -215,7 +204,12 @@ export async function executeDeletion(
   audit(
     actor,
     'manifest.bulk.complete',
-    JSON.stringify({ registryId: registry.id, repository: row.repository, deleted, failed })
+    JSON.stringify({
+      registryId: registry.id,
+      repository: row.repository,
+      deleted,
+      failed,
+    })
   )
 
   return { results, deleted, failed }

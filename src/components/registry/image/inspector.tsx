@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { Layers3, ShieldCheck } from 'lucide-react'
 
-import { Command } from '@/components/registry/controls/command'
+import { CopyButton } from '@/components/registry/controls/copy-button'
 import { DeleteDialog } from '@/components/registry/controls/delete-dialog'
 import { ImageHistory } from '@/components/registry/image/history'
 import { ImageScan } from '@/components/registry/security/scan'
@@ -56,13 +56,16 @@ export function Inspector({ registry, repository, reference, admin, pullUrl }: P
 
   return (
     <div className="space-y-6">
-      <Command command={command} />
+      <CopyButton command={command} />
 
       <section className="rounded-xl border bg-card p-6 shadow-xs">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <h2 className="flex items-center gap-2 font-semibold">
             <Layers3 aria-hidden="true" className="size-5 text-primary" />
             Overview
+            {data.isPrivate === true && (
+              <span className="text-xs font-normal text-muted-foreground">Private</span>
+            )}
           </h2>
 
           <span className={`flex items-center gap-1.5 text-xs ${digestColour}`}>
@@ -171,7 +174,7 @@ export function Inspector({ registry, repository, reference, admin, pullUrl }: P
 
                     <code className="break-all text-xs text-muted-foreground">{child.digest}</code>
 
-                    {registry.trivyEnabled && !isAttestation(child) && (
+                    {registry.trivyEnabled && data.isPrivate === false && metadata && (
                       <div className="mt-3">
                         <ImageScan
                           compact
@@ -189,8 +192,14 @@ export function Inspector({ registry, repository, reference, admin, pullUrl }: P
         </section>
       )}
 
-      {registry.trivyEnabled && (
+      {registry.trivyEnabled && data.isPrivate === false && data.platformDetails.length > 0 && (
         <ImageScan admin={admin} digest={data.digest} id={registry.id} repository={repository} />
+      )}
+
+      {registry.trivyEnabled && data.isPrivate === true && (
+        <p className="text-sm text-muted-foreground">
+          Vulnerability scanning is disabled for private Docker Hub repositories.
+        </p>
       )}
 
       {!hasChildren && <ImageHistory entries={data.history} labels={data.labels} />}
@@ -217,7 +226,12 @@ export function Inspector({ registry, repository, reference, admin, pullUrl }: P
 
       {canDelete && (
         <div className="flex justify-end">
-          <DeleteDialog digest={data.digest} id={registry.id} repository={repository} />
+          <DeleteDialog
+            digest={data.digest}
+            id={registry.id}
+            provider={registry.provider}
+            repository={repository}
+          />
         </div>
       )}
     </div>

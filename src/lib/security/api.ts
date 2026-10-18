@@ -4,8 +4,8 @@ import { type NextRequest, NextResponse } from 'next/server'
 
 import { auditAuthFailure } from '@/lib/auth/audit'
 import { getIdentity } from '@/lib/auth/session'
+import { withLimits } from '@/lib/security/context'
 import { AppError } from '@/lib/security/error'
-import { rateLimit } from '@/lib/security/rate-limit'
 import { requireOrigin } from '@/lib/security/request'
 import { type Identity, type Role } from '@/types/auth'
 
@@ -33,17 +33,19 @@ export function api(handler: Handler, role?: Role) {
         throw new AppError(403, 'Administrator access required.')
       }
 
-      rateLimit(`api:${identity.username}`, 240, 60_000)
+      const current = identity
 
-      if (!SAFE_METHODS.has(request.method)) {
-        requireOrigin(request)
-      }
+      return await withLimits(current.role !== 'admin', async () => {
+        if (!SAFE_METHODS.has(request.method)) {
+          requireOrigin(request)
+        }
 
-      const response = await handler(request, context, identity)
+        const response = await handler(request, context, current)
 
-      response.headers.set('Cache-Control', 'no-store')
+        response.headers.set('Cache-Control', 'no-store')
 
-      return response
+        return response
+      })
     } catch (error) {
       const path = new URL(request.url).pathname
 

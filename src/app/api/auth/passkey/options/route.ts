@@ -12,7 +12,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     limitSignIn(request, 'passkey')
 
     const options = await authenticationOptions()
-    const response = NextResponse.json(options, { headers: { 'Cache-Control': 'no-store' } })
+    const response = NextResponse.json(options, {
+      headers: { 'Cache-Control': 'no-store' },
+    })
 
     issueRequest(response, 'passkey-login', null, options.challenge)
 

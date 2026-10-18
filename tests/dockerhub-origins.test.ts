@@ -34,7 +34,12 @@ Object.assign(process.env, {
 
 after(() => {
   database().close()
-  rmSync(directory, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 })
+  rmSync(directory, {
+    recursive: true,
+    force: true,
+    maxRetries: 5,
+    retryDelay: 100,
+  })
 })
 
 function connection(id: string): RegistryRecord {
@@ -64,7 +69,7 @@ test('Docker Hub registry origins work without a provider or allowlist while cus
   })
 
   assert.equal(getRegistry(id).url, DOCKER_HUB_REGISTRY)
-  assert.equal(getRegistry(id).readOnly, true)
+  assert.equal(getRegistry(id).readOnly, false)
   assert.equal(validateUrl(DOCKER_HUB_API, 'dockerhub'), DOCKER_HUB_API)
   assert.equal(validateUrl(DOCKER_HUB_REGISTRY), DOCKER_HUB_REGISTRY)
   assert.equal(validateUrl(DOCKER_HUB_REGISTRY, 'distribution'), DOCKER_HUB_REGISTRY)
@@ -224,12 +229,16 @@ test('Docker Hub image metadata authenticates and follows its CDN without forwar
       }
 
       if (url.pathname.includes('/manifests/')) {
-        return new Response(manifest, { headers: { 'Docker-Content-Digest': manifestDigest } })
+        return new Response(manifest, {
+          headers: { 'Docker-Content-Digest': manifestDigest },
+        })
       }
 
       return new Response(null, {
         status: 307,
-        headers: { Location: 'https://production.cloudfront.docker.com/config?signed=value' },
+        headers: {
+          Location: 'https://production.cloudfront.docker.com/config?signed=value',
+        },
       })
     }
   )

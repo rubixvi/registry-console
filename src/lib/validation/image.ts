@@ -7,6 +7,7 @@ export const descriptorSchema = z
     digest: digestName,
     size: z.number().int().nonnegative(),
     mediaType: z.string().optional(),
+    artifactType: z.string().optional(),
     platform: z
       .object({
         os: z.string(),
@@ -21,6 +22,7 @@ export const manifestSchema = z
   .object({
     schemaVersion: z.literal(2),
     mediaType: z.string().optional(),
+    artifactType: z.string().optional(),
     config: descriptorSchema.optional(),
     layers: z.array(descriptorSchema).max(1000).optional(),
     manifests: z.array(descriptorSchema).max(1000).optional(),

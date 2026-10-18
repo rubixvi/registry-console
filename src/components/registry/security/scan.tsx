@@ -1,16 +1,12 @@
 'use client'
 
-import { useState } from 'react'
 import { ShieldCheck } from 'lucide-react'
-import { toast } from 'sonner'
-import useSWR from 'swr'
 
 import { CompactScan } from '@/components/registry/security/compact'
 import { Counts } from '@/components/registry/security/counts'
 import { ScanTable } from '@/components/registry/security/table'
 import { Button } from '@/components/ui/button'
-import { apiRequest } from '@/lib/http/client'
-import { type ScanStatus } from '@/types/scan'
+import { useScan } from '@/hooks/registry/use-scan'
 
 type Props = {
   id: string
@@ -21,46 +17,7 @@ type Props = {
 }
 
 export function ImageScan({ id, repository, digest, admin = false, compact = false }: Props) {
-  const [busy, setBusy] = useState(false)
-  const params = new URLSearchParams({ repository, digest })
-  const scanEndpoint = `/api/registries/${encodeURIComponent(id)}/scan`
-  const endpoint = `${scanEndpoint}?${params}`
-
-  const { data, error, mutate } = useSWR<ScanStatus>(endpoint, apiRequest<ScanStatus>, {
-    revalidateOnFocus: false,
-    shouldRetryOnError: false,
-    dedupingInterval: 10_000,
-    refreshInterval: (current) =>
-      current?.status === 'running'
-        ? 3000
-        : current?.enabled && current.status !== 'complete'
-          ? 30_000
-          : 0,
-  })
-
-  async function scan(): Promise<void> {
-    if (busy || data?.status === 'running' || data?.status === 'complete') return
-
-    setBusy(true)
-
-    try {
-      const result = await apiRequest<ScanStatus>(scanEndpoint, {
-        method: 'POST',
-        body: JSON.stringify({ repository, digest }),
-      })
-
-      await mutate(result, { revalidate: false })
-      toast.success(
-        result.status === 'complete'
-          ? 'Stored vulnerability report loaded.'
-          : 'Vulnerability scan started.'
-      )
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Unable to start the scan.')
-    } finally {
-      setBusy(false)
-    }
-  }
+  const { data, error, busy, scan } = useScan(id, repository, digest)
 
   if (error) {
     return <span className="text-xs text-muted-foreground">Scan status unavailable</span>
@@ -69,6 +26,7 @@ export function ImageScan({ id, repository, digest, admin = false, compact = fal
   if (!data?.enabled) return null
 
   const report = data.report
+  const limited = (data.retryAfter ?? 0) > 0
   const total = report ? Object.values(report.counts).reduce((sum, count) => sum + count, 0) : 0
   const summary =
     data.status === 'running'
@@ -94,7 +52,7 @@ export function ImageScan({ id, repository, digest, admin = false, compact = fal
         {admin && data.status !== 'complete' && (
           <Button
             disabled={busy || data.status === 'running'}
-            onClick={scan}
+            onClick={() => scan(limited)}
             type="button"
             variant="outline"
           >
@@ -106,6 +64,13 @@ export function ImageScan({ id, repository, digest, admin = false, compact = fal
       <p aria-live="polite" className="text-sm text-muted-foreground">
         {summary}
       </p>
+
+      {limited && (
+        <p className="text-sm text-muted-foreground">
+          The scan limit has been reached. Automatic scanning will resume when capacity is
+          available.
+        </p>
+      )}
 
       {data.error && <p className="text-sm text-destructive">{data.error}</p>}
 

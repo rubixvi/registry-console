@@ -84,7 +84,9 @@ export async function checkRegistry({
     })
 
     await t.test('viewers can browse but cannot delete images', async () => {
-      const catalogue = await request(`${api}/catalog`, { cookie: readerCookie })
+      const catalogue = await request(`${api}/catalog`, {
+        cookie: readerCookie,
+      })
       const deleted = await request(`${api}/image`, {
         method: 'DELETE',
         body: deletion,
@@ -129,7 +131,10 @@ export async function checkRegistry({
       })
 
       const updated = await request(api, { method: 'PUT', body: update })
-      const deleted = await request(`${api}/image`, { method: 'DELETE', body: deletion })
+      const deleted = await request(`${api}/image`, {
+        method: 'DELETE',
+        body: deletion,
+      })
 
       assert.equal(updated.status, 200, 'connection can be updated')
       assert.equal(deleted.status, 403)

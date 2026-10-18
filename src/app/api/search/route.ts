@@ -4,12 +4,9 @@ import { searchRegistry } from '@/lib/registry/search'
 import { getRegistries, getRegistry } from '@/lib/registry/store'
 import { api } from '@/lib/security/api'
 import { AppError } from '@/lib/security/error'
-import { rateLimit } from '@/lib/security/rate-limit'
 import { searchSchema } from '@/lib/validation/registry'
 
-export const GET = api(async (request, _context, identity) => {
-  rateLimit(`workspace-search:${identity.username}`, 30, 60_000)
-
+export const GET = api(async (request) => {
   const parsed = searchSchema.safeParse(Object.fromEntries(request.nextUrl.searchParams))
 
   if (!parsed.success) {
@@ -23,7 +20,11 @@ export const GET = api(async (request, _context, identity) => {
     throw new AppError(400, 'Select a registry before searching across more than ten connections.')
   }
 
-  const results: { registryId: string; registryName: string; repository: string }[] = []
+  const results: {
+    registryId: string
+    registryName: string
+    repository: string
+  }[] = []
   const failures: { registryName: string; message: string }[] = []
   const deadline = Date.now() + 60_000
 
@@ -33,10 +34,17 @@ export const GET = api(async (request, _context, identity) => {
     }
 
     try {
-      const result = await searchRegistry(getRegistry(registry.id), { query, architecture })
+      const result = await searchRegistry(getRegistry(registry.id), {
+        query,
+        architecture,
+      })
 
       for (const repository of result.items) {
-        results.push({ registryId: registry.id, registryName: registry.name, repository })
+        results.push({
+          registryId: registry.id,
+          registryName: registry.name,
+          repository,
+        })
       }
 
       if (results.length > 10_000) {

@@ -14,12 +14,14 @@ import {
   finishScan,
   getScan,
   queueScan,
+  scanDelay,
   scanDue,
 } from '@/lib/database/scan'
 import { validateUrl } from '@/lib/registry/allowlist'
 import { assertDockerHubRepository } from '@/lib/registry/dockerhub'
 import { registryIdentity } from '@/lib/registry/identity'
 import { imageDetails } from '@/lib/registry/image'
+import { requirePublic } from '@/lib/registry/scan-policy'
 import { getRegistry } from '@/lib/registry/store'
 import { appendTrivyReport, emptyReport } from '@/lib/registry/trivy-report'
 import { decryptSecret } from '@/lib/security/crypto'
@@ -27,18 +29,9 @@ import { AppError } from '@/lib/security/error'
 import { keyedFingerprint } from '@/lib/security/fingerprint'
 import { digestName, repositoryName } from '@/lib/validation/registry'
 import { type RegistryRecord } from '@/types/registry'
-import { type ScanStatus } from '@/types/scan'
+import { type ScanJob, type ScanStatus, type ScanTarget } from '@/types/scan'
 
 const MAX_REPORT_BYTES = 16 * 1024 * 1024
-
-export type ScanJob = {
-  id: string
-  registryId: string
-  repository: string
-  digest: string
-  actor: string
-  expires: number
-}
 
 function scanKey(registry: RegistryRecord, digest: string): string {
   return keyedFingerprint('trivy-image-report', [registryIdentity(registry), digest])
@@ -82,7 +75,7 @@ export function scanStatus(
   const row = getScan(reportKey(registry, repository, digest))
 
   if (!row) {
-    return { enabled: true, status: 'not-scanned' }
+    return { enabled: true, status: 'not-scanned', retryAfter: scanDelay() }
   }
 
   if (row.status === 'running' && row.expires <= Date.now()) {
@@ -90,10 +83,16 @@ export function scanStatus(
       enabled: true,
       status: 'failed',
       error: 'The scan was interrupted or timed out. Start a new scan.',
+      retryAfter: scanDelay(),
     }
   }
 
-  return { enabled: true, status: row.status, ...JSON.parse(row.value) }
+  return {
+    enabled: true,
+    status: row.status,
+    ...JSON.parse(row.value),
+    ...(row.status === 'failed' ? { retryAfter: scanDelay() } : {}),
+  }
 }
 
 export function needsScan(registry: RegistryRecord, repository: string, digest: string): boolean {
@@ -116,12 +115,20 @@ export function scheduleScan(
   assertDockerHubRepository(registry, repository)
   scanAllowed(registry)
 
-  return queueScan({
+  return queueScan(scanTarget(registry, repository, digest))
+}
+
+export function scanTarget(
+  registry: RegistryRecord,
+  repository: string,
+  digest: string
+): ScanTarget {
+  return {
     id: reportKey(registry, repository, digest),
     registryId: registry.id,
     repository,
     digest,
-  })
+  }
 }
 
 export function matchesScan(
@@ -137,7 +144,8 @@ export function prepareScan(
   registry: RegistryRecord,
   repository: string,
   digest: string,
-  actor: string
+  actor: string,
+  override = false
 ): ScanJob {
   repositoryName.parse(repository)
   digestName.parse(digest)
@@ -157,9 +165,36 @@ export function prepareScan(
   const id = reportKey(registry, repository, digest)
   const expires = Date.now() + (env().TRIVY_TIMEOUT_SECONDS + 60) * 1000
 
-  claimScan({ id, registryId: registry.id, repository, digest, actor, expires })
+  claimScan({ id, registryId: registry.id, repository, digest, actor, expires, override })
 
   return { id, registryId: registry.id, repository, digest, actor, expires }
+}
+
+export async function startScan(
+  registry: RegistryRecord,
+  repository: string,
+  digest: string,
+  actor: string,
+  override = false
+): Promise<ScanJob | null> {
+  if (!scanAllowed(registry)) {
+    throw new AppError(409, 'Trivy scanning is disabled. Set TRIVY_ENABLED=true to enable it.')
+  }
+
+  await requirePublic(registry, repository)
+
+  const details = await imageDetails(registry, repository, digest)
+
+  if (!details.platformDetails.length) {
+    discardScan(reportKey(registry, repository, digest))
+    return null
+  }
+
+  if (details.platformDetails.length > 8) {
+    throw new AppError(413, 'Scanning supports images with one to eight runnable platforms.')
+  }
+
+  return prepareScan(registry, repository, digest, actor, override)
 }
 
 export async function executeTrivy(
@@ -172,6 +207,8 @@ export async function executeTrivy(
   repositoryName.parse(repository)
   digestName.parse(digest)
   assertDockerHubRepository(registry, repository)
+
+  await requirePublic(registry, repository)
 
   const config = env()
   const origin = new URL(validateUrl(registry.url, registry.provider))
@@ -342,7 +379,9 @@ export async function runScan(job: ScanJob): Promise<void> {
       throw new AppError(409, 'The connection changed. Start the scan again.')
     }
 
-    const details = await imageDetails(registry, job.repository, job.digest, true)
+    await requirePublic(registry, job.repository)
+
+    const details = await imageDetails(registry, job.repository, job.digest)
     const platforms = details.platformDetails
 
     if (!platforms.length || platforms.length > 8) {

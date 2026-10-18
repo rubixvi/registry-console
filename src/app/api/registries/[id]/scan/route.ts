@@ -1,22 +1,21 @@
 import { after, NextResponse } from 'next/server'
-import { z } from 'zod'
 
+import { hubPrivacy } from '@/lib/registry/dockerhub'
+import { requirePublic } from '@/lib/registry/scan-policy'
 import { getRegistry } from '@/lib/registry/store'
-import { prepareScan, runScan, scanStatus } from '@/lib/registry/trivy'
+import { runScan, scanStatus, startScan } from '@/lib/registry/trivy'
 import { api } from '@/lib/security/api'
+import { withLimits } from '@/lib/security/context'
 import { AppError } from '@/lib/security/error'
-import { rateLimit } from '@/lib/security/rate-limit'
 import { readJson } from '@/lib/security/request'
-import { digestName, repositoryName } from '@/lib/validation/registry'
+import { scanInput, scanQuery } from '@/lib/validation/scan'
 
 export const runtime = 'nodejs'
 export const maxDuration = 660
 
-const input = z.object({ repository: repositoryName, digest: digestName }).strict()
-
 export const GET = api(async (request, context) => {
   const { id } = await context.params
-  const parsed = input.safeParse(Object.fromEntries(request.nextUrl.searchParams))
+  const parsed = scanQuery.safeParse(Object.fromEntries(request.nextUrl.searchParams))
 
   if (!parsed.success) {
     throw new AppError(400, 'Invalid scan reference.')
@@ -24,25 +23,32 @@ export const GET = api(async (request, context) => {
 
   const registry = getRegistry(id)
 
+  if ((await hubPrivacy(registry, parsed.data.repository)) !== false) {
+    return NextResponse.json({ enabled: false, status: 'not-scanned' })
+  }
+
   return NextResponse.json(scanStatus(registry, parsed.data.repository, parsed.data.digest))
 })
 
 export const POST = api(async (request, context, identity) => {
   const { id } = await context.params
-  const { repository, digest } = await readJson(request, input)
-
-  rateLimit(`trivy-start:${identity.username}`, 16, 60_000)
+  const { repository, digest, override } = await readJson(request, scanInput)
 
   const registry = getRegistry(id)
   const status = scanStatus(registry, repository, digest)
 
   if (status.status === 'complete') {
+    await requirePublic(registry, repository)
     return NextResponse.json(status)
   }
 
-  const job = prepareScan(registry, repository, digest, identity.username)
+  const job = await startScan(registry, repository, digest, identity.username, override)
 
-  after(() => runScan(job))
+  if (!job) {
+    throw new AppError(422, 'This reference has no runnable image to scan.')
+  }
+
+  after(() => withLimits(true, () => runScan(job)))
 
   return NextResponse.json({ enabled: true, status: 'running' }, { status: 202 })
 }, 'admin')

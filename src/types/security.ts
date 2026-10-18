@@ -1,3 +1,12 @@
+import { type Session } from '@/types/auth'
+
+export type Purpose =
+  | 'passkey-login'
+  | 'passkey-register'
+  | 'two-factor'
+  | 'security'
+  | 'totp-setup'
+
 export type AuthRequest = {
   id: string
   purpose: Purpose
@@ -7,6 +16,13 @@ export type AuthRequest = {
   value: string
   expires: number
   attempts: number
+}
+
+export type RequestInput = Omit<AuthRequest, 'attempts'>
+
+export type Enrollment = {
+  codes: string[]
+  session: Session
 }
 
 export type SecurityAccount = {
@@ -22,13 +38,6 @@ export type AuthenticatorRow = {
   last_step: number
   recovery: string
 }
-
-export type Purpose =
-  | 'passkey-login'
-  | 'passkey-register'
-  | 'two-factor'
-  | 'security'
-  | 'totp-setup'
 
 export type PasskeySummary = {
   id: string

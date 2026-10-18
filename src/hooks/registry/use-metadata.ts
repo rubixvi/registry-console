@@ -4,13 +4,13 @@ import { useEffect, useRef, useState } from 'react'
 import useSWR from 'swr'
 
 import { apiRequest } from '@/lib/http/client'
-import { type ImageDetails } from '@/types/image'
+import { type ImageMetadata } from '@/types/image'
 
 const waiting: (() => void)[] = []
 
 let active = 0
 
-async function fetchMetadata(url: string): Promise<ImageDetails> {
+async function fetchMetadata(url: string): Promise<ImageMetadata> {
   await new Promise<void>((resolve) => {
     const start = () => {
       active++
@@ -25,7 +25,7 @@ async function fetchMetadata(url: string): Promise<ImageDetails> {
   })
 
   try {
-    return await apiRequest<ImageDetails>(url)
+    return await apiRequest<ImageMetadata>(url)
   } finally {
     active--
     waiting.shift()?.()
@@ -37,9 +37,9 @@ export function useMetadata(id: string, repository: string, reference: string) {
   const [visible, setVisible] = useState(false)
 
   const params = new URLSearchParams({ repository, reference })
-  const endpoint = `/api/registries/${encodeURIComponent(id)}/image?${params}`
+  const endpoint = `/api/registries/${encodeURIComponent(id)}/metadata?${params}`
 
-  const resource = useSWR<ImageDetails>(visible ? endpoint : null, fetchMetadata, {
+  const resource = useSWR<ImageMetadata>(visible ? endpoint : null, fetchMetadata, {
     dedupingInterval: 10_000,
     revalidateOnFocus: false,
     shouldRetryOnError: false,

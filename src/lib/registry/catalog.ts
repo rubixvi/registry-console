@@ -14,7 +14,7 @@ export async function registryPage(
 ): Promise<RegistryPage> {
   const { repository, last, n } = input
 
-  if (registry.provider === 'dockerhub' && !repository) {
+  if (registry.provider === 'dockerhub') {
     return dockerHubPage(registry, input, refresh)
   }
 

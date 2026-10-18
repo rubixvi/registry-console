@@ -33,7 +33,10 @@ export async function checkConsole({ context, request, readerCookie, fixture }: 
       readOnly: false,
     }
 
-    const created = await request('/api/registries', { method: 'POST', body: input })
+    const created = await request('/api/registries', {
+      method: 'POST',
+      body: input,
+    })
 
     assert.equal(created.status, 201, 'additional registry connection can be created')
 
@@ -41,7 +44,10 @@ export async function checkConsole({ context, request, readerCookie, fixture }: 
     const api = `/api/registries/${id}`
     const repository = 'team/app'
     const query = new URLSearchParams({ repository, reference: 'latest' })
-    const selection = { repository, tags: ['latest', 'stable', 'worker', 'protected'] }
+    const selection = {
+      repository,
+      tags: ['latest', 'stable', 'worker', 'protected'],
+    }
 
     t.after(async () => {
       const response = await request(api, { method: 'DELETE', body: {} })
@@ -131,7 +137,11 @@ export async function checkConsole({ context, request, readerCookie, fixture }: 
 
         assert.equal(scan.enabled, false, 'scanning is disabled unless explicitly enabled')
 
-        const viewer = await request(`${api}/scan`, { method: 'POST', body, cookie: readerCookie })
+        const viewer = await request(`${api}/scan`, {
+          method: 'POST',
+          body,
+          cookie: readerCookie,
+        })
         const admin = await request(`${api}/scan`, { method: 'POST', body })
         const foreign = await request(`${api}/scan`, {
           method: 'POST',
@@ -179,17 +189,26 @@ export async function checkConsole({ context, request, readerCookie, fixture }: 
         assert.equal(response.status, 200, 'connection can be made writable')
       })
 
-      const updated = await request(api, { method: 'PUT', body: { ...input, readOnly: true } })
+      const updated = await request(api, {
+        method: 'PUT',
+        body: { ...input, readOnly: true },
+      })
 
       assert.equal(updated.status, 200, 'connection can be made read-only')
 
-      const response = await request(`${api}/bulk`, { method: 'POST', body: selection })
+      const response = await request(`${api}/bulk`, {
+        method: 'POST',
+        body: selection,
+      })
 
       assert.equal(response.status, 403)
     })
 
     await t.test('bulk deletion deduplicates digests and reports partial failures', async () => {
-      const preview = await request(`${api}/bulk`, { method: 'POST', body: selection })
+      const preview = await request(`${api}/bulk`, {
+        method: 'POST',
+        body: selection,
+      })
 
       assert.equal(preview.status, 200)
 

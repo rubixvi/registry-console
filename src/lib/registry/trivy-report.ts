@@ -1,28 +1,5 @@
-import { z } from 'zod'
-
-import { type ScanReport, SEVERITIES } from '@/types/scan'
-
-const vulnerability = z.object({
-  VulnerabilityID: z.string().max(256),
-  PkgName: z.string().max(1024),
-  InstalledVersion: z.string().max(1024),
-  FixedVersion: z.string().max(1024).default(''),
-  Severity: z.enum(SEVERITIES).catch('UNKNOWN'),
-  Title: z.string().max(4096).default(''),
-})
-
-const outputSchema = z.object({
-  SchemaVersion: z.literal(2),
-  Results: z
-    .array(
-      z.object({
-        Target: z.string().max(2048),
-        Vulnerabilities: z.array(vulnerability).max(50_000).optional(),
-      })
-    )
-    .max(1000)
-    .optional(),
-})
+import { outputSchema } from '@/lib/validation/response/trivy'
+import { type ScanReport } from '@/types/scan'
 
 export function emptyReport(digest: string): ScanReport {
   return {

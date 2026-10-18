@@ -58,7 +58,12 @@ before(async () => {
 after(async () => {
   database().close()
   await fixture.close()
-  rmSync(directory, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 })
+  rmSync(directory, {
+    recursive: true,
+    force: true,
+    maxRetries: 5,
+    retryDelay: 100,
+  })
 })
 
 test('namespace trees preserve nested and root repositories, including a repository with children', () => {
@@ -182,7 +187,9 @@ test('response caching saves requests and isolates connection IDs, credentials, 
   await registryRequest(registry, manifestPath, { scope })
   assert.equal(fixture.requests.get(manifestPath), initial + 1)
   await registryRequest({ ...registry, id: 'other' }, manifestPath, { scope })
-  await registryRequest({ ...registry, username: 'different' }, manifestPath, { scope })
+  await registryRequest({ ...registry, username: 'different' }, manifestPath, {
+    scope,
+  })
   await registryRequest({ ...registry, password: encryptSecret('different') }, manifestPath, {
     scope,
   })
@@ -394,7 +401,10 @@ test('saved connections can be repaired while replacement origins remain validat
 
 test('deletion invalidates mutable and digest reads, including older in-flight responses', async () => {
   fixture.state.pause = true
-  const pending = registryRequest(registry, manifestPath, { scope, cache: 'reload' })
+  const pending = registryRequest(registry, manifestPath, {
+    scope,
+    cache: 'reload',
+  })
 
   for (let attempt = 0; !fixture.state.release && attempt < 100; attempt++) {
     await new Promise((resolve) => setTimeout(resolve, 10))

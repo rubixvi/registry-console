@@ -107,6 +107,42 @@ const annotated = image('arm64', 'invalid', [], {
 
 aliases.set('annotated', annotated.digest)
 
+const proof = {
+  digest: `sha256:${'d'.repeat(64)}`,
+  size: 512,
+  mediaType: 'application/vnd.in-toto+json',
+}
+
+const legacy = descriptor({
+  schemaVersion: 2,
+  config: {
+    ...descriptor({ os: 'unknown', architecture: 'unknown' }),
+    mediaType: 'application/vnd.oci.image.config.v1+json',
+  },
+  layers: [proof],
+})
+
+const artifact = descriptor({
+  schemaVersion: 2,
+  artifactType: 'application/vnd.docker.attestation.manifest.v1+json',
+  config: {
+    ...descriptor({}),
+    mediaType: 'application/vnd.oci.empty.v1+json',
+  },
+  layers: [proof],
+})
+
+const disguised = descriptor({
+  schemaVersion: 2,
+  config: {
+    ...amd64.config,
+    mediaType: 'application/vnd.oci.image.config.v1+json',
+  },
+  layers: [proof],
+})
+
+index('mixed', [amd64, legacy, artifact, disguised])
+
 const broken = image('arm64', '2026-10-16T00:00:00Z')
 
 index('broken', [broken])
@@ -243,4 +279,30 @@ test('oversized indexes return an explicit limit error instead of partial totals
 
     return true
   })
+})
+
+test('direct attestation manifests retain inspection data without exposing runnable platforms', async () => {
+  for (const entry of [legacy, artifact, disguised]) {
+    const result = await imageDetails(registry, 'team/app', entry.digest)
+
+    assert.equal(result.digest, entry.digest)
+    assert.deepEqual(result.platformDetails, [])
+    assert.deepEqual(result.platforms, [])
+    assert.equal((result.manifest as ImageManifest).layers?.[0].mediaType, proof.mediaType)
+  }
+})
+
+test('unmarked artifacts in an index are excluded from image platforms and compressed totals', async () => {
+  const result = await imageDetails(registry, 'team/app', 'mixed')
+
+  assert.deepEqual(result.platforms, ['linux/amd64'])
+  assert.equal(result.platformDetails.length, 1)
+  assert.equal(result.size, amd64.config.size + shared.size)
+})
+
+test('runnable images with an empty layer list remain eligible for scanning', async () => {
+  const result = await imageDetails(registry, 'team/app', annotated.digest)
+
+  assert.equal(result.platformDetails.length, 1)
+  assert.equal(result.platformDetails[0].digest, annotated.digest)
 })

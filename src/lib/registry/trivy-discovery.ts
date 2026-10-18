@@ -1,30 +1,20 @@
 import 'server-only'
 
-import { z } from 'zod'
-
 import { saveDiscovery } from '@/lib/database/scan-discovery'
 import { registryPage } from '@/lib/registry/catalog'
+import { hubPrivacy } from '@/lib/registry/dockerhub'
 import { registryIdentity } from '@/lib/registry/identity'
 import { imageDigest } from '@/lib/registry/image-digest'
 import { getRegistry } from '@/lib/registry/store'
 import { scheduleScan } from '@/lib/registry/trivy'
 import { AppError } from '@/lib/security/error'
 import { keyedFingerprint } from '@/lib/security/fingerprint'
-import { referenceName, repositoryName } from '@/lib/validation/registry'
+import { cursorSchema } from '@/lib/validation/scan'
 import { type RegistryRecord } from '@/types/registry'
+import { type ScanCursor } from '@/types/scan'
 
 const INTERVAL = 15 * 60_000
 const BATCH = 10
-
-const cursorSchema = z.object({
-  catalogue: z.string().max(255).nullable().default(''),
-  repositories: z.array(repositoryName).max(100).default([]),
-  repository: z.union([repositoryName, z.literal('')]).default(''),
-  cursor: z.string().max(255).nullable().default(''),
-  tags: z.array(referenceName).max(100).default([]),
-  pages: z.number().int().min(0).max(200).default(0),
-  tagPages: z.number().int().min(0).max(200).default(0),
-})
 
 export function discoveryScope(registry: RegistryRecord): string {
   return keyedFingerprint('trivy-discovery', registryIdentity(registry))
@@ -36,7 +26,7 @@ export async function discoverRegistry(
   value: string,
   active: () => boolean
 ): Promise<void> {
-  let state: z.infer<typeof cursorSchema>
+  let state: ScanCursor
 
   try {
     state = cursorSchema.parse(JSON.parse(value))
@@ -51,6 +41,15 @@ export async function discoverRegistry(
       const current = getRegistry(registry.id)
 
       if (discoveryScope(current) !== scope) return
+
+      if (state.repository && (await hubPrivacy(current, state.repository)) !== false) {
+        state.repository = ''
+        state.tags = []
+        state.cursor = ''
+        state.tagPages = 0
+        saveDiscovery(registry.id, scope, state, 60_000)
+        continue
+      }
 
       if (!state.repository) {
         if (!state.repositories.length) {

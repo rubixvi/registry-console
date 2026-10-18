@@ -88,8 +88,8 @@ export function RegistryForm({ registry }: Props) {
                 required
               />
               <p className="text-xs text-muted-foreground">
-                Docker Hub connections support read-only browsing. Use an access token for private
-                repositories.
+                Use an access token to access private repositories and manage images with the
+                required permissions.
               </p>
             </div>
           )}
@@ -180,7 +180,6 @@ export function RegistryForm({ registry }: Props) {
             <input
               className="size-4 accent-primary"
               defaultChecked={registry?.readOnly}
-              disabled={provider === 'dockerhub'}
               name="readOnly"
               type="checkbox"
             />
