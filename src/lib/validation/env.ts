@@ -14,7 +14,7 @@ export const envSchema = z.object({
   TRUST_PROXY: z.enum(['true', 'false']).default('false'),
   SESSION_HOURS: z.coerce.number().int().min(1).max(24).default(8),
   PULL_URL: pullUrlSchema.default(''),
-  TAGLIST_ORDER: z.enum(TAG_ORDERS).default('natural-asc'),
+  TAGLIST_ORDER: z.enum(TAG_ORDERS).default('date-desc'),
   HISTORY_CUSTOM_LABELS: z
     .string()
     .max(4096)

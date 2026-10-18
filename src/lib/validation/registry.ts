@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 import { pullUrlSchema } from '@/lib/validation/url'
+import { TAG_ORDERS } from '@/utils/tag-order'
 
 export const repositoryName = z
   .string()
@@ -43,6 +44,7 @@ export const browseInput = z
     repository: repositoryName.optional(),
     architecture: architectureName.optional(),
     query: z.string().max(128).default(''),
+    order: z.enum(TAG_ORDERS).optional(),
   })
   .strict()
 

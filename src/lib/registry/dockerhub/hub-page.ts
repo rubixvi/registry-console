@@ -14,6 +14,7 @@ import { AppError } from '@/lib/security/error'
 import { repositoryName } from '@/lib/validation/registry'
 import { pageSchema, tagPageSchema } from '@/lib/validation/response/dockerhub'
 import { type RegistryPage, type RegistryPageInput, type RegistryRecord } from '@/types/registry'
+import { imageCreated } from '@/utils/image-metadata'
 
 export async function hubPage(
   registry: RegistryRecord,
@@ -43,9 +44,8 @@ export async function hubPage(
 
   try {
     const result = await hubRequest(registry, requestPath)
-    const body = input.repository
-      ? tagPageSchema.parse(JSON.parse(result.text))
-      : pageSchema.parse(JSON.parse(result.text))
+    const tags = input.repository ? tagPageSchema.parse(JSON.parse(result.text)) : undefined
+    const body = tags ?? pageSchema.parse(JSON.parse(result.text))
 
     if (body.results.length > input.n) {
       throw new AppError(502, 'Docker Hub ignored its requested page limit.')
@@ -86,6 +86,16 @@ export async function hubPage(
       items: body.results.map((entry) =>
         input.repository ? entry.name : repositoryName.parse(`${namespace}/${entry.name}`)
       ),
+      ...(input.dates && tags
+        ? {
+            dates: Object.fromEntries(
+              tags.results.map((tag) => [
+                tag.name,
+                imageCreated(tag.tag_last_pushed) ?? imageCreated(tag.last_updated),
+              ])
+            ),
+          }
+        : {}),
       next,
     }
   } catch (error) {

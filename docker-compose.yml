@@ -2,7 +2,7 @@ name: registry-console
 
 services:
   app:
-    image: ${REGISTRY_CONSOLE_IMAGE:?Set REGISTRY_CONSOLE_IMAGE to your published image and tag}
+    image: ${REGISTRY_CONSOLE_IMAGE:-rubixvi/registry-console:edge}
     pull_policy: always
     user: '1000:1000'
     init: true

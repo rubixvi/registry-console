@@ -26,8 +26,12 @@ export type RegistryRecord = Omit<Registry, 'hasPassword'> & {
   password: string
 }
 
-export type RegistryPage = {
+export type RegistryListing = {
   items: string[]
+  dates?: Record<string, string | null>
+}
+
+export type RegistryPage = RegistryListing & {
   next: string | null
 }
 
@@ -44,6 +48,7 @@ export type RegistryInput = {
 
 export type RegistryPageInput = {
   repository?: string
+  dates?: boolean
   last: string
   n: number
 }

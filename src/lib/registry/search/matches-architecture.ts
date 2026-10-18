@@ -23,5 +23,7 @@ export async function matchesArchitecture(
 
   const details = await imageDetails(search.registry, repo, tag, search.refresh)
 
+  if (search.dates && !search.dates.has(tag)) search.dates.set(tag, details.created)
+
   return details.platforms.some((platform) => platform.split('/')[1] === search.architecture)
 }

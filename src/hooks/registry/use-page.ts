@@ -9,7 +9,7 @@ import { sortTags, type TagOrder } from '@/utils/tag-order'
 
 const PAGE_SIZE = 100
 
-export function useRegistryPage(id: string, repository?: string, order: TagOrder = 'natural-asc') {
+export function useRegistryPage(id: string, repository?: string, order: TagOrder = 'date-desc') {
   const [index, setIndex] = useState(0)
   const [query, setQuery] = useState('')
   const [architecture, setArchitecture] = useState('all')
@@ -32,11 +32,20 @@ export function useRegistryPage(id: string, repository?: string, order: TagOrder
     params.set('query', searchQuery)
   }
 
+  if (repository && order.startsWith('date-')) {
+    params.set('order', order)
+    params.set('query', searchQuery)
+  }
+
   const endpoint = `/api/registries/${encodeURIComponent(id)}/browse?${params}`
   const resource = useResource<{ items: string[] }>(endpoint)
   const search = query.toLowerCase()
   const matches = resource.data?.items.filter((item) => item.toLowerCase().includes(search)) ?? []
-  const sorted = repository ? sortTags(matches, order) : matches.sort()
+  const sorted = repository
+    ? order.startsWith('date-')
+      ? matches
+      : sortTags(matches, order)
+    : matches.sort()
   const maximum = Math.max(0, Math.ceil(sorted.length / PAGE_SIZE) - 1)
   const current = Math.min(index, maximum)
   const items = sorted.slice(current * PAGE_SIZE, (current + 1) * PAGE_SIZE)
