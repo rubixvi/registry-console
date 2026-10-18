@@ -119,7 +119,7 @@ test('admins still receive genuine upstream 429 responses with the current retry
       assert.ok(error instanceof AppError)
       assert.equal(error.status, 429)
       assert.equal(error.retryAfter, 15)
-      assert.match(error.message, /Docker Hub registry returned HTTP 429/)
+      assert.match(error.message, /Docker Hub returned HTTP 429/)
       assert.equal(error.message.includes('private'), false)
       return true
     })
