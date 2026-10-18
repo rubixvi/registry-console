@@ -10,16 +10,17 @@ WORKDIR /app
 
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN apk add --no-cache ca-certificates gcompat \
+RUN apk upgrade --no-cache \
+    && apk add --no-cache ca-certificates gcompat \
+    && npm install --global corepack \
     && corepack enable
-
 
 FROM base AS deps
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
-RUN pnpm install --frozen-lockfile
-
+RUN pnpm --version \
+    && pnpm install --frozen-lockfile
 
 FROM base AS builder
 
@@ -50,7 +51,8 @@ LABEL org.opencontainers.image.title="Registry Console" \
       org.opencontainers.image.revision="${VCS_REF}" \
       org.opencontainers.image.version="${VERSION}"
 
-RUN apk add --no-cache ca-certificates gcompat \
+RUN apk upgrade --no-cache \
+    && apk add --no-cache ca-certificates gcompat \
     && mkdir -p /app/data /usr/share/licenses/trivy \
     && chown node:node /app/data \
     && chmod 700 /app/data
