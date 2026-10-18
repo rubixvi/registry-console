@@ -53,6 +53,11 @@ LABEL org.opencontainers.image.title="Registry Console" \
 
 RUN apk upgrade --no-cache \
     && apk add --no-cache ca-certificates gcompat \
+    && rm -rf /usr/local/lib/node_modules/npm \
+        /usr/local/lib/node_modules/corepack /opt/yarn-v* \
+    && rm -f /usr/local/bin/npm /usr/local/bin/npx \
+        /usr/local/bin/corepack /usr/local/bin/pnpm /usr/local/bin/pnpx \
+        /usr/local/bin/yarn /usr/local/bin/yarnpkg \
     && mkdir -p /app/data /app/scanner /usr/share/licenses/trivy \
     && chown node:node /app/data \
     && chmod 700 /app/data \

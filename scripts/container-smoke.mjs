@@ -195,11 +195,25 @@ async function waitForContainer() {
 }
 
 function checkRuntime() {
+  const paths = [
+    '/usr/local/lib/node_modules/npm',
+    '/usr/local/lib/node_modules/corepack',
+    '/usr/local/bin/npm',
+    '/usr/local/bin/npx',
+    '/usr/local/bin/corepack',
+    '/usr/local/bin/pnpm',
+    '/usr/local/bin/pnpx',
+    '/usr/local/bin/yarn',
+    '/usr/local/bin/yarnpkg',
+  ]
   const script = [
     "const fs = require('node:fs')",
+    `const paths = ${JSON.stringify(paths)}`,
     "if (process.getuid() === 0) throw new Error('Container runs as root')",
     "if (fs.existsSync('/app/.env')) throw new Error('Image contains .env')",
     "if (fs.existsSync('/app/public/source.tar.gz')) throw new Error('Image contains source archive')",
+    "if (paths.some(file => fs.lstatSync(file, { throwIfNoEntry: false }))) throw new Error('Runtime contains a package manager')",
+    "if (fs.readdirSync('/opt').some(name => name.startsWith('yarn-v'))) throw new Error('Runtime contains Yarn')",
     "const probe = '/app/data/.smoke-write-test'",
     "fs.writeFileSync(probe, 'ok')",
     'fs.unlinkSync(probe)',
