@@ -8,7 +8,7 @@ import { after, test } from 'node:test'
 import { env } from '../src/lib/config/env'
 import { database } from '../src/lib/database/client'
 import { validateBlobRedirect, validateToken, validateUrl } from '../src/lib/registry/allowlist'
-import { dockerHubPage } from '../src/lib/registry/dockerhub'
+import { hubPage } from '../src/lib/registry/dockerhub'
 import {
   DOCKER_HUB_API,
   DOCKER_HUB_AUTH,
@@ -165,7 +165,7 @@ test('Docker Hub listings need no manual API allowlist entry', async (context) =
     return Response.json({ results: [{ name: 'app' }], next: null })
   })
 
-  assert.deepEqual(await dockerHubPage(value, { last: '', n: 100 }), {
+  assert.deepEqual(await hubPage(value, { last: '', n: 100 }), {
     items: ['team/app'],
     next: null,
   })

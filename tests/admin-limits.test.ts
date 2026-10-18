@@ -6,7 +6,7 @@ import { after, beforeEach, test } from 'node:test'
 
 import { database } from '../src/lib/database/client'
 import { registryRequest } from '../src/lib/registry/client'
-import { dockerHubPage } from '../src/lib/registry/dockerhub'
+import { hubPage } from '../src/lib/registry/dockerhub'
 import { checkBackoff, limitRegistry } from '../src/lib/registry/throttle'
 import { loadToken } from '../src/lib/registry/token-cache'
 import { hasLimits, withLimits } from '../src/lib/security/context'
@@ -145,13 +145,13 @@ test('admins bypass Hub API cooldowns while background operations retain them', 
   })
 
   await withLimits(false, async () => {
-    assert.deepEqual(await dockerHubPage(registry, { last: '', n: 100 }), {
+    assert.deepEqual(await hubPage(registry, { last: '', n: 100 }), {
       items: ['team/app'],
       next: null,
     })
 
     await assert.rejects(
-      withLimits(true, () => dockerHubPage(registry, { last: '', n: 100 })),
+      withLimits(true, () => hubPage(registry, { last: '', n: 100 })),
       /Docker Hub API requests are paused locally/
     )
   })

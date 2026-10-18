@@ -11,7 +11,7 @@ import { database } from '../src/lib/database/client'
 import { getScan, pendingScan } from '../src/lib/database/scan'
 import { cachedResponse, cacheGeneration, rememberResponse } from '../src/lib/registry/cache'
 import { deleteManifest, executeDeletion, previewDeletion } from '../src/lib/registry/delete'
-import { dockerHubPage, hubPrivacy } from '../src/lib/registry/dockerhub'
+import { hubPage, hubPrivacy } from '../src/lib/registry/dockerhub'
 import { requirePublic } from '../src/lib/registry/scan-policy'
 import { addRegistry, getRegistries, getRegistry, updateRegistry } from '../src/lib/registry/store'
 import {
@@ -90,7 +90,7 @@ test('Hub repository listings retain privacy and reuse it without another API re
     })
   })
 
-  assert.deepEqual((await dockerHubPage(registry, { last: '', n: 100 })).items, [
+  assert.deepEqual((await hubPage(registry, { last: '', n: 100 })).items, [
     'team/public',
     'team/private',
   ])
