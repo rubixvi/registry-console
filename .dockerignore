@@ -6,6 +6,9 @@ data
 release
 .env
 .env.*
+!.env.example
 *.tsbuildinfo
 *.zip
 coverage
+scripts
+tests
