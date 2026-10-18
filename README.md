@@ -4,6 +4,12 @@ Registry Console is a self-hosted workspace for browsing and managing container 
 
 Connect an existing registry or deploy a Distribution registry alongside the console. Registry Console stores connection settings and security data in SQLite, while image manifests and layers remain in the connected registries. Docker clients continue to push and pull directly from those registries.
 
+<img width="1912" height="914" alt="image" src="https://github.com/user-attachments/assets/6d4d8836-2bee-45ce-8d5d-89b7f710efb0" />
+
+<img width="1912" height="914" alt="image" src="https://github.com/user-attachments/assets/6bb9c87f-e351-435a-b171-5f1b76714240" />
+
+<img width="1912" height="914" alt="image" src="https://github.com/user-attachments/assets/e3ed9b7e-9169-4b18-8243-a095b6e0ae46" />
+
 ## What you can do
 
 - Browse multiple registries, search repositories and filter images by architecture. Distribution registries support namespace trees and flat lists; Docker Hub uses a namespace list.
