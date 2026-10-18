@@ -26,9 +26,9 @@ FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-RUN mkdir -p public \
+RUN --mount=type=cache,id=registry-console-nextjs,target=/app/.next/cache,sharing=locked \
+    mkdir -p public \
     && pnpm run build
-
 
 FROM node:24-alpine AS runner
 
@@ -55,12 +55,23 @@ RUN apk add --no-cache ca-certificates gcompat \
     && chown node:node /app/data \
     && chmod 700 /app/data
 
-COPY --from=scanner --chmod=0755 /usr/local/bin/trivy /usr/local/bin/trivy
+COPY --from=scanner --chmod=0755 \
+    /usr/local/bin/trivy \
+    /usr/local/bin/trivy
+
 COPY licenses/trivy/LICENSE /usr/share/licenses/trivy/LICENSE
 
-COPY --from=builder --chown=node:node /app/.next/standalone ./
-COPY --from=builder --chown=node:node /app/.next/static ./.next/static
-COPY --from=builder --chown=node:node /app/public ./public
+COPY --from=builder --chown=node:node \
+    /app/.next/standalone \
+    ./
+
+COPY --from=builder --chown=node:node \
+    /app/.next/static \
+    ./.next/static
+
+COPY --from=builder --chown=node:node \
+    /app/public \
+    ./public
 
 COPY --from=builder --chown=node:node \
     /app/LICENSE \
