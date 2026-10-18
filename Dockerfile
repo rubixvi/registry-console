@@ -13,14 +13,14 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN apk upgrade --no-cache \
     && apk add --no-cache ca-certificates gcompat \
     && npm install --global corepack \
-    && corepack enable \
-    && pnpm --version
+    && corepack enable
 
 FROM base AS deps
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
-RUN pnpm install --frozen-lockfile
+RUN pnpm --version \
+    && pnpm install --frozen-lockfile
 
 FROM base AS builder
 
