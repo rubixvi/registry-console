@@ -20,6 +20,10 @@ export default async function AccountPage() {
 
   const user = configUser(identity.username)
   const authenticator = getAuthenticator(user)
+  
+  const recovery = authenticator
+    ? (JSON.parse(authenticator.recovery) as string[]).length
+    : 0
 
   return (
     <>
@@ -30,9 +34,7 @@ export default async function AccountPage() {
           passkeys: passkeyInfo(user),
           directoryAccount: user.authProvider === 'ldap',
           totpEnabled: Boolean(authenticator),
-          recoveryRemaining: authenticator
-            ? (JSON.parse(authenticator.recovery) as string[]).length
-            : 0,
+          recoveryRemaining: recovery,
         }}
       />
     </>
