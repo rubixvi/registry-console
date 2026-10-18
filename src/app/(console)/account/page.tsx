@@ -7,10 +7,10 @@ import { Security } from '@/components/security'
 import { passkeyInfo } from '@/lib/auth/passkey'
 import { readRequest } from '@/lib/auth/requests'
 import { getIdentity } from '@/lib/auth/session'
-import { ssoProviders } from '@/lib/auth/sso'
 import { getAuthenticator } from '@/lib/auth/totp'
 import { configUser } from '@/lib/auth/verification'
 import { env } from '@/lib/config/env'
+import { getSso } from '@/utils/get-sso'
 
 export const metadata: Metadata = {
   title: 'Security',
@@ -48,13 +48,7 @@ export default async function AccountPage() {
           directoryAccount: user.authProvider === 'ldap',
           ssoAccount: user.authProvider === 'sso',
           ssoVerified,
-          providers:
-            user.email && user.authProvider !== 'ldap'
-              ? ssoProviders().map((provider) => ({
-                  id: provider.id,
-                  name: provider.name ?? provider.id,
-                }))
-              : [],
+          providers: user.email && user.authProvider !== 'ldap' ? getSso() : [],
           totpEnabled: Boolean(authenticator),
           recoveryRemaining: recovery,
         }}
