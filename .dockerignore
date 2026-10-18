@@ -10,5 +10,4 @@ release
 *.tsbuildinfo
 *.zip
 coverage
-scripts
 tests
