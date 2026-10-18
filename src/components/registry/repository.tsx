@@ -21,15 +21,18 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useRegistryPage } from '@/hooks/registry/use-page'
+import { type RegistryProvider } from '@/types/registry'
 
 type Props = {
   id: string
+  provider?: RegistryProvider
 }
 
-export function Repository({ id }: Props) {
+export function Repository({ id, provider }: Props) {
   const state = useRegistryPage(id)
   const { mutate } = useSWRConfig()
   const [view, setView] = useState('tree')
+  const tree = provider !== 'dockerhub' && view === 'tree'
 
   const registryPath = `/registries/${encodeURIComponent(id)}`
 
@@ -61,7 +64,7 @@ export function Repository({ id }: Props) {
         </p>
       </div>
     )
-  } else if (view === 'tree' && state.matches.length > 0) {
+  } else if (tree && state.matches.length > 0) {
     content = <Namespace id={id} query={state.query} repositories={state.matches} />
   } else if (state.items.length > 0) {
     content = (
@@ -113,16 +116,18 @@ export function Repository({ id }: Props) {
         </div>
 
         <div className="grid w-full grid-cols-[minmax(0,1fr)_auto] gap-2 sm:flex sm:w-auto">
-          <Select onValueChange={setView} value={view}>
-            <SelectTrigger aria-label="Repository view" className="w-full sm:w-28">
-              <SelectValue />
-            </SelectTrigger>
+          {provider !== 'dockerhub' && (
+            <Select onValueChange={setView} value={view}>
+              <SelectTrigger aria-label="Repository view" className="w-full sm:w-28">
+                <SelectValue />
+              </SelectTrigger>
 
-            <SelectContent position="popper">
-              <SelectItem value="tree">Tree</SelectItem>
-              <SelectItem value="list">List</SelectItem>
-            </SelectContent>
-          </Select>
+              <SelectContent position="popper">
+                <SelectItem value="tree">Tree</SelectItem>
+                <SelectItem value="list">List</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
 
           <Architecture onChange={state.changeArchitecture} value={state.architecture} />
 
@@ -157,7 +162,7 @@ export function Repository({ id }: Props) {
 
       {content}
 
-      {view === 'list' && (
+      {!tree && (
         <Pagination
           hasNext={state.hasNext}
           hasPrevious={state.hasPrevious}

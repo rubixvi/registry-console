@@ -1,7 +1,5 @@
 import 'server-only'
 
-import { z } from 'zod'
-
 import { validateUrl } from '@/lib/registry/allowlist'
 import { cachedResponse, cacheGeneration, rememberResponse } from '@/lib/registry/cache'
 import { DOCKER_HUB_API, DOCKER_HUB_REGISTRY } from '@/lib/registry/dockerhub-settings'
@@ -11,29 +9,8 @@ import { decryptSecret } from '@/lib/security/crypto'
 import { AppError } from '@/lib/security/error'
 import { readBounded } from '@/lib/security/request'
 import { repositoryName } from '@/lib/validation/registry'
+import { authSchema, pageSchema } from '@/lib/validation/response/dockerhub'
 import { type RegistryPage, type RegistryPageInput, type RegistryRecord } from '@/types/registry'
-
-const pageSchema = z.object({
-  next: z.string().nullable(),
-  results: z
-    .array(
-      z.object({
-        name: z
-          .string()
-          .regex(/^[a-z0-9]+(?:(?:[._]|__|[-]+)[a-z0-9]+)*$/)
-          .max(255),
-      })
-    )
-    .max(100),
-})
-
-const authSchema = z.object({
-  access_token: z
-    .string()
-    .min(1)
-    .max(32_768)
-    .regex(/^[^\r\n]+$/),
-})
 
 let inflight = 0
 

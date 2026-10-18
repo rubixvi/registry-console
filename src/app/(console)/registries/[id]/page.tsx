@@ -9,7 +9,8 @@ import { Repository } from '@/components/registry/repository'
 import { Tag } from '@/components/registry/tags/tag'
 import { Badge } from '@/components/ui/badge'
 import { env } from '@/lib/config/env'
-import { getRegistry, type RegistryProps } from '@/lib/registry/page'
+import { getRegistry } from '@/lib/registry/page'
+import { type RegistryProps } from '@/types/registry'
 
 export async function generateMetadata(props: RegistryProps): Promise<Metadata> {
   const { registry, repository, reference } = await getRegistry(props)
@@ -46,7 +47,7 @@ export default async function RegistryPage(props: RegistryProps) {
     query: { repository },
   }
 
-  let content = <Repository id={id} key={id} />
+  let content = <Repository id={id} key={id} provider={registry.provider} />
 
   if (repository && reference) {
     content = (

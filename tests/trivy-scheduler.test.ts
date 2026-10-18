@@ -21,7 +21,13 @@ import {
 import { nextDiscovery, registerDiscovery } from '../src/lib/database/scan-discovery'
 import { registryIdentity } from '../src/lib/registry/identity'
 import { addRegistry, getRegistry, updateRegistry } from '../src/lib/registry/store'
-import { prepareScan, scanStatus, scheduleScan } from '../src/lib/registry/trivy'
+import {
+  prepareScan,
+  scanStatus,
+  scanTarget,
+  scheduleScan,
+  startScan,
+} from '../src/lib/registry/trivy'
 import { discoverRegistry, discoveryScope } from '../src/lib/registry/trivy-discovery'
 import { emptyReport } from '../src/lib/registry/trivy-report'
 import { scanPending } from '../src/lib/registry/trivy-worker'
@@ -448,4 +454,105 @@ test('queued digests preserve insertion order when their timestamps match', () =
   scheduleScan(registry, 'team/app', second)
 
   assert.equal(pendingScan()?.digest, first)
+})
+
+test('explicit overrides bypass the hourly budget while retaining concurrency and audit records', () => {
+  env().TRIVY_SCANS_PER_HOUR = 1
+
+  const job = prepareScan(registry, 'team/app', first, 'admin')
+
+  finishScan(job.id, job.expires, { report: emptyReport(first) })
+
+  assert.equal(scanStatus(registry, 'team/app', second).retryAfter, 3600)
+  assert.throws(
+    () => prepareScan(registry, 'team/app', second, 'admin'),
+    (error: unknown) => error instanceof AppError && error.status === 429
+  )
+
+  const override = prepareScan(registry, 'team/app', second, 'admin', true)
+  const third = image('2026-12-01T00:00:00Z')
+  const entry = database()
+    .prepare("SELECT actor FROM audit WHERE action = 'image.scan.limit.overridden'")
+    .get()
+
+  assert.equal(count('scan_attempts'), 2)
+  assert.throws(() => prepareScan(registry, 'team/app', third, 'admin', true), /already running/)
+  assert.equal(entry?.actor, 'admin')
+
+  finishScan(override.id, override.expires, { report: emptyReport(second) })
+
+  assert.throws(
+    () => prepareScan(registry, 'team/app', second, 'admin', true),
+    /already been scanned/
+  )
+  assert.equal(scanDelay(), 3600)
+})
+
+test('override audit failures roll back the claim and preserve the hourly budget', () => {
+  const job = prepareScan(registry, 'team/app', first, 'admin')
+
+  finishScan(job.id, job.expires, { report: emptyReport(first) })
+  database().exec(`CREATE TRIGGER reject_override BEFORE INSERT ON audit
+    WHEN NEW.action = 'image.scan.limit.overridden' BEGIN SELECT RAISE(ABORT, 'fixture'); END`)
+
+  try {
+    assert.throws(() => prepareScan(registry, 'team/app', second, 'admin', true), /fixture/)
+    assert.equal(count('scan_attempts'), 1)
+    assert.equal(count('scan_queue'), 0)
+    assert.equal(scanStatus(registry, 'team/app', second).status, 'not-scanned')
+  } finally {
+    database().exec('DROP TRIGGER reject_override')
+  }
+})
+
+test('reference processing prioritises the requested digest without starting catalogue discovery', async () => {
+  scheduleScan(registry, 'team/app', first)
+  scheduleScan(registry, 'team/app', second)
+
+  await scanPending(scanTarget(registry, 'team/app', second))
+
+  assert.equal(scanned().length, 1)
+  assert.equal(scanStatus(registry, 'team/app', second).status, 'complete')
+  assert.equal(pendingScan()?.digest, first)
+  assert.equal(
+    requests.some((request) => request.path === '/v2/_catalog'),
+    false
+  )
+  assert.equal(
+    requests.some((request) => request.method === 'HEAD'),
+    false
+  )
+})
+
+test('direct attestation digests are discarded before claiming or spending scan capacity', async () => {
+  const config = JSON.stringify({ os: 'unknown', architecture: 'unknown' })
+  const configDigest = `sha256:${createHash('sha256').update(config).digest('hex')}`
+  const manifest = JSON.stringify({
+    schemaVersion: 2,
+    config: {
+      digest: configDigest,
+      size: Buffer.byteLength(config),
+      mediaType: 'application/vnd.oci.image.config.v1+json',
+    },
+    layers: [
+      {
+        digest: `sha256:${'c'.repeat(64)}`,
+        size: 128,
+        mediaType: 'application/vnd.in-toto+json',
+      },
+    ],
+  })
+  const digest = `sha256:${createHash('sha256').update(manifest).digest('hex')}`
+
+  objects.set(configDigest, config)
+  objects.set(digest, manifest)
+  scheduleScan(registry, 'team/app', digest)
+
+  await scanPending(scanTarget(registry, 'team/app', digest))
+
+  assert.equal(await startScan(registry, 'team/app', digest, 'admin', true), null)
+  assert.equal(scanned().length, 0)
+  assert.equal(count('scan_attempts'), 0)
+  assert.equal(count('image_scans'), 0)
+  assert.equal(count('scan_queue'), 0)
 })

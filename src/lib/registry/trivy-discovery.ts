@@ -1,7 +1,5 @@
 import 'server-only'
 
-import { z } from 'zod'
-
 import { saveDiscovery } from '@/lib/database/scan-discovery'
 import { registryPage } from '@/lib/registry/catalog'
 import { registryIdentity } from '@/lib/registry/identity'
@@ -10,21 +8,12 @@ import { getRegistry } from '@/lib/registry/store'
 import { scheduleScan } from '@/lib/registry/trivy'
 import { AppError } from '@/lib/security/error'
 import { keyedFingerprint } from '@/lib/security/fingerprint'
-import { referenceName, repositoryName } from '@/lib/validation/registry'
+import { cursorSchema } from '@/lib/validation/scan'
 import { type RegistryRecord } from '@/types/registry'
+import { type ScanCursor } from '@/types/scan'
 
 const INTERVAL = 15 * 60_000
 const BATCH = 10
-
-const cursorSchema = z.object({
-  catalogue: z.string().max(255).nullable().default(''),
-  repositories: z.array(repositoryName).max(100).default([]),
-  repository: z.union([repositoryName, z.literal('')]).default(''),
-  cursor: z.string().max(255).nullable().default(''),
-  tags: z.array(referenceName).max(100).default([]),
-  pages: z.number().int().min(0).max(200).default(0),
-  tagPages: z.number().int().min(0).max(200).default(0),
-})
 
 export function discoveryScope(registry: RegistryRecord): string {
   return keyedFingerprint('trivy-discovery', registryIdentity(registry))
@@ -36,7 +25,7 @@ export async function discoverRegistry(
   value: string,
   active: () => boolean
 ): Promise<void> {
-  let state: z.infer<typeof cursorSchema>
+  let state: ScanCursor
 
   try {
     state = cursorSchema.parse(JSON.parse(value))

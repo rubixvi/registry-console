@@ -28,6 +28,12 @@ export type PlanRow = {
   expires: number
 }
 
+export type PlanInput = PlanRow & {
+  username: string
+  registry_id: string
+  session_id: string
+}
+
 export type StoredPlan = {
   fingerprint: string
   entries: DeletionEntry[]

@@ -5,8 +5,9 @@ import { type NextResponse } from 'next/server'
 
 import { cookieOptions, sessionCookieName, tokenHash } from '@/lib/auth/session'
 import { userFingerprint, users } from '@/lib/config/users'
-import { database } from '@/lib/database/client'
+import { getRequest, insertRequest } from '@/lib/database/requests'
 import { AppError } from '@/lib/security/error'
+import { tokenSchema } from '@/lib/validation/auth'
 import { type User } from '@/types/auth'
 import { type AuthRequest, type Purpose } from '@/types/security'
 
@@ -36,22 +37,16 @@ export function issueRequest(
 ): void {
   const token = randomBytes(32).toString('base64url')
   const expires = Date.now() + 5 * 60_000
-  const db = database()
 
-  db.prepare('DELETE FROM auth_requests WHERE expires <= ?').run(Date.now())
-
-  db.prepare(`
-    INSERT INTO auth_requests (id, purpose, username, fingerprint, session_id, value, expires)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    tokenHash(token),
+  insertRequest({
+    id: tokenHash(token),
     purpose,
-    user?.username ?? '',
-    user ? userFingerprint(user) : '',
-    session,
+    username: user?.username ?? '',
+    fingerprint: user ? userFingerprint(user) : '',
+    session_id: session,
     value,
-    expires
-  )
+    expires,
+  })
 
   response.cookies.set(cookieName(purpose), token, {
     ...cookieOptions(),
@@ -62,21 +57,11 @@ export function issueRequest(
 export function readRequest(request: Request, purpose: Purpose, consume = false): AuthRequest {
   const token = cookieValue(request, cookieName(purpose))
 
-  if (!/^[A-Za-z0-9_-]{43}$/.test(token)) {
+  if (!tokenSchema.safeParse(token).success) {
     throw new AppError(400, 'Verification expired. Please start again.')
   }
 
-  const db = database()
-  const statement =
-    purpose === 'security'
-      ? 'SELECT * FROM auth_requests WHERE id = ? AND purpose = ? AND expires > ?'
-      : consume
-        ? 'DELETE FROM auth_requests WHERE id = ? AND purpose = ? AND expires > ? RETURNING *'
-        : 'UPDATE auth_requests SET attempts = attempts + 1 WHERE id = ? AND purpose = ? AND expires > ? AND attempts < 8 RETURNING *'
-
-  const row = db.prepare(statement).get(tokenHash(token), purpose, Date.now()) as
-    | AuthRequest
-    | undefined
+  const row = getRequest(tokenHash(token), purpose, consume)
 
   if (!row || row.attempts > 8) {
     throw new AppError(400, 'Verification expired. Please start again.')

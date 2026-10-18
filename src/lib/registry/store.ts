@@ -3,8 +3,18 @@ import 'server-only'
 import { randomUUID } from 'node:crypto'
 
 import { env } from '@/lib/config/env'
-import { database } from '@/lib/database/client'
+import {
+  countRegistries,
+  deleteRegistry,
+  getRegistryRow,
+  insertRegistry,
+  listRegistries,
+  markSeeded,
+  registrySeeded,
+  updateRegistryRow,
+} from '@/lib/database/registry'
 import { discardQueue } from '@/lib/database/scan'
+import { transaction } from '@/lib/database/transaction'
 import { validateUrl } from '@/lib/registry/allowlist'
 import { invalidateRegistry } from '@/lib/registry/cache'
 import { dockerHubSettings } from '@/lib/registry/dockerhub-settings'
@@ -12,7 +22,6 @@ import { decryptSecret, encryptSecret } from '@/lib/security/crypto'
 import { AppError } from '@/lib/security/error'
 import {
   type Registry,
-  type RegistryCount,
   type RegistryInput,
   type RegistryRecord,
   type RegistryRow,
@@ -21,11 +30,7 @@ import {
 const MAX_REGISTRIES = 50
 
 export function getRegistries(): Registry[] {
-  const rows = database()
-    .prepare('SELECT * FROM registries ORDER BY name COLLATE NOCASE')
-    .all() as RegistryRow[]
-
-  return rows.map((row) => ({
+  return listRegistries().map((row) => ({
     id: row.id,
     name: row.name,
     url: row.url,
@@ -40,15 +45,32 @@ export function getRegistries(): Registry[] {
 }
 
 function registryRow(id: string): RegistryRow {
-  const row = database().prepare('SELECT * FROM registries WHERE id = ?').get(id) as
-    | RegistryRow
-    | undefined
+  const row = getRegistryRow(id)
 
   if (!row) {
     throw new AppError(404, 'Registry connection not found.')
   }
 
   return row
+}
+
+function registryInput(id: string, input: RegistryInput): RegistryRow {
+  const url = validateUrl(input.url, input.provider)
+  const password = encryptSecret(input.password)
+  const settings = dockerHubSettings(input, url)
+
+  return {
+    id,
+    name: input.name,
+    url,
+    pull_url: input.pullUrl,
+    username: input.username,
+    password,
+    read_only: Number(input.readOnly || settings.provider === 'dockerhub'),
+    provider: settings.provider,
+    namespace: settings.namespace,
+    revision: randomUUID(),
+  }
 }
 
 export function getRegistry(id: string): RegistryRecord {
@@ -70,82 +92,21 @@ export function getRegistry(id: string): RegistryRecord {
 }
 
 export function addRegistry(input: RegistryInput): string {
-  const db = database()
-  const result = db.prepare('SELECT COUNT(*) AS count FROM registries').get() as RegistryCount
-
-  if (result.count >= MAX_REGISTRIES) {
+  if (countRegistries() >= MAX_REGISTRIES) {
     throw new AppError(409, 'Maximum of 50 connections reached.')
   }
 
   const id = randomUUID()
-  const url = validateUrl(input.url, input.provider)
-  const password = encryptSecret(input.password)
-  const settings = dockerHubSettings(input, url)
 
-  db.prepare(`
-    INSERT INTO registries (
-      id,
-      name,
-      url,
-      pull_url,
-      username,
-      password,
-      read_only,
-      provider,
-      namespace,
-      revision
-    )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    id,
-    input.name,
-    url,
-    input.pullUrl,
-    input.username,
-    password,
-    Number(input.readOnly || settings.provider === 'dockerhub'),
-    settings.provider,
-    settings.namespace,
-    randomUUID()
-  )
+  insertRegistry(registryInput(id, input))
 
   return id
 }
 
 export function updateRegistry(id: string, input: RegistryInput): string {
   const current = registryRow(id)
-  const url = validateUrl(input.url, input.provider)
-  const password = encryptSecret(input.password)
-  const settings = dockerHubSettings(input, url)
 
-  database()
-    .prepare(`
-      UPDATE registries
-      SET
-        name = ?,
-        url = ?,
-        pull_url = ?,
-        username = ?,
-        password = ?,
-        read_only = ?,
-        provider = ?,
-        namespace = ?,
-        revision = ?
-      WHERE id = ?
-    `)
-    .run(
-      input.name,
-      url,
-      input.pullUrl,
-      input.username,
-      password,
-      Number(input.readOnly || settings.provider === 'dockerhub'),
-      settings.provider,
-      settings.namespace,
-      randomUUID(),
-      current.id
-    )
-
+  updateRegistryRow(registryInput(current.id, input))
   discardQueue(current.id)
   invalidateRegistry(current.id)
 
@@ -155,7 +116,7 @@ export function updateRegistry(id: string, input: RegistryInput): string {
 export function removeRegistry(id: string): void {
   const current = registryRow(id)
 
-  database().prepare('DELETE FROM registries WHERE id = ?').run(current.id)
+  deleteRegistry(current.id)
   discardQueue(current.id)
   invalidateRegistry(current.id)
 }
@@ -163,55 +124,27 @@ export function removeRegistry(id: string): void {
 export function seedRegistry(): void {
   const url = process.env.REGISTRY_URL
 
-  if (!url) return
-
-  const db = database()
-  const seedQuery = db.prepare(`
-    SELECT id FROM settings WHERE id = 'registry-seeded'
-  `)
-
-  if (seedQuery.get()) return
+  if (!url || registrySeeded()) return
 
   const password = process.env.REGISTRY_PASSWORD_ENCRYPTED || ''
 
   decryptSecret(password)
-  db.exec('BEGIN IMMEDIATE')
 
-  try {
-    if (!seedQuery.get()) {
-      db.prepare(`
-        INSERT INTO registries (
-          id,
-          name,
-          url,
-          pull_url,
-          username,
-          password,
-          read_only,
-          revision
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(
-        randomUUID(),
-        process.env.REGISTRY_NAME || 'Primary registry',
-        validateUrl(url),
-        '',
-        process.env.REGISTRY_USERNAME || '',
-        password,
-        Number(process.env.REGISTRY_READ_ONLY === 'true'),
-        randomUUID()
-      )
+  transaction(() => {
+    if (registrySeeded()) return
 
-      db.prepare(`
-        INSERT INTO settings (id, value)
-        VALUES ('registry-seeded', 'true')
-      `).run()
-    }
-
-    db.exec('COMMIT')
-  } catch (error) {
-    db.exec('ROLLBACK')
-
-    throw error
-  }
+    insertRegistry({
+      id: randomUUID(),
+      name: process.env.REGISTRY_NAME || 'Primary registry',
+      url: validateUrl(url),
+      pull_url: '',
+      username: process.env.REGISTRY_USERNAME || '',
+      password,
+      read_only: Number(process.env.REGISTRY_READ_ONLY === 'true'),
+      provider: 'distribution',
+      namespace: '',
+      revision: randomUUID(),
+    })
+    markSeeded()
+  })
 }

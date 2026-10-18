@@ -4,7 +4,7 @@ import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
 
 import { securityId } from '@/lib/auth/accounts'
 import { tokenHash } from '@/lib/auth/session'
-import { database } from '@/lib/database/client'
+import { findAuthenticator, updateRecovery, updateStep } from '@/lib/database/authenticator'
 import { decryptSecret } from '@/lib/security/crypto'
 import { AppError } from '@/lib/security/error'
 import { type User } from '@/types/auth'
@@ -64,11 +64,7 @@ export function totpStep(secret: string, code: string, now = Date.now()): number
 }
 
 export function getAuthenticator(user: User): AuthenticatorRow | undefined {
-  return database()
-    .prepare(`
-      SELECT * FROM authenticators WHERE username = ? AND fingerprint = ?
-    `)
-    .get(user.username, securityId(user)) as AuthenticatorRow | undefined
+  return findAuthenticator(user.username, securityId(user))
 }
 
 export function recoveryCodes(): string[] {
@@ -86,37 +82,18 @@ export function verifySecondFactor(user: User, code: string): void {
     throw new AppError(401, 'Authenticator is not enabled.')
   }
 
-  const db = database()
   const step = totpStep(decryptSecret(row.secret), code)
 
-  if (step !== null && step > row.last_step) {
-    const result = db
-      .prepare(`
-        UPDATE authenticators SET last_step = ?
-        WHERE username = ? AND fingerprint = ? AND last_step = ?
-      `)
-      .run(step, user.username, row.fingerprint, row.last_step)
-
-    if (result.changes === 1) {
-      return
-    }
+  if (step !== null && step > row.last_step && updateStep(row, step)) {
+    return
   }
 
   const stored = JSON.parse(row.recovery) as string[]
   const hash = recoveryHash(code)
   const remaining = stored.filter((entry) => entry !== hash)
 
-  if (remaining.length < stored.length) {
-    const result = db
-      .prepare(`
-        UPDATE authenticators SET recovery = ?
-        WHERE username = ? AND fingerprint = ? AND recovery = ?
-      `)
-      .run(JSON.stringify(remaining), user.username, row.fingerprint, row.recovery)
-
-    if (result.changes === 1) {
-      return
-    }
+  if (remaining.length < stored.length && updateRecovery(row, remaining)) {
+    return
   }
 
   throw new AppError(401, 'Invalid or already used verification code.')

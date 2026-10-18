@@ -3,14 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import { getIdentity } from '@/lib/auth/session'
 import { getRegistries } from '@/lib/registry/store'
 import { referenceName, repositoryName } from '@/lib/validation/registry'
-
-export type RegistryProps = {
-  params: Promise<{ id: string }>
-  searchParams: Promise<{
-    repository?: string
-    reference?: string
-  }>
-}
+import { type RegistryProps } from '@/types/registry'
 
 export async function getRegistry({ params, searchParams }: RegistryProps) {
   const identity = await getIdentity()

@@ -32,6 +32,7 @@ export type ManifestEntry = {
   digest: string
   platform?: ImagePlatform
   annotations?: unknown
+  artifactType?: string
 }
 
 export type PlatformDetails = {
@@ -48,6 +49,13 @@ export type ImageSummary = {
 }
 
 export type ImageManifest = z.infer<typeof manifestSchema>
+
+export type ManifestResult = {
+  manifest: ImageManifest
+  digest: string
+  verified: boolean
+  mediaType: string
+}
 
 export type HistoryEntry = {
   step: number

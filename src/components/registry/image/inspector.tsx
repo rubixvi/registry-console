@@ -171,7 +171,7 @@ export function Inspector({ registry, repository, reference, admin, pullUrl }: P
 
                     <code className="break-all text-xs text-muted-foreground">{child.digest}</code>
 
-                    {registry.trivyEnabled && !isAttestation(child) && (
+                    {registry.trivyEnabled && metadata && (
                       <div className="mt-3">
                         <ImageScan
                           compact
@@ -189,7 +189,7 @@ export function Inspector({ registry, repository, reference, admin, pullUrl }: P
         </section>
       )}
 
-      {registry.trivyEnabled && (
+      {registry.trivyEnabled && data.platformDetails.length > 0 && (
         <ImageScan admin={admin} digest={data.digest} id={registry.id} repository={repository} />
       )}
 

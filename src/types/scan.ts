@@ -1,3 +1,7 @@
+import { type z } from 'zod'
+
+import { type cursorSchema } from '@/lib/validation/scan'
+
 export const SEVERITIES = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'UNKNOWN'] as const
 
 export type Severity = (typeof SEVERITIES)[number]
@@ -27,6 +31,7 @@ export type ScanStatus = {
   status: 'not-scanned' | 'running' | 'complete' | 'failed'
   report?: ScanReport
   error?: string
+  retryAfter?: number
 }
 
 export type ScanTarget = {
@@ -35,3 +40,26 @@ export type ScanTarget = {
   repository: string
   digest: string
 }
+
+export type ScanJob = ScanTarget & {
+  actor: string
+  expires: number
+}
+
+export type ScanClaim = ScanJob & {
+  override?: boolean
+}
+
+export type ScanRow = {
+  status: ScanStatus['status']
+  value: string
+  expires: number
+}
+
+export type DiscoveryRow = {
+  id: string
+  scope: string
+  value: string
+}
+
+export type ScanCursor = z.infer<typeof cursorSchema>

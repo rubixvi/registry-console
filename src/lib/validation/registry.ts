@@ -13,14 +13,6 @@ export const referenceName = z
   .max(128)
   .regex(/^(?:[\w][\w.-]{0,127}|sha256:[a-f0-9]{64})$/)
 
-export const tagsSchema = z.object({
-  tags: z.array(referenceName).max(10_000).nullable(),
-})
-
-export const catalogueSchema = z.object({
-  repositories: z.array(repositoryName).max(10_000),
-})
-
 export const digestName = z.string().regex(/^sha256:[a-f0-9]{64}$/)
 
 export const registryInput = z

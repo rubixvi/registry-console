@@ -1,22 +1,19 @@
 import { after, NextResponse } from 'next/server'
-import { z } from 'zod'
 
 import { getRegistry } from '@/lib/registry/store'
-import { prepareScan, runScan, scanStatus } from '@/lib/registry/trivy'
+import { runScan, scanStatus, startScan } from '@/lib/registry/trivy'
 import { api } from '@/lib/security/api'
 import { AppError } from '@/lib/security/error'
 import { rateLimit } from '@/lib/security/rate-limit'
 import { readJson } from '@/lib/security/request'
-import { digestName, repositoryName } from '@/lib/validation/registry'
+import { scanInput, scanQuery } from '@/lib/validation/scan'
 
 export const runtime = 'nodejs'
 export const maxDuration = 660
 
-const input = z.object({ repository: repositoryName, digest: digestName }).strict()
-
 export const GET = api(async (request, context) => {
   const { id } = await context.params
-  const parsed = input.safeParse(Object.fromEntries(request.nextUrl.searchParams))
+  const parsed = scanQuery.safeParse(Object.fromEntries(request.nextUrl.searchParams))
 
   if (!parsed.success) {
     throw new AppError(400, 'Invalid scan reference.')
@@ -29,7 +26,7 @@ export const GET = api(async (request, context) => {
 
 export const POST = api(async (request, context, identity) => {
   const { id } = await context.params
-  const { repository, digest } = await readJson(request, input)
+  const { repository, digest, override } = await readJson(request, scanInput)
 
   rateLimit(`trivy-start:${identity.username}`, 16, 60_000)
 
@@ -40,7 +37,11 @@ export const POST = api(async (request, context, identity) => {
     return NextResponse.json(status)
   }
 
-  const job = prepareScan(registry, repository, digest, identity.username)
+  const job = await startScan(registry, repository, digest, identity.username, override)
+
+  if (!job) {
+    throw new AppError(422, 'This reference has no runnable image to scan.')
+  }
 
   after(() => runScan(job))
 

@@ -4,7 +4,8 @@ import { type NextResponse } from 'next/server'
 
 import { loginResponse } from '@/lib/auth/response'
 import { verifySecondFactor } from '@/lib/auth/totp'
-import { database } from '@/lib/database/client'
+import { consumeRequest } from '@/lib/database/requests'
+import { transaction } from '@/lib/database/transaction'
 import { AppError } from '@/lib/security/error'
 import { type User } from '@/types/auth'
 import { type AuthRequest } from '@/types/security'
@@ -14,34 +15,13 @@ export function verifyLogin(user: User, pending: AuthRequest, code: string): Nex
     throw new AppError(400, 'Verification expired. Please sign in again.')
   }
 
-  const db = database()
-
-  db.exec('BEGIN IMMEDIATE')
-
-  try {
-    const consumed = db
-      .prepare(`
-        DELETE FROM auth_requests
-        WHERE id = ? AND purpose = 'two-factor' AND username = ?
-          AND fingerprint = ? AND expires > ?
-        RETURNING id
-      `)
-      .get(pending.id, user.username, pending.fingerprint, Date.now())
-
-    if (!consumed) {
+  return transaction(() => {
+    if (!consumeRequest(pending)) {
       throw new AppError(400, 'Verification expired. Please sign in again.')
     }
 
     verifySecondFactor(user, code)
 
-    const response = loginResponse(user, 'two_factor')
-
-    db.exec('COMMIT')
-
-    return response
-  } catch (error) {
-    db.exec('ROLLBACK')
-
-    throw error
-  }
+    return loginResponse(user, 'two_factor')
+  })
 }

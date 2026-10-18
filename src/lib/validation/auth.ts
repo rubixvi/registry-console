@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+export const tokenSchema = z.string().regex(/^[A-Za-z0-9_-]{43}$/)
+
 export const passwordHashSchema = z
   .string()
   .regex(/^scrypt\$32768\$8\$1\$[a-f0-9]{32}\$[a-f0-9]{64}$/)

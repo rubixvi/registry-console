@@ -19,9 +19,10 @@ import {
   registerDiscovery,
 } from '@/lib/database/scan-discovery'
 import { getRegistries, getRegistry, seedRegistry } from '@/lib/registry/store'
-import { matchesScan, needsScan, prepareScan, runScan } from '@/lib/registry/trivy'
+import { matchesScan, needsScan, runScan, startScan } from '@/lib/registry/trivy'
 import { discoverRegistry, discoveryScope } from '@/lib/registry/trivy-discovery'
 import { AppError } from '@/lib/security/error'
+import { type ScanTarget } from '@/types/scan'
 
 const INTERVAL = 60_000
 
@@ -29,7 +30,7 @@ const worker = globalThis as typeof globalThis & {
   trivyTimer?: ReturnType<typeof setTimeout>
 }
 
-export async function scanPending(): Promise<void> {
+export async function scanPending(reference?: ScanTarget): Promise<void> {
   if (env().TRIVY_ENABLED !== 'true') return
 
   const owner = randomUUID()
@@ -49,51 +50,51 @@ export async function scanPending(): Promise<void> {
   heartbeat.unref()
 
   try {
-    seedRegistry()
+    if (!reference) {
+      seedRegistry()
 
-    const connections = getRegistries()
-    const ids = new Set(connections.map((registry) => registry.id))
+      const connections = getRegistries()
+      const ids = new Set(connections.map((registry) => registry.id))
 
-    for (const connection of connections) {
-      try {
-        const registry = getRegistry(connection.id)
-
-        registerDiscovery(registry.id, discoveryScope(registry))
-      } catch {
-        // A connection outside the allowlist cannot be used for discovery.
-      }
-    }
-
-    const discovery = nextDiscovery()
-
-    if (discovery && enabled()) {
-      if (!ids.has(discovery.id)) {
-        discardDiscovery(discovery.id)
-      } else {
+      for (const connection of connections) {
         try {
-          await discoverRegistry(
-            getRegistry(discovery.id),
-            discovery.scope,
-            discovery.value,
-            enabled
-          )
-        } catch (error) {
-          pauseDiscovery(
-            discovery.id,
-            discovery.scope,
-            error instanceof AppError && error.retryAfter ? error.retryAfter * 1000 : 15 * 60_000
-          )
-          console.error('Trivy discovery paused.', {
-            registry: discovery.id,
-            status: error instanceof AppError ? error.status : 500,
-          })
+          const registry = getRegistry(connection.id)
+
+          registerDiscovery(registry.id, discoveryScope(registry))
+        } catch {}
+      }
+
+      const discovery = nextDiscovery()
+
+      if (discovery && enabled()) {
+        if (!ids.has(discovery.id)) {
+          discardDiscovery(discovery.id)
+        } else {
+          try {
+            await discoverRegistry(
+              getRegistry(discovery.id),
+              discovery.scope,
+              discovery.value,
+              enabled
+            )
+          } catch (error) {
+            pauseDiscovery(
+              discovery.id,
+              discovery.scope,
+              error instanceof AppError && error.retryAfter ? error.retryAfter * 1000 : 15 * 60_000
+            )
+            console.error('Trivy discovery paused.', {
+              registry: discovery.id,
+              status: error instanceof AppError ? error.status : 500,
+            })
+          }
         }
       }
     }
 
     if (!enabled() || scanDelay() > 0) return
 
-    const target = pendingScan()
+    const target = reference ?? pendingScan()
 
     if (!target) return
 
@@ -110,7 +111,9 @@ export async function scanPending(): Promise<void> {
         return
       }
 
-      await runScan(prepareScan(registry, target.repository, target.digest, 'system:trivy'))
+      const job = await startScan(registry, target.repository, target.digest, 'system:trivy')
+
+      if (job) await runScan(job)
     } catch (error) {
       if (error instanceof AppError && (error.status === 409 || error.status === 429)) return
 

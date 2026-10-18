@@ -1,5 +1,13 @@
 export type RegistryProvider = 'distribution' | 'dockerhub'
 
+export type RegistryProps = {
+  params: Promise<{ id: string }>
+  searchParams: Promise<{
+    repository?: string
+    reference?: string
+  }>
+}
+
 export type Registry = {
   provider?: RegistryProvider
   namespace?: string

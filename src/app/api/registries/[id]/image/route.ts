@@ -1,13 +1,17 @@
-import { NextResponse } from 'next/server'
+import { after, NextResponse } from 'next/server'
 
 import { deleteManifest } from '@/lib/registry/delete'
 import { imageDetails } from '@/lib/registry/image'
 import { getRegistry } from '@/lib/registry/store'
-import { scheduleScan } from '@/lib/registry/trivy'
+import { scanTarget, scheduleScan } from '@/lib/registry/trivy'
+import { scanPending } from '@/lib/registry/trivy-worker'
 import { api } from '@/lib/security/api'
 import { AppError } from '@/lib/security/error'
 import { readJson } from '@/lib/security/request'
 import { deleteInput, imageInput } from '@/lib/validation/registry'
+
+export const runtime = 'nodejs'
+export const maxDuration = 660
 
 export const GET = api(async (request, context) => {
   const { id } = await context.params
@@ -23,7 +27,11 @@ export const GET = api(async (request, context) => {
   const refresh = request.headers.get('x-registry-refresh') === '1'
   const details = await imageDetails(registry, repository, reference, refresh)
 
-  scheduleScan(registry, repository, details.digest)
+  if (details.platformDetails.length && scheduleScan(registry, repository, details.digest)) {
+    const target = scanTarget(registry, repository, details.digest)
+
+    after(() => scanPending(target))
+  }
 
   return NextResponse.json(details)
 })
