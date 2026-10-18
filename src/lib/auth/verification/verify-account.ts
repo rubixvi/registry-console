@@ -2,20 +2,10 @@ import 'server-only'
 
 import { verifyCredentials } from '@/lib/auth/credentials'
 import { getAuthenticator, verifySecondFactor } from '@/lib/auth/totp'
-import { users } from '@/lib/config/users'
+import { configUser } from '@/lib/auth/verification/config-user'
 import { AppError } from '@/lib/security/error'
 import { rateLimit } from '@/lib/security/rate-limit'
 import { type User } from '@/types/auth'
-
-export function configUser(username: string): User {
-  const user = users().find((entry) => entry.username === username)
-
-  if (!user) {
-    throw new AppError(401, 'Account is unavailable. Sign in again.')
-  }
-
-  return user
-}
 
 export async function verifyAccount(
   username: string,

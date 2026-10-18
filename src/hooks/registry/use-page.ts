@@ -16,6 +16,7 @@ export function useRegistryPage(id: string, repository?: string, order: TagOrder
   const [searchQuery, setSearchQuery] = useState('')
   const [refreshing, setRefreshing] = useState(false)
   const [refreshError, setRefreshError] = useState<Error>()
+
   const params = new URLSearchParams()
 
   useEffect(() => {

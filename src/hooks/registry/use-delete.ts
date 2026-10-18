@@ -8,6 +8,7 @@ import { apiRequest } from '@/lib/http/client'
 
 export function useDelete(id: string, repository: string, digest: string) {
   const router = useRouter()
+
   const [confirmation, setConfirmation] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)

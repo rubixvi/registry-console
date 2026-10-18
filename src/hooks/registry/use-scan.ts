@@ -9,6 +9,7 @@ import { type ScanStatus } from '@/types/scan'
 
 export function useScan(id: string, repository: string, digest: string) {
   const [busy, setBusy] = useState(false)
+
   const params = new URLSearchParams({ repository, digest })
   const endpoint = `/api/registries/${encodeURIComponent(id)}/scan`
 

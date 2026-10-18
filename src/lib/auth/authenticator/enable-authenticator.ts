@@ -4,7 +4,7 @@ import { securityId } from '@/lib/auth/accounts'
 import { createSession } from '@/lib/auth/session'
 import { getAuthenticator, recoveryCodes, recoveryHash, totpStep } from '@/lib/auth/totp'
 import { audit } from '@/lib/database/audit'
-import { deleteAuthenticator, insertAuthenticator } from '@/lib/database/authenticator'
+import { insertAuthenticator } from '@/lib/database/authenticator'
 import { clearRequests, consumeRequest } from '@/lib/database/requests'
 import { clearSessions } from '@/lib/database/session'
 import { transaction } from '@/lib/database/transaction'
@@ -55,15 +55,5 @@ export function enableAuthenticator(user: User, pending: AuthRequest, code: stri
     audit(user.username, 'security.totp.enabled', '')
 
     return { codes, session }
-  })
-}
-
-export function disableAuthenticator(username: string): void {
-  transaction(() => {
-    deleteAuthenticator(username)
-    clearRequests(username)
-    clearSessions(username)
-
-    audit(username, 'security.totp.disabled', '')
   })
 }

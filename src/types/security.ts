@@ -1,5 +1,12 @@
 import { type Session } from '@/types/auth'
 
+export type Purpose =
+  | 'passkey-login'
+  | 'passkey-register'
+  | 'two-factor'
+  | 'security'
+  | 'totp-setup'
+
 export type AuthRequest = {
   id: string
   purpose: Purpose
@@ -31,13 +38,6 @@ export type AuthenticatorRow = {
   last_step: number
   recovery: string
 }
-
-export type Purpose =
-  | 'passkey-login'
-  | 'passkey-register'
-  | 'two-factor'
-  | 'security'
-  | 'totp-setup'
 
 export type PasskeySummary = {
   id: string

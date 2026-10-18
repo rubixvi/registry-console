@@ -40,6 +40,7 @@ export const DELETE = api(async (request, _context, identity) => {
     ...cookieOptions(),
     maxAge: 0,
   })
+
   clearRequest(response, 'security')
 
   return response

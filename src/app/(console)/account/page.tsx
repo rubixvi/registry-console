@@ -20,10 +20,8 @@ export default async function AccountPage() {
 
   const user = configUser(identity.username)
   const authenticator = getAuthenticator(user)
-  
-  const recovery = authenticator
-    ? (JSON.parse(authenticator.recovery) as string[]).length
-    : 0
+
+  const recovery = authenticator ? (JSON.parse(authenticator.recovery) as string[]).length : 0
 
   return (
     <>

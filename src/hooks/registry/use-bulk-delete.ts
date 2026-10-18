@@ -15,13 +15,14 @@ export function useBulkDelete(
   refresh: () => void | Promise<void>
 ) {
   const [selection, setSelection] = useState<{ scope: string; tags: string[] }>({ scope, tags: [] })
-  const anchor = useRef<{ scope: string; tag: string } | null>(null)
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [confirmation, setConfirmation] = useState('')
   const [plan, setPlan] = useState<DeletionPlan | null>(null)
   const [result, setResult] = useState<BulkDeletionResult | null>(null)
+  const anchor = useRef<{ scope: string; tag: string } | null>(null)
+
   const selected =
     selection.scope === scope ? selection.tags.filter((tag) => tags.includes(tag)) : []
   const endpoint = `/api/registries/${encodeURIComponent(id)}/bulk`

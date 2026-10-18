@@ -8,6 +8,7 @@ import { apiRequest } from '@/lib/http/client'
 
 export function useSettings() {
   const router = useRouter()
+
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 

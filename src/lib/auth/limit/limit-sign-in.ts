@@ -7,8 +7,8 @@ import { AppError } from '@/lib/security/error'
 import { rateLimit } from '@/lib/security/rate-limit'
 
 const CAPACITY_WINDOW_MS = 1000
-const MAX_REQUESTS_PER_WINDOW = 120
 
+const MAX_REQUESTS_PER_WINDOW = 120
 let windowExpires = 0
 let requests = 0
 

@@ -17,11 +17,13 @@ export function useAudit() {
   const [filters, setFilters] = useState<AuditFilters>(EMPTY_FILTERS)
   const [before, setBefore] = useState(0)
   const [history, setHistory] = useState<number[]>([])
+
   const params = new URLSearchParams({
     ...filters,
     before: String(before),
     n: '20',
   })
+
   const resource = useResource<AuditPage>(`/api/audit?${params}`)
 
   function apply(event: SyntheticEvent<HTMLFormElement>): void {

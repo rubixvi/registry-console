@@ -1,11 +1,12 @@
 export type Role = 'admin' | 'viewer'
+export type Providers = 'local' | 'ldap'
 
 export type User = {
   id?: string
   username: string
   role: Role
   passwordHash?: string
-  authProvider?: 'local' | 'ldap'
+  authProvider?: Providers
 }
 
 export type Identity = {

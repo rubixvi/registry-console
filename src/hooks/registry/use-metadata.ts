@@ -33,8 +33,8 @@ async function fetchMetadata(url: string): Promise<ImageDetails> {
 }
 
 export function useMetadata(id: string, repository: string, reference: string) {
-  const container = useRef<HTMLDivElement>(null)
   const [visible, setVisible] = useState(false)
+  const container = useRef<HTMLDivElement>(null)
 
   const params = new URLSearchParams({ repository, reference })
   const endpoint = `/api/registries/${encodeURIComponent(id)}/image?${params}`

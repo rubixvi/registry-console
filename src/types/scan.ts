@@ -5,6 +5,7 @@ import { type cursorSchema } from '@/lib/validation/scan'
 export const SEVERITIES = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'UNKNOWN'] as const
 
 export type Severity = (typeof SEVERITIES)[number]
+export type Status = 'not-scanned' | 'running' | 'complete' | 'failed'
 
 export type Vulnerability = {
   id: string
@@ -28,7 +29,7 @@ export type ScanReport = {
 
 export type ScanStatus = {
   enabled: boolean
-  status: 'not-scanned' | 'running' | 'complete' | 'failed'
+  status: Status
   report?: ScanReport
   error?: string
   retryAfter?: number
