@@ -1,4 +1,3 @@
-
 name: Build and publish
 
 on:
@@ -92,6 +91,19 @@ jobs:
 
       - name: Test container
         run: pnpm run test:container registry-console:ci
+
+      - name: Scan test image with Trivy
+        run: |
+          docker run --rm --user 0:0 \
+            --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock,readonly \
+            --entrypoint /usr/local/bin/trivy \
+            registry-console:ci image \
+            --image-src docker \
+            --scanners vuln \
+            --severity HIGH,CRITICAL \
+            --timeout 10m \
+            --exit-code 1 \
+            registry-console:ci
 
   publish:
     needs: verify
