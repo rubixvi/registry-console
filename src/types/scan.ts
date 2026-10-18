@@ -5,7 +5,7 @@ import { type cursorSchema } from '@/lib/validation/scan'
 export const SEVERITIES = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'UNKNOWN'] as const
 
 export type Severity = (typeof SEVERITIES)[number]
-export type Status = 'not-scanned' | 'running' | 'complete' | 'failed'
+export type Status = 'not-scanned' | 'queued' | 'running' | 'complete' | 'failed'
 
 export type Vulnerability = {
   id: string
@@ -33,6 +33,13 @@ export type ScanStatus = {
   report?: ScanReport
   error?: string
   retryAfter?: number
+  queued?: boolean
+  busy?: {
+    actor: string
+    repository: string
+    digest: string
+    expires: number
+  }
 }
 
 export type ScanTarget = {
@@ -45,7 +52,12 @@ export type ScanTarget = {
 export type ScanJob = ScanTarget & {
   actor: string
   expires: number
+  started?: boolean
 }
+
+export type ScanLease = { expires: number; started: boolean }
+
+export type QueuedScan = ScanTarget & { actor: string; override: number; available: number }
 
 export type ScanClaim = ScanJob & {
   override?: boolean

@@ -42,13 +42,18 @@ export const POST = api(async (request, context, identity) => {
     return NextResponse.json(status)
   }
 
+  if (status.status === 'running') {
+    await requirePublic(registry, repository)
+    return NextResponse.json(status, { status: 202 })
+  }
+
   const job = await startScan(registry, repository, digest, identity.username, override)
 
   if (!job) {
     throw new AppError(422, 'This reference has no runnable image to scan.')
   }
 
-  after(() => withLimits(true, () => runScan(job)))
+  if (job.started) after(() => withLimits(true, () => runScan(job)))
 
-  return NextResponse.json({ enabled: true, status: 'running' }, { status: 202 })
+  return NextResponse.json(scanStatus(registry, repository, digest), { status: 202 })
 }, 'admin')

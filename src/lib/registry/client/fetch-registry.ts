@@ -4,12 +4,11 @@ import { validateBlobRedirect, validateToken, validateUrl } from '@/lib/registry
 import { parseChallenge } from '@/lib/registry/challenge'
 import {
   MANIFEST_ACCEPT,
-  MAX_INFLIGHT,
   MAX_RESPONSE_BYTES,
   MAX_TOKEN_BYTES,
   REQUEST_TIMEOUT_MS,
 } from '@/lib/registry/client/constants'
-import { counter } from '@/lib/registry/client/state'
+import { enter } from '@/lib/registry/client/state'
 import { DOCKER_HUB_REGISTRY } from '@/lib/registry/dockerhub-settings'
 import { checkBackoff, checkRegistry, limitRegistry, limitResponse } from '@/lib/registry/throttle'
 import {
@@ -19,6 +18,7 @@ import {
   rememberToken,
   tokenKey,
 } from '@/lib/registry/token-cache'
+import { hasLimits } from '@/lib/security/context'
 import { decryptSecret } from '@/lib/security/crypto'
 import { AppError } from '@/lib/security/error'
 import { readBounded } from '@/lib/security/request'
@@ -30,11 +30,7 @@ export async function fetchRegistry(
   path: string,
   options: RegistryOptions = {}
 ): Promise<RegistryResponse> {
-  if (counter.inflight >= MAX_INFLIGHT) {
-    throw new AppError(503, 'Registry request capacity reached. Retry shortly.')
-  }
-
-  counter.inflight++
+  const release = await enter(!hasLimits())
 
   try {
     const origin = validateUrl(registry.url, registry.provider)
@@ -214,6 +210,10 @@ export async function fetchRegistry(
         throw new AppError(404, 'Registry resource was not found.')
       }
 
+      if (status === 503 || status === 504) {
+        throw new AppError(status, 'Registry is temporarily unavailable. Retry shortly.', 1)
+      }
+
       if (method === 'DELETE' && (status === 400 || status === 405)) {
         throw new AppError(409, 'Manifest deletion is disabled or unsupported by this registry.')
       }
@@ -252,11 +252,15 @@ export async function fetchRegistry(
       throw error
     }
 
+    if (error instanceof Error && ['TimeoutError', 'AbortError'].includes(error.name)) {
+      throw new AppError(504, 'Registry request timed out. Retry shortly.', 1)
+    }
+
     throw new AppError(
       502,
       'Unable to reach the registry securely. Check its URL, TLS certificate, and connection.'
     )
   } finally {
-    counter.inflight--
+    release()
   }
 }

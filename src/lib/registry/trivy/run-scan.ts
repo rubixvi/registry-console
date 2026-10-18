@@ -14,6 +14,8 @@ import { AppError } from '@/lib/security/error'
 import { type ScanJob } from '@/types/scan'
 
 export async function runScan(job: ScanJob): Promise<void> {
+  if (job.started === false) return
+
   const stored = getScan(job.id)
 
   if (stored?.status !== 'running' || stored.expires !== job.expires) return

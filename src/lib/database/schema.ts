@@ -32,6 +32,15 @@ export const DATABASE_SCHEMA = `
     configured_id TEXT NOT NULL DEFAULT ''
   );
 
+  CREATE TABLE IF NOT EXISTS sso_links (
+    provider TEXT NOT NULL,
+    issuer TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    account_id TEXT NOT NULL,
+    PRIMARY KEY (provider, issuer, subject),
+    UNIQUE (provider, account_id)
+  );
+
   CREATE TABLE IF NOT EXISTS passkeys (
     id TEXT PRIMARY KEY,
     username TEXT NOT NULL,
@@ -104,6 +113,8 @@ export const DATABASE_SCHEMA = `
     registry_id TEXT NOT NULL,
     repository TEXT NOT NULL,
     digest TEXT NOT NULL,
+    actor TEXT NOT NULL DEFAULT 'system:trivy',
+    override INTEGER NOT NULL DEFAULT 0,
     available INTEGER NOT NULL DEFAULT 0,
     attempts INTEGER NOT NULL DEFAULT 0,
     updated INTEGER NOT NULL
@@ -145,4 +156,6 @@ export const DATABASE_SCHEMA = `
     action TEXT NOT NULL,
     target TEXT NOT NULL
   );
+
+  CREATE INDEX IF NOT EXISTS audit_time ON audit (at);
 `

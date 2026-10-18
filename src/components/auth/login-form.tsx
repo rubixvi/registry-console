@@ -2,14 +2,19 @@
 
 import { ArrowRight, Fingerprint, LoaderCircle } from 'lucide-react'
 
+import { SsoButtons } from '@/components/auth/sso'
 import { ErrorMessage } from '@/components/shared/error-message'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useLogin } from '@/hooks/auth/use-login'
+import { type SsoButton } from '@/types/sso'
 
-export function LoginForm() {
-  const { error, busy, twoFactor, recovery, setRecovery, submit, passkey, restart } = useLogin()
+type Props = { providers?: SsoButton[]; initialFactor?: boolean; ssoError?: boolean }
+
+export function LoginForm({ providers = [], initialFactor = false, ssoError = false }: Props) {
+  const { error, busy, twoFactor, recovery, setRecovery, submit, passkey, restart } =
+    useLogin(initialFactor)
 
   return (
     <form aria-busy={busy} className="space-y-5" onSubmit={submit}>
@@ -69,6 +74,9 @@ export function LoginForm() {
       )}
 
       <ErrorMessage message={error} />
+      {ssoError && (
+        <ErrorMessage message="SSO sign-in could not be verified. Check your configured email and provider." />
+      )}
 
       <Button className="w-full" disabled={busy} type="submit">
         {busy ? (
@@ -106,6 +114,8 @@ export function LoginForm() {
           Sign in with a passkey
         </Button>
       )}
+
+      {!twoFactor && <SsoButtons disabled={busy} providers={providers} />}
     </form>
   )
 }

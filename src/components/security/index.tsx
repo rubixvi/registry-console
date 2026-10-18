@@ -23,12 +23,19 @@ export function Security({ status }: Props) {
       {codes.length > 0 && <Recovery codes={codes} onConfirm={() => security.setCodes([])} />}
 
       {!verified && codes.length === 0 && (
-        <Identity busy={busy} onVerify={security.verify} totpEnabled={status.totpEnabled} />
+        <Identity
+          busy={busy}
+          onVerify={security.verify}
+          providers={status.providers}
+          ssoAccount={status.ssoAccount}
+          ssoVerified={status.ssoVerified}
+          totpEnabled={status.totpEnabled}
+        />
       )}
 
       <Passkeys
         busy={busy}
-        directoryAccount={status.directoryAccount}
+        directoryAccount={status.directoryAccount || status.ssoAccount}
         onAdd={security.addPasskey}
         onRemove={security.removePasskey}
         passkeys={status.passkeys}

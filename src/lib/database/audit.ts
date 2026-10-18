@@ -1,9 +1,8 @@
 import 'server-only'
 
+import { env } from '@/lib/config/env'
 import { database } from '@/lib/database/client'
 import { type AuditEntry, type AuditInput, type AuditPage } from '@/types/audit'
-
-const MAX_AUDIT_ENTRIES = 10_000
 
 export function audit(actor: string, action: string, target: string): void {
   const db = database()
@@ -14,13 +13,9 @@ export function audit(actor: string, action: string, target: string): void {
     VALUES (?, ?, ?, ?)
   `).run(timestamp, actor, action, target)
 
-  db.prepare(`
-    DELETE FROM audit
-    WHERE id <= (
-      SELECT COALESCE(MAX(id), 0) - ?
-      FROM audit
-    )
-  `).run(MAX_AUDIT_ENTRIES)
+  const cutoff = new Date(Date.now() - env().AUDIT_RETENTION_DAYS * 86_400_000).toISOString()
+
+  db.prepare('DELETE FROM audit WHERE at < ?').run(cutoff)
 }
 
 export function auditPage(input: AuditInput): AuditPage {

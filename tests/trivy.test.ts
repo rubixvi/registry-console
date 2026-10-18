@@ -208,7 +208,10 @@ test('scan jobs enforce global opt-in, concurrency, immutable digests, and crede
   const job = prepareScan(registry, 'team/app', digest, 'admin')
 
   assert.equal(scanStatus(registry, 'team/app', digest).status, 'running')
-  assert.throws(() => prepareScan(registry, 'team/app', digest, 'admin'), /already running/)
+  const repeated = prepareScan(registry, 'team/app', digest, 'admin')
+
+  assert.equal(repeated.started, false)
+  assert.equal(repeated.expires, job.expires)
 
   assert.equal(
     scanStatus({ ...registry, username: 'other-reader' }, 'team/app', digest).status,

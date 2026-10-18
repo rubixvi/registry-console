@@ -15,14 +15,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   try {
     requireOrigin(request)
-    limitSignIn(request, 'two-factor')
+    const source = limitSignIn(request, 'two-factor')
 
     const { code } = await readJson(request, codeInput)
     const pending = readRequest(request, 'two-factor')
 
     actor = pending.username
 
-    rateLimit(`two-factor-user:${pending.username}`, 8, 15 * 60_000)
+    rateLimit(`two-factor-user:${pending.username}:${source}`, 8, 15 * 60_000)
 
     const user = configUser(pending.username)
 

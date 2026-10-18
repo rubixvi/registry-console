@@ -15,8 +15,13 @@ export async function registerPasskey(
   userId: string,
   name: string
 ): Promise<void> {
-  if (user.authProvider === 'ldap') {
-    throw new AppError(403, 'Passkeys are unavailable for directory accounts.')
+  if (user.authProvider === 'ldap' || user.authProvider === 'sso') {
+    throw new AppError(
+      403,
+      user.authProvider === 'ldap'
+        ? 'Passkeys are unavailable for directory accounts.'
+        : 'Passkeys are unavailable for SSO accounts.'
+    )
   }
 
   const { origin, rpID } = passkeyHost()

@@ -235,10 +235,7 @@ test('expiry, upstream no-store and max-age, and errors never extend cached acce
   assert.equal(cachedResponse(registry, manifestPath, scope), null)
   fixture.state.control = ''
   fixture.state.fail = true
-  await assert.rejects(
-    registryRequest(registry, manifestPath, { scope }),
-    /Registry request failed/
-  )
+  await assert.rejects(registryRequest(registry, manifestPath, { scope }), { status: 503 })
   assert.equal(cachedResponse(registry, manifestPath, scope), null)
   fixture.state.fail = false
 })

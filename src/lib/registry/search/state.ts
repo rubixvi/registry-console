@@ -1,3 +1,5 @@
 import 'server-only'
 
-export const counter = { active: 0 }
+import { createGate } from '@/lib/security/gate'
+
+export const enter = createGate(2, 1)

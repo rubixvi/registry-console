@@ -1,9 +1,11 @@
 import 'server-only'
 
+import { type DatabaseSync } from 'node:sqlite'
+
 import { database } from '@/lib/database/client'
 
-export function transaction<T>(operation: () => T): T {
-  const db = database()
+export function transaction<T>(operation: () => T, connection?: DatabaseSync): T {
+  const db = connection ?? database()
 
   if (db.isTransaction) return operation()
 

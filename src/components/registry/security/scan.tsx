@@ -31,11 +31,15 @@ export function ImageScan({ id, repository, digest, admin = false, compact = fal
   const summary =
     data.status === 'running'
       ? 'Scan running…'
-      : data.status === 'failed'
-        ? 'Scan failed'
-        : report
-          ? `${total} vulnerabilities - ${report.counts.CRITICAL} critical - ${report.counts.HIGH} high`
-          : 'Not scanned'
+      : data.queued && data.busy
+        ? 'Queued behind another scan'
+        : data.queued
+          ? 'Scan queued'
+          : data.status === 'failed'
+            ? 'Scan failed'
+            : report
+              ? `${total} vulnerabilities - ${report.counts.CRITICAL} critical - ${report.counts.HIGH} high`
+              : 'Not scanned'
 
   if (compact) {
     return <CompactScan data={data} summary={summary} total={total} />
@@ -51,12 +55,18 @@ export function ImageScan({ id, repository, digest, admin = false, compact = fal
 
         {admin && data.status !== 'complete' && (
           <Button
-            disabled={busy || data.status === 'running'}
+            disabled={busy || data.status === 'running' || (data.queued && !limited)}
             onClick={() => scan(limited)}
             type="button"
             variant="outline"
           >
-            {data.status === 'running' ? 'Scanning…' : 'Scan'}
+            {data.status === 'running'
+              ? 'Scanning…'
+              : limited
+                ? 'Scan'
+                : data.queued
+                  ? 'Queued'
+                  : 'Scan'}
           </Button>
         )}
       </div>
@@ -69,6 +79,13 @@ export function ImageScan({ id, repository, digest, admin = false, compact = fal
         <p className="text-sm text-muted-foreground">
           The scan limit has been reached. Automatic scanning will resume when capacity is
           available.
+        </p>
+      )}
+
+      {data.busy && (
+        <p className="text-xs text-muted-foreground">
+          {data.busy.actor} is scanning {data.busy.repository || 'another image'}. The scan lease
+          ends at {new Date(data.busy.expires).toLocaleTimeString()}.
         </p>
       )}
 

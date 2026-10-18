@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 
 import { Sidebar } from '@/components/layout/sidebar'
 import { getIdentity } from '@/lib/auth/session'
-import { getRegistries, seedRegistry } from '@/lib/registry/store'
+import { getRegistries } from '@/lib/registry/store'
 import { getSettings } from '@/lib/settings'
 
 type Props = {
@@ -14,8 +14,6 @@ export default async function ConsoleLayout({ children }: Props) {
   const identity = await getIdentity()
 
   if (!identity) redirect('/login')
-
-  seedRegistry()
 
   const branding = getSettings()
   const registries = getRegistries().map(({ id, name }) => ({ id, name }))

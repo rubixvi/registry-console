@@ -15,6 +15,7 @@ export const POST = api(async (request, _context, identity) => {
   rateLimit(`passkey-enroll:${identity.username}`, 15, 15 * 60_000)
 
   const { name, credential } = await readJson(request, passkeyRegistrationInput)
+
   const pending = readRequest(request, 'passkey-register', true)
   const user = configUser(identity.username)
 

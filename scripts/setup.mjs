@@ -24,7 +24,7 @@ let registries
 try {
   origin = (await terminal.question('App origin (e.g. http://localhost:3000): ')).trim()
 
-  username = (await terminal.question('Administrator username: ')).trim()
+  username = (await terminal.question('Admin username: ')).trim()
 
   registries = (await terminal.question('Allowed registry origins, comma separated: '))
     .split(',')
@@ -52,7 +52,7 @@ for (const registry of registries) {
   }
 }
 
-const password = await readSecret(`Administrator password (${MIN_PASSWORD_LENGTH}+ characters): `)
+const password = await readSecret(`Admin password (${MIN_PASSWORD_LENGTH}+ characters): `)
 
 const encoded = hashPassword(password)
 
@@ -61,11 +61,12 @@ const configuration = [
   `AUTH_USERNAME=${username}`,
   `AUTH_PASSWORD_HASH='${encoded}'`,
   `ENCRYPTION_KEY=${randomBytes(32).toString('hex')}`,
+  `TRIVY_RUNNER_TOKEN=${randomBytes(32).toString('hex')}`,
+  'TRIVY_RUNNER_URL=http://scanner:3001',
   `REGISTRY_ALLOWED_ORIGINS=${registries.join(',')}`,
   'ALLOW_HTTP_REGISTRIES=false',
   'DATA_DIR=/app/data',
-  '# Set the published image for Compose.',
-  '# REGISTRY_CONSOLE_IMAGE=ghcr.io/your-owner/your-repository:1.0.0',
+  'REGISTRY_CONSOLE_IMAGE=rubixvi/registry-console:edge',
   '',
 ].join('\n')
 

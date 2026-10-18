@@ -22,6 +22,6 @@ export function verifyLogin(user: User, pending: AuthRequest, code: string): Nex
 
     verifySecondFactor(user, code)
 
-    return loginResponse(user, 'two_factor')
+    return loginResponse(user, pending.value.startsWith('sso.') ? pending.value : 'two_factor')
   })
 }

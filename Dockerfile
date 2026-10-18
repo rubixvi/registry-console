@@ -53,9 +53,16 @@ LABEL org.opencontainers.image.title="Registry Console" \
 
 RUN apk upgrade --no-cache \
     && apk add --no-cache ca-certificates gcompat \
-    && mkdir -p /app/data /usr/share/licenses/trivy \
+    && rm -rf /usr/local/lib/node_modules/npm \
+        /usr/local/lib/node_modules/corepack /opt/yarn-v* \
+    && rm -f /usr/local/bin/npm /usr/local/bin/npx \
+        /usr/local/bin/corepack /usr/local/bin/pnpm /usr/local/bin/pnpx \
+        /usr/local/bin/yarn /usr/local/bin/yarnpkg \
+    && mkdir -p /app/data /app/scanner /usr/share/licenses/trivy \
     && chown node:node /app/data \
-    && chmod 700 /app/data
+    && chmod 700 /app/data \
+    && chown 1001:1001 /app/scanner \
+    && chmod 700 /app/scanner
 
 COPY --from=scanner --chmod=0755 \
     /usr/local/bin/trivy \
@@ -85,6 +92,9 @@ COPY --from=builder --chown=node:node \
     /app/scripts/encrypt-secret.mjs \
     /app/scripts/read-secret.mjs \
     /app/scripts/reset-security.mjs \
+    /app/scripts/rotate-key.mjs \
+    /app/scripts/peer.mjs \
+    /app/scripts/scanner.mjs \
     ./scripts/
 
 COPY --from=builder --chown=node:node \
@@ -100,4 +110,4 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s \
     CMD node -e "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
-CMD ["node", "server.js"]
+CMD ["node", "--import", "./scripts/peer.mjs", "server.js"]

@@ -9,10 +9,11 @@ import {
 } from '@/lib/registry/cache'
 import { hubFetch } from '@/lib/registry/dockerhub-client/hub-fetch'
 import { hubToken } from '@/lib/registry/dockerhub-client/hub-token'
-import { counter } from '@/lib/registry/dockerhub-client/state'
+import { enter } from '@/lib/registry/dockerhub-client/state'
 import { DOCKER_HUB_API } from '@/lib/registry/dockerhub-settings'
 import { shareResponse } from '@/lib/registry/requests'
 import { forgetToken, tokenKey } from '@/lib/registry/token-cache'
+import { hasLimits } from '@/lib/security/context'
 import { AppError } from '@/lib/security/error'
 import { readBounded } from '@/lib/security/request'
 import { type RegistryRecord, type RegistryResponse } from '@/types/registry'
@@ -41,11 +42,7 @@ export async function hubRequest(
 
   const generation = cacheGeneration()
   const result = await shareResponse(registry, path, scope, async () => {
-    if (counter.inflight >= 4) {
-      throw new AppError(503, 'Docker Hub request capacity reached. Retry shortly.')
-    }
-
-    counter.inflight++
+    const release = await enter(!hasLimits())
 
     try {
       const headers = new Headers({ Accept: 'application/json' })
@@ -70,6 +67,14 @@ export async function hubRequest(
           throw new AppError(404, 'Docker Hub resource was not found.')
         }
 
+        if (response.status === 503 || response.status === 504) {
+          throw new AppError(
+            response.status,
+            'Docker Hub is temporarily unavailable. Retry shortly.',
+            1
+          )
+        }
+
         throw new AppError(
           502,
           'Docker Hub denied the request. Check the namespace and access token.'
@@ -80,9 +85,13 @@ export async function hubRequest(
     } catch (error) {
       if (error instanceof AppError) throw error
 
+      if (error instanceof Error && ['TimeoutError', 'AbortError'].includes(error.name)) {
+        throw new AppError(504, 'Docker Hub request timed out. Retry shortly.', 1)
+      }
+
       throw new AppError(502, 'Unable to read a valid Docker Hub response.')
     } finally {
-      counter.inflight--
+      release()
     }
   })
 

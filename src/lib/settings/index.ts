@@ -3,6 +3,7 @@ import 'server-only'
 import { env } from '@/lib/config/env'
 import { audit } from '@/lib/database/audit'
 import { database } from '@/lib/database/client'
+import { transaction } from '@/lib/database/transaction'
 import { brandingInput } from '@/lib/validation/branding'
 import { type Branding } from '@/types/branding'
 
@@ -56,9 +57,7 @@ export function saveSettings(value: Branding): void {
 export function updateSettings({ settings, username, logo, remove = false }: Update): void {
   const db = database()
 
-  db.exec('BEGIN IMMEDIATE')
-
-  try {
+  transaction(() => {
     if (logo) {
       db.prepare(`
         INSERT INTO settings (id, value)
@@ -71,21 +70,13 @@ export function updateSettings({ settings, username, logo, remove = false }: Upd
 
     saveSettings(settings)
     audit(username, 'settings.update', '')
-
-    db.exec('COMMIT')
-  } catch (error) {
-    db.exec('ROLLBACK')
-
-    throw error
-  }
+  })
 }
 
 export function removeLogo(username: string): void {
   const db = database()
 
-  db.exec('BEGIN IMMEDIATE')
-
-  try {
+  transaction(() => {
     const settings = getSettings()
 
     db.prepare("DELETE FROM settings WHERE id = 'brand-logo'").run()
@@ -96,11 +87,5 @@ export function removeLogo(username: string): void {
     })
 
     audit(username, 'settings.logo.remove', '')
-
-    db.exec('COMMIT')
-  } catch (error) {
-    db.exec('ROLLBACK')
-
-    throw error
-  }
+  })
 }

@@ -2,7 +2,14 @@ import 'server-only'
 
 import { randomUUID } from 'node:crypto'
 
-import { clearAccount, getAccount, insertAccount, migrateAccount } from '@/lib/database/accounts'
+import {
+  clearAccount,
+  emailAccount,
+  getAccount,
+  insertAccount,
+  migrateAccount,
+  updateAccount,
+} from '@/lib/database/accounts'
 import { audit } from '@/lib/database/audit'
 import { transaction } from '@/lib/database/transaction'
 import { type User } from '@/types/auth'
@@ -12,10 +19,19 @@ export function securityId(user: User): string {
   const current = getAccount(user.username)
 
   if (current?.configured_id === configuredId) {
+    if (current.email !== (user.email ?? '')) updateAccount(user.username, user.email ?? '')
     return current.account_id
   }
 
   return transaction(() => {
+    const linked = user.email ? emailAccount(user.email) : undefined
+
+    if (!current && linked && linked.configured_id === configuredId) {
+      updateAccount(user.username, user.email!, linked.username)
+      audit('system', 'security.account.renamed', user.username)
+      return linked.account_id
+    }
+
     const existing = getAccount(user.username)
 
     if (existing?.configured_id === configuredId) {
@@ -33,6 +49,7 @@ export function securityId(user: User): string {
       username: user.username,
       account_id: accountId,
       configured_id: configuredId,
+      email: user.email ?? '',
     })
 
     if (migrateAccount(user.username, accountId)) {

@@ -16,9 +16,9 @@ export function useScan(id: string, repository: string, digest: string) {
   const resource = useSWR<ScanStatus>(`${endpoint}?${params}`, apiRequest<ScanStatus>, {
     revalidateOnFocus: false,
     shouldRetryOnError: false,
-    dedupingInterval: 10_000,
+    dedupingInterval: 2000,
     refreshInterval: (current) =>
-      current?.status === 'running'
+      current?.status === 'running' || current?.queued || current?.busy
         ? 3000
         : current?.enabled && current.status !== 'complete'
           ? 30_000
@@ -40,7 +40,9 @@ export function useScan(id: string, repository: string, digest: string) {
       toast.success(
         result.status === 'complete'
           ? 'Stored vulnerability report loaded.'
-          : 'Vulnerability scan started.'
+          : result.queued
+            ? 'Vulnerability scan queued.'
+            : 'Vulnerability scan started.'
       )
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Unable to start the scan.')

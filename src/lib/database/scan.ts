@@ -5,8 +5,16 @@ import { randomUUID } from 'node:crypto'
 import { env } from '@/lib/config/env'
 import { audit } from '@/lib/database/audit'
 import { database } from '@/lib/database/client'
+import { transaction } from '@/lib/database/transaction'
 import { AppError } from '@/lib/security/error'
-import { type ScanClaim, type ScanRow, type ScanStatus, type ScanTarget } from '@/types/scan'
+import {
+  type QueuedScan,
+  type ScanClaim,
+  type ScanLease,
+  type ScanRow,
+  type ScanStatus,
+  type ScanTarget,
+} from '@/types/scan'
 
 const HOUR = 60 * 60_000
 const LEASE = 90_000
@@ -49,7 +57,11 @@ export function scanDelay(): number {
   return Math.max(0, Math.ceil((Math.max(spaced, rolling) - now) / 1000))
 }
 
-export function queueScan({ id, registryId, repository, digest }: ScanTarget): boolean {
+export function queueScan(
+  { id, registryId, repository, digest }: ScanTarget,
+  actor = 'system:trivy',
+  override = false
+): boolean {
   const db = database()
 
   if (getScan(id)?.status === 'complete') {
@@ -59,28 +71,58 @@ export function queueScan({ id, registryId, repository, digest }: ScanTarget): b
 
   const result = db
     .prepare(`
-    INSERT INTO scan_queue (id, registry_id, repository, digest, updated)
-    SELECT ?, ?, ?, ?, ? WHERE (SELECT COUNT(*) FROM scan_queue) < ?
+    INSERT INTO scan_queue (id, registry_id, repository, digest, updated, actor, override)
+    SELECT ?, ?, ?, ?, ?, ?, ? WHERE (SELECT COUNT(*) FROM scan_queue) < ?
     ON CONFLICT(id) DO NOTHING
   `)
-    .run(id, registryId, repository, digest, Date.now(), MAX_PENDING)
+    .run(id, registryId, repository, digest, Date.now(), actor, Number(override), MAX_PENDING)
+
+  if (actor !== 'system:trivy') {
+    db.prepare('UPDATE scan_queue SET actor = ?, override = ?, available = 0 WHERE id = ?').run(
+      actor,
+      Number(override),
+      id
+    )
+  }
 
   return (
     result.changes === 1 || Boolean(db.prepare('SELECT id FROM scan_queue WHERE id = ?').get(id))
   )
 }
 
-export function pendingScan(): ScanTarget | undefined {
+export function pendingScan(id?: string): QueuedScan | undefined {
+  if (id) {
+    return database()
+      .prepare(`
+        SELECT id, registry_id AS registryId, repository, digest, actor, override, available
+        FROM scan_queue WHERE id = ?
+      `)
+      .get(id) as QueuedScan | undefined
+  }
+
   return database()
     .prepare(`
-      SELECT id, registry_id AS registryId, repository, digest FROM scan_queue
-      WHERE available <= ? ORDER BY updated, rowid LIMIT 1
+      SELECT id, registry_id AS registryId, repository, digest, actor, override, available
+      FROM scan_queue
+      WHERE available <= ? ORDER BY override DESC, updated, rowid LIMIT 1
     `)
-    .get(Date.now()) as ScanTarget | undefined
+    .get(Date.now()) as QueuedScan | undefined
+}
+
+export function activeScan(): { id: string; value: string; expires: number } | undefined {
+  return database()
+    .prepare("SELECT id, value, expires FROM image_scans WHERE status = 'running' AND expires > ?")
+    .get(Date.now()) as { id: string; value: string; expires: number } | undefined
 }
 
 export function discardScan(id: string): void {
   database().prepare('DELETE FROM scan_queue WHERE id = ?').run(id)
+}
+
+export function deferScan(id: string, seconds = 15): void {
+  database()
+    .prepare('UPDATE scan_queue SET available = ? WHERE id = ?')
+    .run(Date.now() + Math.max(1, seconds) * 1000, id)
 }
 
 export function claimScan({
@@ -91,24 +133,29 @@ export function claimScan({
   actor,
   expires,
   override = false,
-}: ScanClaim): void {
+}: ScanClaim): ScanLease {
   const db = database()
   const now = Date.now()
 
-  db.exec('BEGIN IMMEDIATE')
+  return transaction(() => {
+    const current = getScan(id)
 
-  try {
-    if (getScan(id)?.status === 'complete') {
+    if (current?.status === 'complete') {
       throw new AppError(409, 'This image digest has already been scanned.')
     }
 
-    if (
-      db.prepare("SELECT id FROM image_scans WHERE status = 'running' AND expires > ?").get(now)
-    ) {
-      throw new AppError(
-        409,
-        'A scan is already running. Wait for it to finish before starting another.'
-      )
+    if (current?.status === 'running' && current.expires > now) {
+      return { expires: current.expires, started: false }
+    }
+
+    if (activeScan()) {
+      if (!queueScan({ id, registryId, repository, digest }, actor, override)) {
+        throw new AppError(503, 'The scan queue is full. Retry later.')
+      }
+
+      audit(actor, 'image.scan.queued', `${registryId}/${repository}@${digest}`)
+
+      return { expires: 0, started: false }
     }
 
     const delay = scanDelay()
@@ -128,16 +175,16 @@ export function claimScan({
 
     db.prepare(`
       INSERT INTO image_scans (id, registry_id, status, value, expires, updated)
-      VALUES (?, ?, 'running', '{}', ?, ?)
-      ON CONFLICT(id) DO UPDATE SET status = 'running', value = '{}',
+      VALUES (?, ?, 'running', ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET status = 'running', value = excluded.value,
         expires = excluded.expires, updated = excluded.updated
-    `).run(id, registryId, expires, now)
+    `).run(id, registryId, JSON.stringify({ actor, repository, digest }), expires, now)
 
     db.prepare(`
-      INSERT INTO scan_queue (id, registry_id, repository, digest, updated)
-      VALUES (?, ?, ?, ?, ?)
-      ON CONFLICT(id) DO NOTHING
-    `).run(id, registryId, repository, digest, now)
+      INSERT INTO scan_queue (id, registry_id, repository, digest, updated, actor, override)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET actor = excluded.actor, override = excluded.override
+    `).run(id, registryId, repository, digest, now, actor, Number(override))
 
     db.prepare('DELETE FROM scan_attempts WHERE started <= ?').run(now - HOUR)
     db.prepare('INSERT INTO scan_attempts (id, started) VALUES (?, ?)').run(randomUUID(), now)
@@ -147,12 +194,8 @@ export function claimScan({
       audit(actor, 'image.scan.limit.overridden', `${registryId}/${repository}@${digest}`)
     }
 
-    db.exec('COMMIT')
-  } catch (error) {
-    db.exec('ROLLBACK')
-
-    throw error
-  }
+    return { expires, started: true }
+  })
 }
 
 export function finishScan(
@@ -163,9 +206,7 @@ export function finishScan(
   const db = database()
   const now = Date.now()
 
-  db.exec('BEGIN IMMEDIATE')
-
-  try {
+  return transaction(() => {
     const row = db.prepare('SELECT attempts FROM scan_queue WHERE id = ?').get(id) as
       | { attempts: number }
       | undefined
@@ -188,14 +229,8 @@ export function finishScan(
       }
     }
 
-    db.exec('COMMIT')
-
     return result.changes === 1
-  } catch (error) {
-    db.exec('ROLLBACK')
-
-    throw error
-  }
+  })
 }
 
 export function claimDiscovery(owner: string): boolean {

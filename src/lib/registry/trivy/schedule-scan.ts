@@ -1,6 +1,5 @@
 import 'server-only'
 
-import { env } from '@/lib/config/env'
 import { queueScan } from '@/lib/database/scan'
 import { assertRepository } from '@/lib/registry/dockerhub'
 import { scanAllowed } from '@/lib/registry/trivy/scan-allowed'
@@ -13,12 +12,11 @@ export function scheduleScan(
   repository: string,
   digest: string
 ): boolean {
-  if (env().TRIVY_ENABLED !== 'true') return false
+  if (!scanAllowed(registry)) return false
 
   repositoryName.parse(repository)
   digestName.parse(digest)
   assertRepository(registry, repository)
-  scanAllowed(registry)
 
   return queueScan(scanTarget(registry, repository, digest))
 }

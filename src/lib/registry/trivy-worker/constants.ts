@@ -1,3 +1,3 @@
 import 'server-only'
 
-export const INTERVAL = 60_000
+export const INTERVAL = 5000

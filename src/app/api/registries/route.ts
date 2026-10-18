@@ -1,14 +1,12 @@
 import { NextResponse } from 'next/server'
 
 import { audit } from '@/lib/database/audit'
-import { addRegistry, getRegistries, seedRegistry } from '@/lib/registry/store'
+import { addRegistry, getRegistries } from '@/lib/registry/store'
 import { api } from '@/lib/security/api'
 import { readJson } from '@/lib/security/request'
 import { registryInput } from '@/lib/validation/registry'
 
 export const GET = api(async () => {
-  seedRegistry()
-
   const registries = getRegistries()
 
   return NextResponse.json(registries)

@@ -66,7 +66,14 @@ export function updateRegistryRow(row: RegistryRow): void {
 }
 
 export function deleteRegistry(id: string): void {
-  database().prepare('DELETE FROM registries WHERE id = ?').run(id)
+  const db = database()
+
+  for (const table of ['image_scans', 'deletion_plans', 'scan_queue']) {
+    db.prepare(`DELETE FROM ${table} WHERE registry_id = ?`).run(id)
+  }
+
+  db.prepare('DELETE FROM scan_discovery WHERE id = ?').run(id)
+  db.prepare('DELETE FROM registries WHERE id = ?').run(id)
 }
 
 export function registrySeeded(): boolean {

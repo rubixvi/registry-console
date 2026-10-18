@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import { emailSchema } from '@/lib/validation/sso'
+
 export const tokenSchema = z.string().regex(/^[A-Za-z0-9_-]{43}$/)
 
 export const passwordHashSchema = z
@@ -9,13 +11,14 @@ export const passwordHashSchema = z
 export const userSchema = z
   .object({
     id: z.string().uuid().optional(),
+    email: emailSchema.optional(),
     username: z.string().regex(/^[a-zA-Z0-9_.@-]{1,64}$/),
     passwordHash: passwordHashSchema.optional(),
-    authProvider: z.enum(['local', 'ldap']).optional(),
+    authProvider: z.enum(['local', 'ldap', 'sso']).optional(),
     role: z.enum(['admin', 'viewer']),
   })
   .superRefine((user, context) => {
-    if (user.authProvider !== 'ldap' && !user.passwordHash) {
+    if ((!user.authProvider || user.authProvider === 'local') && !user.passwordHash) {
       context.addIssue({
         code: 'custom',
         path: ['passwordHash'],
@@ -23,11 +26,19 @@ export const userSchema = z
       })
     }
 
-    if (user.authProvider === 'ldap' && user.passwordHash) {
+    if ((user.authProvider === 'ldap' || user.authProvider === 'sso') && user.passwordHash) {
       context.addIssue({
         code: 'custom',
         path: ['passwordHash'],
-        message: 'LDAP accounts must not define a local password.',
+        message: 'External accounts must not define a local password.',
+      })
+    }
+
+    if (user.authProvider === 'sso' && !user.email) {
+      context.addIssue({
+        code: 'custom',
+        path: ['email'],
+        message: 'SSO accounts require an email.',
       })
     }
   })

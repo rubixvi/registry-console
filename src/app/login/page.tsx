@@ -4,14 +4,25 @@ import { LockKeyhole } from 'lucide-react'
 import { LoginForm } from '@/components/auth/login-form'
 import { Brand } from '@/components/layout/brand'
 import { getIdentity } from '@/lib/auth/session'
+import { ssoProviders } from '@/lib/auth/sso'
 import { getSettings } from '@/lib/settings'
 
-export default async function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ twoFactor?: string; error?: string }>
+}) {
   const identity = await getIdentity()
 
   if (identity) redirect('/')
 
   const branding = getSettings()
+  const query = await searchParams
+
+  const providers = ssoProviders().map((provider) => ({
+    id: provider.id,
+    name: provider.name ?? provider.id,
+  }))
 
   return (
     <main className="grid min-h-dvh lg:grid-cols-2">
@@ -43,7 +54,11 @@ export default async function LoginPage() {
             </div>
           </div>
 
-          <LoginForm />
+          <LoginForm
+            initialFactor={query.twoFactor === '1'}
+            providers={providers}
+            ssoError={query.error === 'sso'}
+          />
         </div>
       </section>
     </main>
