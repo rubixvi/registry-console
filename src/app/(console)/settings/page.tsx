@@ -20,7 +20,7 @@ export default async function SettingsPage() {
   if (identity?.role !== 'admin') redirect('/')
 
   const branding = getSettings()
-  const configuredUsers = users()
+  const configUsers = users()
 
   return (
     <>
@@ -42,7 +42,7 @@ export default async function SettingsPage() {
             </h2>
 
             <ul className="divide-y">
-              {configuredUsers.map((user) => (
+              {configUsers.map((user) => (
                 <li
                   className="flex items-center justify-between gap-3 py-3 text-sm first:pt-0 last:pb-0"
                   key={user.username}
