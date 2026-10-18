@@ -45,4 +45,5 @@ export type RegistrySearch = {
   refresh: boolean
   deadline: number
   inspected: number
+  dates?: Map<string, string | null>
 }

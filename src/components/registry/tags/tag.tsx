@@ -145,6 +145,8 @@ export function Tag({ id, repository, admin, readOnly, defaultOrder, trivyEnable
             </SelectTrigger>
 
             <SelectContent>
+              <SelectItem value="date-desc">Date ↓</SelectItem>
+              <SelectItem value="date-asc">Date ↑</SelectItem>
               <SelectItem value="natural-asc">Numeric ↑</SelectItem>
               <SelectItem value="natural-desc">Numeric ↓</SelectItem>
               <SelectItem value="alpha-asc">Alphabetic ↑</SelectItem>
