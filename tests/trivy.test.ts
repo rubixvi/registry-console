@@ -11,7 +11,7 @@ import { env } from '../src/lib/config/env'
 import { database } from '../src/lib/database/client'
 import { addRegistry, getRegistries, getRegistry } from '../src/lib/registry/store'
 import { executeTrivy, prepareScan, runScan, scanStatus } from '../src/lib/registry/trivy'
-import { appendTrivyReport, emptyReport } from '../src/lib/registry/trivy-report'
+import { appendReport, emptyReport } from '../src/lib/registry/trivy-report'
 
 const directory = mkdtempSync(path.join(tmpdir(), 'registry-trivy-tests-'))
 const executable = path.join(directory, 'scanner.cjs')
@@ -173,14 +173,14 @@ test('Trivy reports retain per-platform totals and mark bounded detail output', 
     ],
   }
 
-  appendTrivyReport(report, raw, 'linux/arm64')
+  appendReport(report, raw, 'linux/arm64')
 
   assert.equal(report.counts.CRITICAL, 1001)
   assert.equal(report.vulnerabilities.length, 1000)
   assert.equal(report.truncated, true)
   assert.deepEqual(report.platforms, ['linux/arm64'])
 
-  assert.throws(() => appendTrivyReport(report, { SchemaVersion: 1 }, 'linux/amd64'))
+  assert.throws(() => appendReport(report, { SchemaVersion: 1 }, 'linux/amd64'))
 })
 
 test('scan jobs enforce global opt-in, concurrency, immutable digests, and credential isolation', async (context) => {

@@ -4,7 +4,7 @@ import { test } from 'node:test'
 
 import { env } from '../src/lib/config/env'
 import { registryRequest } from '../src/lib/registry/client'
-import { dockerHubPage } from '../src/lib/registry/dockerhub'
+import { hubPage } from '../src/lib/registry/dockerhub'
 import { imageDigest } from '../src/lib/registry/image-digest'
 import { checkBackoff, limitRegistry } from '../src/lib/registry/throttle'
 import { apiError } from '../src/lib/security/api'
@@ -203,11 +203,11 @@ test('Docker Hub listing throttles honour Retry-After and do not repeat upstream
   })
 
   await assert.rejects(
-    dockerHubPage(registry, { last: '', n: 100 }),
+    hubPage(registry, { last: '', n: 100 }),
     (error: unknown) =>
       error instanceof AppError && error.status === 429 && error.retryAfter === 150
   )
-  await assert.rejects(dockerHubPage(registry, { last: '', n: 100 }), /rate limit/)
+  await assert.rejects(hubPage(registry, { last: '', n: 100 }), /rate limit/)
   assert.equal(requests, 1)
 })
 

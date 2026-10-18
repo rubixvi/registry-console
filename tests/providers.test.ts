@@ -6,8 +6,8 @@ import { validateBlobRedirect } from '../src/lib/registry/allowlist'
 import { invalidateRegistry } from '../src/lib/registry/cache'
 import { registryRequest } from '../src/lib/registry/client'
 import { deleteManifest } from '../src/lib/registry/delete'
-import { assertDockerHubRepository, dockerHubPage } from '../src/lib/registry/dockerhub'
-import { dockerHubSettings } from '../src/lib/registry/dockerhub-settings'
+import { assertRepository, hubPage } from '../src/lib/registry/dockerhub'
+import { hubSettings } from '../src/lib/registry/dockerhub-settings'
 import { imageDetails } from '../src/lib/registry/image'
 import { tokenKey } from '../src/lib/registry/token-cache'
 import { encryptSecret } from '../src/lib/security/crypto'
@@ -87,13 +87,13 @@ test('Docker Hub uses a fixed API origin, bearer authentication, namespace mappi
     }
   )
 
-  const first = await dockerHubPage(value, { last: '', n: 1 })
-  const second = await dockerHubPage(value, { last: first.next!, n: 1 })
+  const first = await hubPage(value, { last: '', n: 1 })
+  const second = await hubPage(value, { last: first.next!, n: 1 })
 
   assert.deepEqual(first, { items: ['team/app'], next: '2' })
   assert.deepEqual(second, { items: ['team/worker'], next: null })
   assert.equal(seen.filter((url) => url.endsWith('/v2/auth/token')).length, 1)
-  assert.equal((await dockerHubPage(value, { last: '', n: 1 })).items[0], 'team/app')
+  assert.equal((await hubPage(value, { last: '', n: 1 })).items[0], 'team/app')
   assert.equal(seen.length, 3)
 })
 
@@ -107,11 +107,10 @@ test('Docker Hub rejects foreign pagination, namespace escapes, invalid origins,
     })
   )
 
-  await assert.rejects(dockerHubPage(value, { last: '', n: 10 }), /pagination/)
-  assert.throws(() => assertDockerHubRepository(value, 'other/private'), /namespace/)
+  await assert.rejects(hubPage(value, { last: '', n: 10 }), /pagination/)
+  assert.throws(() => assertRepository(value, 'other/private'), /namespace/)
   assert.throws(
-    () =>
-      dockerHubSettings({ ...value, url: 'https://attacker.example' }, 'https://attacker.example'),
+    () => hubSettings({ ...value, url: 'https://attacker.example' }, 'https://attacker.example'),
     /must use/
   )
   await assert.rejects(
