@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
   try {
     requireOrigin(request)
 
-    const source = limitSignIn(request, 'password')
+    const source = limitSignIn(request)
 
     const { username, password } = await readJson(request, loginInput)
 
