@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 export const verificationInput = z
   .object({
-    password: z.string().min(1).max(1024),
+    password: z.string().max(1024).default(''),
     code: z.string().trim().max(64).optional(),
   })
   .strict()

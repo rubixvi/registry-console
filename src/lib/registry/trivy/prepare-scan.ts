@@ -37,7 +37,15 @@ export function prepareScan(
   const id = reportKey(registry, repository, digest)
   const expires = Date.now() + (env().TRIVY_TIMEOUT_SECONDS + 60) * 1000
 
-  claimScan({ id, registryId: registry.id, repository, digest, actor, expires, override })
+  const lease = claimScan({
+    id,
+    registryId: registry.id,
+    repository,
+    digest,
+    actor,
+    expires,
+    override,
+  })
 
-  return { id, registryId: registry.id, repository, digest, actor, expires }
+  return { id, registryId: registry.id, repository, digest, actor, ...lease }
 }

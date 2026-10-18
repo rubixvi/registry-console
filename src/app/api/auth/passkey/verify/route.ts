@@ -17,7 +17,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   try {
     requireOrigin(request)
-    limitSignIn(request, 'passkey')
+    const source = limitSignIn(request, 'passkey')
 
     const credential = await readJson(request, passkeyAuthenticationInput)
     const pending = readRequest(request, 'passkey-login', true)
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       throw new AppError(401, 'Passkey sign-in could not be verified.')
     }
 
-    rateLimit(`passkey-user:${key.username}`, 15, 15 * 60_000)
+    rateLimit(`passkey-user:${key.username}:${source}`, 15, 15 * 60_000)
 
     const user = configUser(key.username)
 

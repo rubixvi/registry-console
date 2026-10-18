@@ -10,6 +10,7 @@ import { validateUrl } from '@/lib/registry/allowlist'
 import { assertRepository } from '@/lib/registry/dockerhub'
 import { requirePublic } from '@/lib/registry/scan-policy'
 import { MAX_REPORT_BYTES } from '@/lib/registry/trivy/constants'
+import { remoteTrivy } from '@/lib/registry/trivy/remote-trivy'
 import { decryptSecret } from '@/lib/security/crypto'
 import { AppError } from '@/lib/security/error'
 import { digestName, repositoryName } from '@/lib/validation/registry'
@@ -30,6 +31,14 @@ export async function executeTrivy(
 
   const config = env()
   const origin = new URL(validateUrl(registry.url, registry.provider))
+
+  if (config.TRIVY_RUNNER_URL) {
+    return remoteTrivy(registry, repository, digest, platform, timeout)
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    throw new AppError(503, 'Production scanning requires an isolated scanner worker.')
+  }
 
   const target = `${origin.host}/${repository}@${digest}`
   const directory = await mkdtemp(path.join(tmpdir(), 'registry-trivy-'))

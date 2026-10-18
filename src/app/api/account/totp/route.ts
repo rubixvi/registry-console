@@ -14,8 +14,10 @@ export const POST = api(async (request, _context, identity) => {
   rateLimit(`totp-enroll:${identity.username}`, 8, 15 * 60_000)
 
   const { code } = await readJson(request, codeInput)
+
   const pending = readRequest(request, 'totp-setup')
   const user = configUser(identity.username)
+
   const { codes, session } = enableAuthenticator(user, pending, code)
   const response = NextResponse.json({ recoveryCodes: codes })
 

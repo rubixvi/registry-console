@@ -19,6 +19,7 @@ import {
   scanDelay,
 } from '../src/lib/database/scan'
 import { nextDiscovery, registerDiscovery } from '../src/lib/database/scan-discovery'
+import { invalidateRegistry } from '../src/lib/registry/cache'
 import { registryIdentity } from '../src/lib/registry/identity'
 import { addRegistry, getRegistry, updateRegistry } from '../src/lib/registry/store'
 import {
@@ -426,7 +427,7 @@ test('competing processes cannot claim two jobs or spend the shared budget twice
     })
   }
 
-  assert.deepEqual((await Promise.all([compete(), compete()])).sort(), ['409', 'claimed'])
+  assert.deepEqual((await Promise.all([compete(), compete()])).sort(), ['claimed', 'running'])
   assert.equal(count('scan_attempts'), 1)
   assert.equal(count('image_scans'), 1)
 })
@@ -476,7 +477,12 @@ test('explicit overrides bypass the hourly budget while retaining concurrency an
     .get()
 
   assert.equal(count('scan_attempts'), 2)
-  assert.throws(() => prepareScan(registry, 'team/app', third, 'admin', true), /already running/)
+  const queued = prepareScan(registry, 'team/app', third, 'admin', true)
+
+  assert.equal(queued.started, false)
+  assert.equal(scanStatus(registry, 'team/app', third).queued, true)
+  assert.equal(scanStatus(registry, 'team/app', third).busy?.actor, 'admin')
+  assert.equal(count('scan_attempts'), 2)
   assert.equal(entry?.actor, 'admin')
 
   finishScan(override.id, override.expires, { report: emptyReport(second) })
@@ -522,6 +528,35 @@ test('reference processing prioritises the requested digest without starting cat
     requests.some((request) => request.method === 'HEAD'),
     false
   )
+})
+
+test('a held discovery lease preserves queued feedback until the worker can start it', async () => {
+  const target = scanTarget(registry, 'team/app', first)
+
+  scheduleScan(registry, 'team/app', first)
+  assert.equal(claimDiscovery('another-worker'), true)
+  await scanPending(target)
+
+  assert.equal(scanStatus(registry, 'team/app', first).status, 'queued')
+  assert.equal(scanStatus(registry, 'team/app', first).queued, true)
+  assert.equal(count('scan_attempts'), 0)
+  releaseDiscovery('another-worker')
+  await scanPending(target)
+
+  assert.equal(scanStatus(registry, 'team/app', first).status, 'complete')
+})
+
+test('a transient metadata failure defers queued work without dropping the target', async (context) => {
+  const target = scanTarget(registry, 'team/app', first)
+
+  invalidateRegistry(registry.id)
+  scheduleScan(registry, 'team/app', first)
+  context.mock.method(globalThis, 'fetch', async () => new Response(null, { status: 503 }))
+  await scanPending(target)
+
+  assert.equal(scanStatus(registry, 'team/app', first).queued, true)
+  assert.ok(pendingScan(target.id)!.available > clock)
+  assert.equal(count('scan_attempts'), 0)
 })
 
 test('direct attestation digests are discarded before claiming or spending scan capacity', async () => {

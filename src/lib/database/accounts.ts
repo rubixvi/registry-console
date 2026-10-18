@@ -26,14 +26,45 @@ export function accountNames(): string[] {
 export function insertAccount(row: SecurityAccount): void {
   database()
     .prepare(`
-      INSERT INTO security_accounts (username, account_id, configured_id)
-      VALUES (?, ?, ?)
+      INSERT INTO security_accounts (username, account_id, configured_id, email)
+      VALUES (?, ?, ?, ?)
     `)
-    .run(row.username, row.account_id, row.configured_id)
+    .run(row.username, row.account_id, row.configured_id, row.email ?? '')
+}
+
+export function emailAccount(email: string): SecurityAccount | undefined {
+  return database().prepare('SELECT * FROM security_accounts WHERE email = ?').get(email) as
+    | SecurityAccount
+    | undefined
+}
+
+export function updateAccount(username: string, email: string, previous = username): void {
+  const db = database()
+
+  if (username !== previous) {
+    for (const table of ['passkeys', 'authenticators']) {
+      db.prepare(`UPDATE ${table} SET username = ? WHERE username = ?`).run(username, previous)
+    }
+
+    clearSessions(previous)
+    clearRequests(previous)
+  }
+
+  db.prepare('UPDATE security_accounts SET username = ?, email = ? WHERE username = ?').run(
+    username,
+    email,
+    previous
+  )
 }
 
 export function clearAccount(username: string): void {
   const db = database()
+
+  db.prepare(`
+    DELETE FROM sso_links WHERE account_id IN (
+      SELECT account_id FROM security_accounts WHERE username = ?
+    )
+  `).run(username)
 
   db.prepare('DELETE FROM passkeys WHERE username = ?').run(username)
   db.prepare('DELETE FROM authenticators WHERE username = ?').run(username)

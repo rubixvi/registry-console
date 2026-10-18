@@ -1,17 +1,29 @@
 import { type SyntheticEvent } from 'react'
 import { UserRound } from 'lucide-react'
 
+import { SsoButtons } from '@/components/auth/sso'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { type SsoButton } from '@/types/sso'
 
 type Props = {
   busy: boolean
   totpEnabled: boolean
+  ssoAccount?: boolean
+  ssoVerified?: boolean
+  providers?: SsoButton[]
   onVerify: (event: SyntheticEvent<HTMLFormElement>) => Promise<void>
 }
 
-export function Identity({ busy, totpEnabled, onVerify }: Props) {
+export function Identity({
+  busy,
+  totpEnabled,
+  onVerify,
+  ssoAccount,
+  ssoVerified,
+  providers = [],
+}: Props) {
   return (
     <section className="space-y-5 rounded-xl border bg-card p-6">
       <h2 className="flex items-center gap-2 font-semibold">
@@ -20,24 +32,30 @@ export function Identity({ busy, totpEnabled, onVerify }: Props) {
       </h2>
 
       <p className="text-sm text-muted-foreground">
-        Enter your password
+        {ssoVerified
+          ? 'Your provider identity is verified. Confirm below'
+          : ssoAccount
+            ? 'Verify with your sign-in provider'
+            : 'Enter your password'}
         {totpEnabled ? ' and an authenticator or recovery code' : ''} to manage your sign-in
         methods.
       </p>
 
       <form className="space-y-4" onSubmit={onVerify}>
-        <div className="grid gap-2">
-          <Label htmlFor="security-password">Password</Label>
-          <Input
-            autoComplete="current-password"
-            disabled={busy}
-            id="security-password"
-            maxLength={1024}
-            name="password"
-            required
-            type="password"
-          />
-        </div>
+        {!ssoAccount && !ssoVerified && (
+          <div className="grid gap-2">
+            <Label htmlFor="security-password">Password</Label>
+            <Input
+              autoComplete="current-password"
+              disabled={busy}
+              id="security-password"
+              maxLength={1024}
+              name="password"
+              required
+              type="password"
+            />
+          </div>
+        )}
 
         {totpEnabled && (
           <div className="grid gap-2">
@@ -53,10 +71,12 @@ export function Identity({ busy, totpEnabled, onVerify }: Props) {
           </div>
         )}
 
-        <Button disabled={busy} type="submit">
+        <Button disabled={busy || (ssoAccount && !ssoVerified)} type="submit">
           {busy ? 'Verifying…' : 'Verify'}
         </Button>
       </form>
+
+      {!ssoVerified && <SsoButtons action="verify" disabled={busy} providers={providers} />}
     </section>
   )
 }

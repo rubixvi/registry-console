@@ -21,6 +21,7 @@ export async function authenticatePasskey(
 
   if (
     user.authProvider === 'ldap' ||
+    user.authProvider === 'sso' ||
     !key ||
     key.username !== user.username ||
     key.fingerprint !== securityId(user) ||

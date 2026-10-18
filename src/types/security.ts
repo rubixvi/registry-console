@@ -1,6 +1,8 @@
 import { type Session } from '@/types/auth'
 
 export type Purpose =
+  | 'sso'
+  | 'sso-verify'
   | 'passkey-login'
   | 'passkey-register'
   | 'two-factor'
@@ -29,6 +31,7 @@ export type SecurityAccount = {
   username: string
   account_id: string
   configured_id: string
+  email?: string
 }
 
 export type AuthenticatorRow = {
@@ -60,6 +63,9 @@ export type PasskeyRow = {
 }
 
 export type SecurityStatus = {
+  ssoAccount?: boolean
+  ssoVerified?: boolean
+  providers?: import('@/types/sso').SsoButton[]
   directoryAccount?: boolean
   passkeys: PasskeySummary[]
   totpEnabled: boolean

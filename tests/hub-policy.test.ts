@@ -203,7 +203,7 @@ test('queue entries wait without spending capacity when Hub visibility is unavai
   scheduleScan(registry, 'team/app', digest)
   await scanPending(scanTarget(registry, 'team/app', digest))
 
-  assert.equal(pendingScan()?.digest, digest)
+  assert.equal(pendingScan(scanTarget(registry, 'team/app', digest).id)?.digest, digest)
   assert.equal(attempts(), 0)
 })
 
@@ -352,10 +352,12 @@ test('read-only and namespace guards reject Hub deletions before upstream access
 test('Hub bulk deletion preserves upstream permission and reference failures', async (context) => {
   const registry = connection()
 
-  context.mock.method(globalThis, 'fetch', async (_raw: unknown, init?: RequestInit) =>
-    init?.method === 'DELETE'
-      ? new Response(null, { status: 403 })
-      : new Response(manifest, { headers: { 'Docker-Content-Digest': digest } })
+  context.mock.method(globalThis, 'fetch', async (raw: unknown, init?: RequestInit) =>
+    new URL(String(raw)).pathname.endsWith('/tags')
+      ? Response.json({ results: [{ name: 'latest' }], next: null })
+      : init?.method === 'DELETE'
+        ? new Response(null, { status: 403 })
+        : new Response(manifest, { headers: { 'Docker-Content-Digest': digest } })
   )
 
   const plan = await previewDeletion(registry, 'team/app', ['latest'], 'admin', 'session')

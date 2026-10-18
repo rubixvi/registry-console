@@ -9,15 +9,14 @@ import { getAuthenticator } from '@/lib/auth/totp'
 import { users } from '@/lib/config/users'
 import { apiError } from '@/lib/security/api'
 import { AppError } from '@/lib/security/error'
+import { createGate } from '@/lib/security/gate'
 import { rateLimit } from '@/lib/security/rate-limit'
 import { readJson, requireOrigin } from '@/lib/security/request'
 import { loginInput } from '@/lib/validation/auth'
 
 const LOGIN_WINDOW_MS = 15 * 60_000
 const MAX_USER_ATTEMPTS = 8
-const MAX_VERIFICATIONS = 3
-
-let verifying = 0
+const enter = createGate(3, 1)
 
 export async function POST(request: NextRequest) {
   let actor = 'anonymous'
@@ -25,28 +24,23 @@ export async function POST(request: NextRequest) {
   try {
     requireOrigin(request)
 
-    limitSignIn(request, 'password')
+    const source = limitSignIn(request, 'password')
 
     const { username, password } = await readJson(request, loginInput)
 
-    rateLimit(`login-user:${username}`, MAX_USER_ATTEMPTS, LOGIN_WINDOW_MS)
+    rateLimit(`login-user:${username}:${source}`, MAX_USER_ATTEMPTS, LOGIN_WINDOW_MS)
 
     const user = users().find((user) => user.username === username)
 
     actor = user?.username ?? 'anonymous'
 
-    if (verifying >= MAX_VERIFICATIONS) {
-      throw new AppError(429, 'Please try again shortly.')
-    }
-
     let valid: boolean
-
-    verifying++
+    const release = await enter(user?.role === 'admin')
 
     try {
       valid = await verifyCredentials(password, user)
     } finally {
-      verifying--
+      release()
     }
 
     if (!user || !valid) {

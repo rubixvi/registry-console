@@ -8,6 +8,8 @@ import { batch } from '@/lib/registry/delete/batch'
 import { fingerprint } from '@/lib/registry/delete/fingerprint'
 import { writable } from '@/lib/registry/delete/writable'
 import { imageManifest } from '@/lib/registry/image'
+import { imageDigest } from '@/lib/registry/image-digest'
+import { registryListing } from '@/lib/registry/listing'
 import { AppError } from '@/lib/security/error'
 import { type DeletionEntry, type DeletionPlan } from '@/types/deletion'
 import { type RegistryRecord } from '@/types/registry'
@@ -43,6 +45,23 @@ export async function previewDeletion(
       grouped.set(digest, { digest, tags: [tag] })
     }
   }
+
+  const selected = new Set(tags)
+  const listing = await registryListing(registry, repository, true)
+  const aliases = await batch(
+    listing.items.filter((tag) => !selected.has(tag)),
+    async (tag) => {
+      if (Date.now() >= deadline) {
+        throw new AppError(504, 'Tag preview timed out. Narrow the repository before deleting.')
+      }
+
+      return { tag, digest: await imageDigest(registry, repository, tag) }
+    }
+  )
+
+  for (const { tag, digest } of aliases) grouped.get(digest)?.tags.push(tag)
+
+  for (const entry of grouped.values()) entry.tags.sort()
 
   const id = randomUUID()
   const expires = Date.now() + 5 * 60_000

@@ -1,3 +1,4 @@
+import { HttpError } from '@/lib/http/error'
 import { reloadPage } from '@/utils/reload'
 
 export async function apiRequest<T>(url: string, options?: RequestInit): Promise<T> {
@@ -11,8 +12,11 @@ export async function apiRequest<T>(url: string, options?: RequestInit): Promise
     ...options,
     headers,
     credentials: 'same-origin',
-    cache: 'no-store',
   })
+  const retry = response.headers.get('retry-after')
+  const seconds = retry && /^\d+$/.test(retry) ? Number(retry) : 0
+  const date = retry ? Date.parse(retry) : NaN
+  const delay = seconds || (Number.isFinite(date) ? Math.ceil((date - Date.now()) / 1000) : 0)
 
   if (
     response.status === 401 &&
@@ -28,8 +32,10 @@ export async function apiRequest<T>(url: string, options?: RequestInit): Promise
   try {
     body = await response.json()
   } catch {
-    throw new Error(
-      `Server returned a non-JSON response (HTTP ${response.status}). Check the server or proxy logs.`
+    throw new HttpError(
+      `Server returned a non-JSON response (HTTP ${response.status}). Check the server or proxy logs.`,
+      response.status,
+      Math.max(0, delay)
     )
   }
 
@@ -45,7 +51,7 @@ export async function apiRequest<T>(url: string, options?: RequestInit): Promise
       message = body.error
     }
 
-    throw new Error(message)
+    throw new HttpError(message, response.status, Math.max(0, delay))
   }
 
   return body as T

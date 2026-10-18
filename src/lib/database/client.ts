@@ -7,6 +7,7 @@ import { DatabaseSync } from 'node:sqlite'
 
 import { env } from '@/lib/config/env'
 import { DATABASE_SCHEMA } from '@/lib/database/schema'
+import { transaction } from '@/lib/database/transaction'
 
 let db: DatabaseSync | undefined
 
@@ -23,9 +24,7 @@ export function database(): DatabaseSync {
   try {
     chmodSync(filename, 0o600)
     connection.exec(DATABASE_SCHEMA)
-    connection.exec('BEGIN IMMEDIATE')
-
-    try {
+    transaction(() => {
       const columns = connection.prepare('PRAGMA table_info(registries)').all() as {
         name: string
       }[]
@@ -56,12 +55,30 @@ export function database(): DatabaseSync {
           .run(randomUUID(), row.id)
       }
 
-      connection.exec('COMMIT')
-    } catch (error) {
-      connection.exec('ROLLBACK')
+      const queue = connection.prepare('PRAGMA table_info(scan_queue)').all() as { name: string }[]
 
-      throw error
-    }
+      if (!queue.some((column) => column.name === 'actor')) {
+        connection.exec(
+          "ALTER TABLE scan_queue ADD COLUMN actor TEXT NOT NULL DEFAULT 'system:trivy'"
+        )
+      }
+
+      if (!queue.some((column) => column.name === 'override')) {
+        connection.exec('ALTER TABLE scan_queue ADD COLUMN override INTEGER NOT NULL DEFAULT 0')
+      }
+
+      const accounts = connection.prepare('PRAGMA table_info(security_accounts)').all() as {
+        name: string
+      }[]
+
+      if (!accounts.some((column) => column.name === 'email')) {
+        connection.exec("ALTER TABLE security_accounts ADD COLUMN email TEXT NOT NULL DEFAULT ''")
+      }
+
+      connection.exec(
+        "CREATE UNIQUE INDEX IF NOT EXISTS account_email ON security_accounts(email) WHERE email <> ''"
+      )
+    }, connection)
 
     db = connection
     return connection

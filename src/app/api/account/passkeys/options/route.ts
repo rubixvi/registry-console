@@ -9,7 +9,9 @@ export const POST = api(async (request, _context, identity) => {
   requireSecurity(request, identity.username)
 
   const user = configUser(identity.username)
+
   const { options, userId } = await registerOptions(user)
+
   const response = NextResponse.json(options)
 
   issueRequest(

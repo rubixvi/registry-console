@@ -8,10 +8,10 @@ import { apiRequest } from '@/lib/http/client'
 import { type LoginResult } from '@/types/security'
 import { reloadPage } from '@/utils/reload'
 
-export function useLogin() {
+export function useLogin(initialFactor = false) {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  const [twoFactor, setTwoFactor] = useState(false)
+  const [twoFactor, setTwoFactor] = useState(initialFactor)
   const [recovery, setRecovery] = useState(false)
 
   async function submit(event: SyntheticEvent<HTMLFormElement>): Promise<void> {

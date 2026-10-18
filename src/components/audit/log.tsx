@@ -89,7 +89,7 @@ export function AuditLog() {
           <h2 className="font-semibold">Events</h2>
 
           <p className="mt-1 text-xs text-muted-foreground">
-            {state.data?.total ?? 0} matching events - Latest 10,000 events retained
+            {state.data?.total ?? 0} matching events - Retention follows the configured age limit
           </p>
         </div>
 

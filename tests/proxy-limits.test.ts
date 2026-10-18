@@ -54,3 +54,8 @@ test('trusted proxy clients receive independent persistent limits and accurate r
   assert.throws(() => limitSignIn(request(), 'password'), /forwarded/)
   assert.throws(() => limitSignIn(request('arbitrary-client-id'), 'password'), /forwarded/)
 })
+
+test('a spoofed first forwarded address cannot change the trusted rightmost client hop', () => {
+  assert.equal(limitSignIn(request('203.0.113.1, 198.51.100.20'), 'source-test'), '198.51.100.20')
+  assert.equal(limitSignIn(request('192.0.2.8, 198.51.100.20'), 'source-test'), '198.51.100.20')
+})

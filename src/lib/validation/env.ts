@@ -1,5 +1,6 @@
 import { z } from 'zod'
 
+import { keyName } from '@/lib/validation/keys'
 import { pullUrlSchema } from '@/lib/validation/url'
 import { TAG_ORDERS } from '@/utils/tag-order'
 
@@ -7,12 +8,16 @@ export const envSchema = z.object({
   APP_ORIGIN: z.string().url(),
   DATA_DIR: z.string().default('./data'),
   ENCRYPTION_KEY: z.string().regex(/^[a-f0-9]{64}$/i, 'Must be 32 random bytes encoded as hex'),
+  ENCRYPTION_KEY_ID: keyName.default('main'),
+  ENCRYPTION_KEYS_JSON: z.string().max(8192).default('{}'),
   REGISTRY_ALLOWED_ORIGINS: z.string().default(''),
   REGISTRY_TOKEN_ORIGINS: z.string().default(''),
   REGISTRY_BLOB_ORIGINS: z.string().default(''),
   ALLOW_HTTP_REGISTRIES: z.enum(['true', 'false']).default('false'),
   TRUST_PROXY: z.enum(['true', 'false']).default('false'),
   SESSION_HOURS: z.coerce.number().int().min(1).max(24).default(8),
+  AUDIT_RETENTION_DAYS: z.coerce.number().int().min(1).max(3650).default(90),
+  SSO_PROVIDERS_JSON: z.string().max(65_536).default('[]'),
   PULL_URL: pullUrlSchema.default(''),
   TAGLIST_ORDER: z.enum(TAG_ORDERS).default('date-desc'),
   HISTORY_CUSTOM_LABELS: z
@@ -39,6 +44,8 @@ export const envSchema = z.object({
   TRIVY_SCANS_PER_HOUR: z.coerce.number().int().min(1).max(60).default(16),
   TRIVY_ENABLED: z.enum(['true', 'false']).default('false'),
   TRIVY_PATH: z.string().max(2048).default('/usr/local/bin/trivy'),
+  TRIVY_RUNNER_URL: pullUrlSchema.default(''),
+  TRIVY_RUNNER_TOKEN: z.string().max(128).default(''),
   TRIVY_TIMEOUT_SECONDS: z.coerce.number().int().min(30).max(600).default(180),
   BRAND_NAME: z.string().min(1).max(64).default('Registry Console'),
 })

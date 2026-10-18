@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 
+import { sourceRequest } from '../helpers/source-request'
 import { type ApplicationProps, type AuditProps, type LimitProps } from './types'
 
 export async function checkApplication({
@@ -108,38 +109,39 @@ export async function checkAuthenticationAudit({ context, directory, password }:
 
 export async function checkLoginLimits({ context, request, base, origin, password }: LimitProps) {
   await context.test('Login throttling', { concurrency: false }, async (t) => {
-    await t.test('malformed requests do not lock out unrelated accounts', async () => {
-      for (let attempt = 0; attempt < 30; attempt++) {
-        const response = await fetch(`${base}/api/auth/login`, {
+    await t.test(
+      'malformed requests are limited by source without locking out other clients',
+      async () => {
+        for (let attempt = 0; attempt < 30; attempt++) {
+          const response = await sourceRequest(base, origin, '127.0.0.2', '{')
+
+          assert.equal(response.status, 400, `malformed request ${attempt + 1} is rejected`)
+        }
+
+        const limited = await sourceRequest(base, origin, '127.0.0.2', '{')
+
+        assert.equal(limited.status, 429)
+        assert.ok(Number(limited.retry) > 0)
+
+        const response = await request('/api/auth/login', {
           method: 'POST',
-          headers: { Origin: origin, 'Content-Type': 'application/json' },
-          body: '{',
-          signal: AbortSignal.timeout(30_000),
+          body: { username: 'admin', password },
         })
 
-        assert.equal(response.status, 400, `malformed request ${attempt + 1} is rejected`)
-        await response.body?.cancel()
+        assert.equal(response.status, 200)
       }
-
-      const response = await request('/api/auth/login', {
-        method: 'POST',
-        body: { username: 'admin', password },
-      })
-
-      assert.equal(response.status, 200)
-    })
+    )
 
     await t.test('repeated failed logins are throttled', async () => {
       const body = { username: 'missing', password: 'wrong' }
 
       for (let attempt = 0; attempt < 8; attempt++) {
-        await request('/api/auth/login', { method: 'POST', body })
+        const response = await sourceRequest(base, origin, '127.0.0.3', JSON.stringify(body))
+
+        assert.equal(response.status, 401)
       }
 
-      const response = await request('/api/auth/login', {
-        method: 'POST',
-        body,
-      })
+      const response = await sourceRequest(base, origin, '127.0.0.3', JSON.stringify(body))
 
       assert.equal(response.status, 429)
     })

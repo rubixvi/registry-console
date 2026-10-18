@@ -33,8 +33,8 @@ switch (action) {
 
   case 'claim':
     try {
-      prepareScan(getRegistry(id), 'team/app', digest, 'admin')
-      console.log('claimed')
+      const job = prepareScan(getRegistry(id), 'team/app', digest, 'admin')
+      console.log(job.started ? 'claimed' : 'running')
     } catch (error) {
       if (!(error instanceof AppError)) throw error
 

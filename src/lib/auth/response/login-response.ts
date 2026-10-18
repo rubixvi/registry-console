@@ -16,6 +16,7 @@ export function loginResponse(user: User, method: string): NextResponse {
 
   response.cookies.set(sessionCookieName(), session.token, {
     ...cookieOptions(),
+    ...(method.startsWith('sso.') ? { sameSite: 'lax' as const } : {}),
     expires: new Date(session.expires),
   })
 

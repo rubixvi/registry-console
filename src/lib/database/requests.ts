@@ -15,7 +15,7 @@ export function insertRequest(row: RequestInput): void {
 
 export function getRequest(id: string, purpose: Purpose, consume = false): AuthRequest | undefined {
   const statement =
-    purpose === 'security'
+    purpose === 'security' || (purpose === 'sso-verify' && !consume)
       ? 'SELECT * FROM auth_requests WHERE id = ? AND purpose = ? AND expires > ?'
       : consume
         ? 'DELETE FROM auth_requests WHERE id = ? AND purpose = ? AND expires > ? RETURNING *'

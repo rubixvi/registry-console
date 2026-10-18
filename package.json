@@ -5,9 +5,9 @@
   "type": "module",
   "license": "AGPL-3.0-or-later",
   "scripts": {
-    "dev": "next dev --hostname 0.0.0.0",
+    "dev": "node --import ./scripts/peer.mjs ./node_modules/next/dist/bin/next dev --hostname 0.0.0.0",
     "build": "next build",
-    "start": "next start --hostname 0.0.0.0",
+    "start": "node --import ./scripts/peer.mjs ./node_modules/next/dist/bin/next start --hostname 0.0.0.0",
     "lint": "pnpm biome lint",
     "lint:fix": "pnpm biome lint --write",
     "format": "pnpm biome format --write",
@@ -23,7 +23,8 @@
     "setup": "node scripts/setup.mjs",
     "image:build": "node scripts/build-image.mjs",
     "image:publish": "node scripts/publish-image.mjs",
-    "security:reset": "node --env-file=.env scripts/reset-security.mjs"
+    "security:reset": "node --env-file=.env scripts/reset-security.mjs",
+    "secret:rotate": "node --env-file=.env scripts/rotate-key.mjs"
   },
   "engines": {
     "node": "24.x || 25.x",
@@ -39,6 +40,7 @@
     "lucide-react": "1.59.0",
     "next": "16.4.2",
     "next-themes": "^0.4.6",
+    "openid-client": "6.8.8",
     "qrcode": "1.5.4",
     "radix-ui": "^1.8.1",
     "react": "19.3.1",

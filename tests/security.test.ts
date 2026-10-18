@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { randomBytes, scryptSync } from 'node:crypto'
+import { createHmac, randomBytes, scryptSync } from 'node:crypto'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
@@ -51,15 +51,20 @@ Object.assign(process.env, {
   ENCRYPTION_KEY: 'd'.repeat(64),
   AUTH_USERS_JSON: JSON.stringify([owner, member]),
   TRUST_PROXY: 'false',
+  REGISTRY_PEER_KEY: 'signed-test-peer-key',
 })
 
 function request(body: string, address = '192.0.2.1'): NextRequest {
+  const value = `${address};${Date.now()}`
+  const signature = createHmac('sha256', process.env.REGISTRY_PEER_KEY!).update(value).digest('hex')
+
   return new NextRequest('https://security.example.com/api/auth/login', {
     method: 'POST',
     headers: {
       Origin: 'https://security.example.com',
       'Content-Type': 'application/json',
       'X-Forwarded-For': address,
+      'X-Registry-Peer': `${value};${signature}`,
     },
     body,
   })
@@ -170,31 +175,32 @@ test('malformed requests and spoofed forwarded headers cannot create a persisten
         request(JSON.stringify({ username: 'unknown', password: 'wrong' }), '198.51.100.2')
       )
     ).status,
-    429
+    401
   )
 })
 
-test('server capacity protection recovers after one second and returns the correct retry delay', (context) => {
+test('sign-in limits remain scoped to the real source and recover at expiry', (context) => {
   let now = Date.now() + 60_000
 
   context.mock.method(Date, 'now', () => now)
 
-  for (let index = 0; index < 120; index++) {
-    limitSignIn(request('{}'), 'passkey')
+  for (let index = 0; index < 30; index++) {
+    limitSignIn(request('{}', '203.0.113.5'), 'passkey')
   }
 
   assert.throws(
-    () => limitSignIn(request('{}'), 'passkey'),
+    () => limitSignIn(request('{}', '203.0.113.5'), 'passkey'),
     (error: unknown) => {
       assert.ok(error instanceof AppError)
-      assert.equal(error.status, 503)
-      assert.equal(apiError(error).headers.get('Retry-After'), '1')
+      assert.equal(error.status, 429)
+      assert.equal(apiError(error).headers.get('Retry-After'), '900')
 
       return true
     }
   )
-  now += 1000
-  assert.doesNotThrow(() => limitSignIn(request('{}'), 'passkey'))
+  assert.doesNotThrow(() => limitSignIn(request('{}', '203.0.113.6'), 'passkey'))
+  now += 15 * 60_000
+  assert.doesNotThrow(() => limitSignIn(request('{}', '203.0.113.5'), 'passkey'))
 })
 
 test('explicit account replacement and removal revoke old security methods', () => {

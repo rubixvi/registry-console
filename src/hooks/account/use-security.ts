@@ -44,7 +44,7 @@ export function useSecurity() {
       await apiRequest('/api/account/security/verify', {
         method: 'POST',
         body: JSON.stringify({
-          password: data.get('password'),
+          password: data.get('password') || '',
           code: data.get('code') || undefined,
         }),
       })

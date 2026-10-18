@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import useSWR from 'swr'
 
 import { apiRequest } from '@/lib/http/client'
+import { retryDelay } from '@/lib/http/retry'
 import { type ImageMetadata } from '@/types/image'
 
 const waiting: (() => void)[] = []
@@ -42,7 +43,12 @@ export function useMetadata(id: string, repository: string, reference: string) {
   const resource = useSWR<ImageMetadata>(visible ? endpoint : null, fetchMetadata, {
     dedupingInterval: 10_000,
     revalidateOnFocus: false,
-    shouldRetryOnError: false,
+    shouldRetryOnError: true,
+    onErrorRetry: (error, _key, _config, revalidate, { retryCount }) => {
+      const delay = retryDelay(error, retryCount)
+
+      if (delay !== undefined) setTimeout(() => revalidate({ retryCount }), delay)
+    },
     keepPreviousData: false,
   })
 

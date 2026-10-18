@@ -26,7 +26,7 @@ export function Passkeys({ busy, verified, directoryAccount, passkeys, onAdd, on
 
       <p className="text-sm text-muted-foreground">
         {directoryAccount
-          ? 'Directory accounts require your directory password. Passkeys are not supported.'
+          ? 'External accounts require provider sign-in. Local passkeys are not supported.'
           : 'Sign in with your fingerprint, facial recognition, device PIN, or security key.'}
       </p>
 

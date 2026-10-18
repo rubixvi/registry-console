@@ -69,7 +69,16 @@ export async function startIntegration(context: TestContext) {
 
   child = spawn(
     process.execPath,
-    ['node_modules/next/dist/bin/next', 'start', '--hostname', '127.0.0.1', '--port', String(port)],
+    [
+      '--import',
+      './scripts/peer.mjs',
+      'node_modules/next/dist/bin/next',
+      'start',
+      '--hostname',
+      '127.0.0.1',
+      '--port',
+      String(port),
+    ],
     {
       env: {
         ...process.env,

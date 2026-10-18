@@ -65,7 +65,7 @@ test('tag searches use tag names and reject failed image metadata instead of gue
 
   await assert.rejects(
     searchRegistry(registry, { repository: 'team/app', architecture: 'amd64' }, true),
-    /request failed/
+    { status: 503 }
   )
 })
 

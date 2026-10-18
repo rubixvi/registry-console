@@ -11,6 +11,7 @@ export function users(): User[] {
   let value: unknown = [
     {
       id: process.env.AUTH_USER_ID,
+      email: process.env.AUTH_EMAIL || undefined,
       username: process.env.AUTH_USERNAME,
       passwordHash: process.env.AUTH_PASSWORD_HASH,
       role: 'admin',
@@ -33,15 +34,20 @@ export function users(): User[] {
   }
 
   const ids = parsed.flatMap((user) => (user.id ? [user.id] : []))
+  const emails = parsed.flatMap((user) => (user.email ? [user.email] : []))
+
+  if (new Set(emails).size !== emails.length) {
+    throw new Error('Account emails must be unique.')
+  }
 
   if (new Set(ids).size !== ids.length) {
     throw new Error('User IDs must be unique.')
   }
 
-  const hasAdministrator = parsed.some((user) => user.role === 'admin')
+  const hasAdmin = parsed.some((user) => user.role === 'admin')
 
-  if (!hasAdministrator) {
-    throw new Error('At least one administrator is required.')
+  if (!hasAdmin) {
+    throw new Error('At least one admin is required.')
   }
 
   return parsed

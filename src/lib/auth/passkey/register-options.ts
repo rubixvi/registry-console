@@ -9,8 +9,13 @@ import { AppError } from '@/lib/security/error'
 import { type User } from '@/types/auth'
 
 export async function registerOptions(user: User) {
-  if (user.authProvider === 'ldap') {
-    throw new AppError(403, 'Directory accounts must sign in with their directory password.')
+  if (user.authProvider === 'ldap' || user.authProvider === 'sso') {
+    throw new AppError(
+      403,
+      user.authProvider === 'ldap'
+        ? 'Directory accounts must sign in with their directory password.'
+        : 'SSO accounts must sign in with their configured provider.'
+    )
   }
 
   const keys = userPasskeys(user)

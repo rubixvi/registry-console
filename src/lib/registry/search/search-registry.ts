@@ -4,8 +4,8 @@ import { registryListing } from '@/lib/registry/listing'
 import { MAX_DURATION } from '@/lib/registry/search/constants'
 import { matchesArchitecture } from '@/lib/registry/search/matches-architecture'
 import { orderTags } from '@/lib/registry/search/order-tags'
-import { counter } from '@/lib/registry/search/state'
-import { AppError } from '@/lib/security/error'
+import { enter } from '@/lib/registry/search/state'
+import { hasLimits } from '@/lib/security/context'
 import { type RegistryRecord } from '@/types/registry'
 import { type TagOrder } from '@/utils/tag-order'
 
@@ -14,11 +14,7 @@ export async function searchRegistry(
   options: { repository?: string; query?: string; architecture?: string; order?: TagOrder },
   refresh = false
 ): Promise<{ items: string[] }> {
-  if (counter.active >= 2) {
-    throw new AppError(503, 'Registry search capacity reached. Retry shortly.')
-  }
-
-  counter.active++
+  const release = await enter(!hasLimits())
 
   try {
     const { repository, architecture, order } = options
@@ -74,6 +70,6 @@ export async function searchRegistry(
 
     return { items }
   } finally {
-    counter.active--
+    release()
   }
 }

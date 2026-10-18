@@ -216,7 +216,7 @@ test('bulk deletion deduplicates shared digests, reports partial failures, audit
   assert.equal(plan.entries.length, 3)
   assert.equal(
     plan.entries.find((entry) => entry.digest === fixture.tags.get('app'))?.tags.length,
-    2
+    3
   )
   assert.equal(fixture.deletes.size, 0)
 

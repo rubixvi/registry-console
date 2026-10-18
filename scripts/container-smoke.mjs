@@ -97,6 +97,16 @@ await test('Container smoke', { concurrency: false }, async (t) => {
 
   await t.test('runtime is unprivileged and supports the mounted data directory', checkRuntime)
 
+  await t.test('the scanner UID cannot read the console database', () => {
+    const script = [
+      "const fs = require('node:fs')",
+      'if (process.getuid() !== 1001) process.exit(1)',
+      "try { fs.readFileSync('/app/data/console.sqlite'); process.exit(1) } catch (error) { if (error.code !== 'EACCES') throw error }",
+    ].join(';\n')
+
+    docker(['exec', '--user', '1001:1001', name, 'node', '-e', script])
+  })
+
   await t.test('Trivy is installed in the container', () => {
     const version = docker(['exec', name, '/usr/local/bin/trivy', '--version'])
 

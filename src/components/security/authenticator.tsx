@@ -35,8 +35,8 @@ export function Authenticator({
 
       <p className="text-sm text-muted-foreground">
         {enabled
-          ? `Enabled for password sign-in. ${remaining} recovery codes remaining.`
-          : 'Require a six-digit code from your authenticator app when signing in with your password.'}
+          ? `Enabled for password and SSO sign-in. ${remaining} recovery codes remaining.`
+          : 'Require a six-digit code from your authenticator app after password or SSO sign-in.'}
       </p>
 
       {verified && !setup && (

@@ -32,6 +32,7 @@ export function issueRequest(
 
   response.cookies.set(cookieName(purpose), token, {
     ...cookieOptions(),
+    ...(purpose === 'sso' || purpose === 'sso-verify' ? { sameSite: 'lax' as const } : {}),
     expires: new Date(expires),
   })
 }

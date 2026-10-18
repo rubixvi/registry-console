@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto'
 import { env } from '@/lib/config/env'
 import {
   claimDiscovery,
+  deferScan,
   discardScan,
   getScan,
   pendingScan,
@@ -19,7 +20,7 @@ import {
   registerDiscovery,
 } from '@/lib/database/scan-discovery'
 import { hubPrivacy } from '@/lib/registry/dockerhub'
-import { getRegistries, getRegistry, seedRegistry } from '@/lib/registry/store'
+import { getRegistries, getRegistry } from '@/lib/registry/store'
 import { matchesScan, needsScan, runScan, startScan } from '@/lib/registry/trivy'
 import { discoverRegistry, discoveryScope } from '@/lib/registry/trivy-discovery'
 import { AppError } from '@/lib/security/error'
@@ -45,11 +46,9 @@ export async function scanPending(reference?: ScanTarget): Promise<void> {
   heartbeat.unref()
 
   try {
-    if (!enabled() || scanDelay() > 0) return
+    if (!enabled() || (scanDelay() > 0 && pendingScan(reference?.id)?.override !== 1)) return
 
-    if (!reference) {
-      seedRegistry()
-
+    if (!reference && pendingScan()?.override !== 1) {
       const connections = getRegistries()
       const ids = new Set(connections.map((registry) => registry.id))
 
@@ -89,7 +88,7 @@ export async function scanPending(reference?: ScanTarget): Promise<void> {
       }
     }
 
-    if (!enabled() || scanDelay() > 0) return
+    if (!enabled() || (scanDelay() > 0 && pendingScan(reference?.id)?.override !== 1)) return
 
     const target = reference ?? pendingScan()
 
@@ -107,6 +106,7 @@ export async function scanPending(reference?: ScanTarget): Promise<void> {
 
       if (privacy !== false) {
         if (privacy === true) discardScan(target.id)
+        else deferScan(target.id, 60)
         return
       }
 
@@ -115,13 +115,24 @@ export async function scanPending(reference?: ScanTarget): Promise<void> {
         return
       }
 
-      const job = await startScan(registry, target.repository, target.digest, 'system:trivy')
+      const queued = pendingScan(target.id)
+      const job = await startScan(
+        registry,
+        target.repository,
+        target.digest,
+        queued?.actor ?? 'system:trivy',
+        queued?.override === 1
+      )
 
       if (job) await runScan(job)
     } catch (error) {
-      if (error instanceof AppError && (error.status === 409 || error.status === 429)) return
-
-      discardScan(target.id)
+      if (error instanceof AppError && (error.status === 429 || error.status >= 500)) {
+        deferScan(target.id, error.retryAfter ?? 15)
+      } else if (error instanceof AppError && error.status === 409) {
+        return
+      } else {
+        discardScan(target.id)
+      }
       console.error('Trivy queued scan could not start.', {
         registry: target.registryId,
         status: error instanceof AppError ? error.status : 500,
