@@ -4,8 +4,8 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { ArrowRight, ChevronDown, ChevronRight, Folder, Package } from 'lucide-react'
 
-import { Branch } from '@/components/registry/namespace/branch'
-import { Tags } from '@/components/registry/namespace/tags'
+import { Branch } from '@/components/registry/repository/tree/branch'
+import { Tags } from '@/components/registry/tags/preview'
 import { Button } from '@/components/ui/button'
 import { type NamespaceNode } from '@/types/registry'
 

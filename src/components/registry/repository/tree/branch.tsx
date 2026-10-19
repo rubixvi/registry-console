@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-import { Node } from '@/components/registry/namespace/node'
+import { Node } from '@/components/registry/repository/tree/node'
 import { Button } from '@/components/ui/button'
 import { type NamespaceNode } from '@/types/registry'
 

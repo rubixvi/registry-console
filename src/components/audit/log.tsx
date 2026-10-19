@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { RefreshCw } from 'lucide-react'
 
 import { DateFilter } from '@/components/audit/date'
-import { Pagination } from '@/components/registry/filters/pagination'
+import { Pagination } from '@/components/registry/shared/pagination'
 import { ErrorMessage } from '@/components/shared/error-message'
 import { Loading } from '@/components/shared/loading'
 import { Button } from '@/components/ui/button'

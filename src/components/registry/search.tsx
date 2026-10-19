@@ -2,7 +2,7 @@
 
 import { Search } from 'lucide-react'
 
-import { Architecture } from '@/components/registry/filters/architecture'
+import { Architecture } from '@/components/registry/shared/architecture'
 import { Input } from '@/components/ui/input'
 import {
   Select,

@@ -9,7 +9,7 @@ type Props = {
   command: string
 }
 
-export function CopyButton({ command }: Props) {
+export function CopyCommand({ command }: Props) {
   const { copied, copy } = useCopy(command)
 
   return (

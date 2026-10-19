@@ -1,6 +1,6 @@
 'use client'
 
-import { Branch } from '@/components/registry/namespace/branch'
+import { Branch } from '@/components/registry/repository/tree/branch'
 import { namespaceTree } from '@/utils/namespace-tree'
 
 type Props = {

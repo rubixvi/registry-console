@@ -15,14 +15,14 @@ import {
 import { Button } from '@/components/ui/button'
 import { useConnection } from '@/hooks/registry/use-connection'
 import { type Registry } from '@/types/registry'
-import { RegistryForm } from '../registry-form'
+import { RegistryForm } from './form'
 
 type Props = {
   registry: Registry
   admin: boolean
 }
 
-export function Connection({ registry, admin }: Props) {
+export function Actions({ registry, admin }: Props) {
   const { busy, error, test, remove } = useConnection(registry.id)
 
   return (

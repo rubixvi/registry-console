@@ -2,9 +2,9 @@
 
 import { ShieldCheck } from 'lucide-react'
 
-import { CompactScan } from '@/components/registry/security/compact'
-import { Counts } from '@/components/registry/security/counts'
-import { ScanTable } from '@/components/registry/security/table'
+import { CompactScan } from '@/components/registry/scan/compact'
+import { Counts } from '@/components/registry/scan/counts'
+import { ScanTable } from '@/components/registry/scan/table'
 import { Button } from '@/components/ui/button'
 import { useScan } from '@/hooks/registry/use-scan'
 
