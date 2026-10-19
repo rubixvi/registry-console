@@ -78,6 +78,14 @@ export function database(): DatabaseSync {
       connection.exec(
         "CREATE UNIQUE INDEX IF NOT EXISTS account_email ON security_accounts(email) WHERE email <> ''"
       )
+
+      const auditColumns = connection.prepare('PRAGMA table_info(audit)').all() as {
+        name: string
+      }[]
+
+      if (!auditColumns.some((column) => column.name === 'ip')) {
+        connection.exec("ALTER TABLE audit ADD COLUMN ip TEXT NOT NULL DEFAULT ''")
+      }
     }, connection)
 
     db = connection

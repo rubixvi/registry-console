@@ -2,6 +2,7 @@ import 'server-only'
 
 import { type NextRequest, NextResponse } from 'next/server'
 
+import { auditRequest } from '@/lib/audit'
 import { auditAuthFailure } from '@/lib/auth/audit'
 import { getIdentity } from '@/lib/auth/session'
 import { hasRole, withIdentity } from '@/lib/security/access'
@@ -20,7 +21,7 @@ const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS'])
 const DEFAULT_ERROR = 'Operation failed. Check the server configuration or registry connection.'
 
 export function api(handler: Handler, role?: Role) {
-  return async (request: NextRequest, context: Context): Promise<NextResponse> => {
+  return auditRequest(async (request: NextRequest, context: Context): Promise<NextResponse> => {
     let identity: Identity | null = null
 
     try {
@@ -58,7 +59,7 @@ export function api(handler: Handler, role?: Role) {
 
       return apiError(error)
     }
-  }
+  })
 }
 
 export function apiError(error: unknown): NextResponse {

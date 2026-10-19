@@ -79,12 +79,13 @@ export async function checkApplication({
 }
 
 export async function checkAuthenticationAudit({ context, directory, password }: AuditProps) {
-  await context.test('Authentication auditing records failures without passwords', () => {
+  await context.test('Authentication auditing records client IPs without passwords', () => {
     const database = new DatabaseSync(path.join(directory, 'console.sqlite'), { readOnly: true })
 
     try {
-      const rows = database.prepare('SELECT actor, action, target FROM audit').all() as {
+      const rows = database.prepare('SELECT actor, ip, action, target FROM audit').all() as {
         actor: string
+        ip: string
         action: string
         target: string
       }[]
@@ -98,7 +99,16 @@ export async function checkAuthenticationAudit({ context, directory, password }:
         'security.verify.success',
       ]) {
         assert.ok(events.has(event), `${event} is recorded`)
+        assert.ok(
+          rows.some((row) => row.action === event && row.ip === '127.0.0.1'),
+          `${event} records the actual socket IP`
+        )
       }
+
+      assert.ok(
+        rows.some((row) => row.action === 'registry.add' && row.ip === '127.0.0.1'),
+        'management actions record the actual socket IP'
+      )
 
       assert.ok(!JSON.stringify(rows).includes(password), 'audit records do not expose passwords')
     } finally {

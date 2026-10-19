@@ -28,9 +28,7 @@ export function Access() {
         <dt>
           <Badge className="min-w-16 justify-center">Viewer</Badge>
         </dt>
-        <dd className="text-xs leading-6 text-muted-foreground">
-            Public repository access.
-        </dd>
+        <dd className="text-xs leading-6 text-muted-foreground">Public repository access.</dd>
       </dl>
 
       <p className="mt-5 border-t pt-4 text-xs leading-6 text-muted-foreground">

@@ -1,5 +1,6 @@
 import { after, NextResponse } from 'next/server'
 
+import { auditBackground } from '@/lib/audit'
 import { deleteManifest } from '@/lib/registry/delete'
 import { hubPrivacy } from '@/lib/registry/dockerhub'
 import { imageDetails } from '@/lib/registry/image'
@@ -39,8 +40,10 @@ export const GET = api(async (request, context) => {
     const target = scanTarget(registry, repository, details.digest)
 
     after(() =>
-      withIdentity({ username: 'system:trivy', role: 'admin' }, () =>
-        withLimits(true, () => scanPending(target))
+      auditBackground(() =>
+        withIdentity({ username: 'system:trivy', role: 'admin' }, () =>
+          withLimits(true, () => scanPending(target))
+        )
       )
     )
   }

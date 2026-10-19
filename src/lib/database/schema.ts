@@ -166,6 +166,7 @@ export const DATABASE_SCHEMA = `
     id INTEGER PRIMARY KEY,
     at TEXT NOT NULL,
     actor TEXT NOT NULL,
+    ip TEXT NOT NULL DEFAULT '',
     action TEXT NOT NULL,
     target TEXT NOT NULL
   );

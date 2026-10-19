@@ -1,5 +1,6 @@
 import { type NextRequest, type NextResponse } from 'next/server'
 
+import { auditRequest } from '@/lib/audit'
 import { auditAuthFailure } from '@/lib/auth/audit'
 import { refreshDirectory } from '@/lib/auth/directory'
 import { limitSignIn } from '@/lib/auth/limit'
@@ -11,7 +12,7 @@ import { rateLimit } from '@/lib/security/rate-limit'
 import { readJson, requireOrigin } from '@/lib/security/request'
 import { codeInput } from '@/lib/validation/security'
 
-export async function POST(request: NextRequest): Promise<NextResponse> {
+export const POST = auditRequest(async (request: NextRequest): Promise<NextResponse> => {
   let actor = 'anonymous'
 
   try {
@@ -35,4 +36,4 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     return apiError(error)
   }
-}
+})

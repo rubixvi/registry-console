@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server'
 
+import { auditRequest } from '@/lib/audit'
 import { findUser } from '@/lib/auth/accounts'
 import { auditAuthFailure } from '@/lib/auth/audit'
 import { verifyCredentials } from '@/lib/auth/credentials'
@@ -21,7 +22,7 @@ const LOGIN_WINDOW_MS = 15 * 60_000
 const MAX_USER_ATTEMPTS = 8
 const enter = createGate(3, 1)
 
-export async function POST(request: NextRequest) {
+export const POST = auditRequest(async (request: NextRequest) => {
   let actor = 'anonymous'
 
   try {
@@ -78,4 +79,4 @@ export async function POST(request: NextRequest) {
 
     return apiError(error)
   }
-}
+})
