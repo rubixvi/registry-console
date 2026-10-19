@@ -11,7 +11,6 @@ import { findUser, securityAccounts, securityId } from '../src/lib/auth/accounts
 import {
   authenticateDirectory,
   directoryConfig,
-  directoryUser,
   refreshDirectory,
 } from '../src/lib/auth/directory'
 import { directoryRole } from '../src/lib/auth/directory/role'
@@ -26,6 +25,7 @@ import { AppError } from '../src/lib/security/error'
 import { userSchema } from '../src/lib/validation/auth'
 
 const directory = mkdtempSync(path.join(tmpdir(), 'registry-directory-'))
+const credential = 'h9L2v7Q4n6R8t3W5'
 const admin = {
   username: 'admin',
   email: 'admin@example.com',
@@ -95,7 +95,7 @@ function mockDirectory(context: TestContext) {
   context.mock.method(Client.prototype, 'bind', async (dn: string, password: string) => {
     state.binds.push(String(dn))
     if (state.failure) throw new Error('private-directory-diagnostic')
-    if (password !== (String(dn).startsWith('cn=search') ? 'search-secret' : 'correct-password'))
+    if (password !== (String(dn).startsWith('cn=search') ? 'search-secret' : credential))
       throw new InvalidCredentialsError()
     if (!String(dn).startsWith('cn=search') && state.replace)
       state.entry.entryUUID = '00000000-0000-4000-8000-000000000009'
@@ -126,7 +126,7 @@ test('LDAP provisions unlisted accounts with directory roles and retains them ac
     new NextRequest(`${process.env.APP_ORIGIN}/api/auth/login`, {
       method: 'POST',
       headers: { Origin: process.env.APP_ORIGIN!, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: 'reader', password: 'correct-password' }),
+      body: JSON.stringify({ username: 'reader', password: credential }),
     })
   )
 
@@ -135,6 +135,8 @@ test('LDAP provisions unlisted accounts with directory roles and retains them ac
 
   assert.equal(user.role, 'viewer')
   assert.equal(user.authProvider, 'ldap')
+  assert.equal(user.passwordHash, undefined)
+  assert.ok(!JSON.stringify(user).includes(credential))
   assert.ok(user.id)
   assert.equal(users().length, 1)
   assert.equal(resolveSession(response.cookies.get(sessionCookieName())!.value)?.username, 'reader')
@@ -160,12 +162,12 @@ test('unmatched groups, invalid credentials, ambiguous identity and disabled acc
   ]) {
     state.entry = { ...original }
     Object.assign(state.entry, changes)
-    assert.equal(await authenticateDirectory('reader', 'correct-password'), null)
+    assert.equal(await authenticateDirectory('reader', credential), null)
   }
 
   state.entry = original
   state.references = ['ldaps://other.example.com']
-  assert.equal(await authenticateDirectory('reader', 'correct-password'), null)
+  assert.equal(await authenticateDirectory('reader', credential), null)
   assert.equal(database().prepare('SELECT COUNT(*) AS count FROM directory_users').get()!.count, 0)
 })
 
@@ -173,15 +175,15 @@ test('directory groups grant the highest explicit role and protect configured ac
   const state = mockDirectory(context)
 
   state.entry.memberOf = [env().LDAP_VIEWER_GROUPS, env().LDAP_MEMBER_GROUPS]
-  assert.equal((await authenticateDirectory('reader', 'correct-password'))!.role, 'member')
+  assert.equal((await authenticateDirectory('reader', credential))!.role, 'member')
   state.entry.memberOf = [env().LDAP_ADMIN_GROUPS, env().LDAP_MEMBER_GROUPS]
-  assert.equal((await authenticateDirectory('reader', 'correct-password'))!.role, 'admin')
+  assert.equal((await authenticateDirectory('reader', credential))!.role, 'admin')
   state.entry.uid = 'ADMIN'
-  await assert.rejects(authenticateDirectory('ADMIN', 'correct-password'), /configured account/)
+  await assert.rejects(authenticateDirectory('ADMIN', credential), /configured account/)
   assert.equal(findUser('admin')!.authProvider, undefined)
   state.entry.uid = 'reader'
   state.entry.mail = 'admin@example.com'
-  await assert.rejects(authenticateDirectory('reader', 'correct-password'), /configured account/)
+  await assert.rejects(authenticateDirectory('reader', credential), /configured account/)
 
   assert.equal(
     directoryRole(['cn=admin-backup,dc=example'], {
@@ -203,7 +205,7 @@ test('directory groups grant the highest explicit role and protect configured ac
 
 test('immutable subjects preserve factors on rename and replace them when a username is reassigned', async (context) => {
   const state = mockDirectory(context)
-  const user = (await authenticateDirectory('reader', 'correct-password'))!
+  const user = (await authenticateDirectory('reader', credential))!
   const id = securityId(user)
 
   database()
@@ -212,7 +214,7 @@ test('immutable subjects preserve factors on rename and replace them when a user
   const old = createSession(user)
 
   state.entry.uid = 'renamed'
-  const renamed = (await authenticateDirectory('renamed', 'correct-password'))!
+  const renamed = (await authenticateDirectory('renamed', credential))!
 
   assert.equal(renamed.id, user.id)
   assert.equal(securityId(renamed), id)
@@ -224,7 +226,7 @@ test('immutable subjects preserve factors on rename and replace them when a user
   const session = createSession(renamed)
 
   state.entry.entryUUID = '00000000-0000-4000-8000-000000000002'
-  const replacement = (await authenticateDirectory('renamed', 'correct-password'))!
+  const replacement = (await authenticateDirectory('renamed', credential))!
 
   assert.notEqual(replacement.id, user.id)
   assert.notEqual(securityId(replacement), id)
@@ -234,7 +236,7 @@ test('immutable subjects preserve factors on rename and replace them when a user
 
 test('directory access is rechecked by immutable subject and revokes sessions after group changes', async (context) => {
   const state = mockDirectory(context)
-  const user = (await authenticateDirectory('reader', 'correct-password'))!
+  const user = (await authenticateDirectory('reader', credential))!
   const session = createSession(user)
 
   await refreshDirectory(user)
@@ -260,7 +262,7 @@ test('directory access is rechecked by immutable subject and revokes sessions af
 
 test('directory outages fail closed without extending the access check interval or exposing diagnostics', async (context) => {
   const state = mockDirectory(context)
-  const user = (await authenticateDirectory('reader', 'correct-password'))!
+  const user = (await authenticateDirectory('reader', credential))!
 
   database().prepare('UPDATE directory_users SET checked = 0').run()
   state.failure = true
@@ -283,7 +285,7 @@ test('group searches escape account and DN filters and apply the configured acce
   state.entry.memberOf = []
   state.entry.dn = 'uid=a*)(uid=*),dc=example,dc=com'
   state.groups = [{ dn: env().LDAP_MEMBER_GROUPS }]
-  assert.equal((await authenticateDirectory('a*)(uid=*)', 'correct-password'))!.role, 'member')
+  assert.equal((await authenticateDirectory('a*)(uid=*)', credential))!.role, 'member')
   assert.equal(state.filters[0], '(&(uid=a\\2a\\29\\28uid=\\2a\\29)(!(accountStatus=disabled)))')
   assert.equal(state.filters[1], '(member=uid=a\\2a\\29\\28uid=\\2a\\29,dc=example,dc=com)')
 })
@@ -293,7 +295,7 @@ test('Active Directory binary IDs are preserved and used safely for access check
 
   env().LDAP_ID_ATTRIBUTE = 'objectGUID'
   state.entry.objectGUID = Buffer.from('0123456789abcdef0123456789abcdef', 'hex')
-  const user = (await authenticateDirectory('reader', 'correct-password'))!
+  const user = (await authenticateDirectory('reader', credential))!
 
   assert.equal(user.directory!.subject, 'b:0123456789abcdef0123456789abcdef')
   database().prepare('UPDATE directory_users SET checked = 0').run()
@@ -308,7 +310,7 @@ test('a directory identity replaced between search and password verification can
   const state = mockDirectory(context)
 
   state.replace = true
-  assert.equal(await authenticateDirectory('reader', 'correct-password'), null)
+  assert.equal(await authenticateDirectory('reader', credential), null)
   assert.equal(directoryRecord('reader'), undefined)
 })
 
@@ -319,7 +321,7 @@ test('provisioning rolls back the account and security state when audit recordin
     BEGIN SELECT RAISE(ABORT, 'test audit failure'); END`)
 
   try {
-    await assert.rejects(authenticateDirectory('reader', 'correct-password'), /unavailable/)
+    await assert.rejects(authenticateDirectory('reader', credential), /unavailable/)
     assert.equal(directoryRecord('reader'), undefined)
     assert.equal(
       database().prepare('SELECT username FROM security_accounts WHERE username = ?').get('reader'),
@@ -332,7 +334,7 @@ test('provisioning rolls back the account and security state when audit recordin
 
 test('directory records cannot reserve the email of a newly configured recovery account', async (context) => {
   mockDirectory(context)
-  await authenticateDirectory('reader', 'correct-password')
+  await authenticateDirectory('reader', credential)
   process.env.AUTH_USERS_JSON = JSON.stringify([{ ...admin, email: 'reader@example.com' }])
 
   securityAccounts(users())
@@ -343,7 +345,7 @@ test('directory records cannot reserve the email of a newly configured recovery 
 
 test('directory policy changes invalidate sessions and roles apply across configured authentication methods', async (context) => {
   mockDirectory(context)
-  const user = (await authenticateDirectory('reader', 'correct-password'))!
+  const user = (await authenticateDirectory('reader', credential))!
   const session = createSession(user)
   const source = directoryConfig().source
 
