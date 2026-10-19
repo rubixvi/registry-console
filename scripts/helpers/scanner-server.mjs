@@ -44,6 +44,7 @@ export function createScanner() {
 
     busy = true
     const controller = new AbortController()
+
     let running = false
 
     response.once('close', () => {

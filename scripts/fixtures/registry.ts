@@ -87,6 +87,7 @@ export async function checkRegistry({
       const catalogue = await request(`${api}/catalog`, {
         cookie: readerCookie,
       })
+
       const deleted = await request(`${api}/image`, {
         method: 'DELETE',
         body: deletion,
@@ -103,6 +104,7 @@ export async function checkRegistry({
         body: deletion,
         origin: 'https://evil.example',
       })
+
       const invalid = await request(`${api}/image`, {
         method: 'DELETE',
         body: { ...deletion, confirmation: 'wrong' },

@@ -68,16 +68,19 @@ await test('Automatic vulnerability scanning in the production server', async (c
     username: 'admin',
     password: server.password,
   })
+
   const reader = await signIn({
     request: anonymous,
     username: 'reader',
     password: server.password,
   })
+
   const request = createRequest({
     base: server.base,
     origin: server.origin,
     cookie,
   })
+
   const response = await request('/api/registries')
   const connections = await response.json()
   const id = connections[0].id
@@ -120,6 +123,7 @@ await test('Automatic vulnerability scanning in the production server', async (c
         body,
         cookie: reader.cookie,
       })
+
       const foreign = await request(endpoint, {
         method: 'POST',
         body,
@@ -156,6 +160,7 @@ await test('Automatic vulnerability scanning in the production server', async (c
         method: 'POST',
         body: { repository: 'team/api', digest: details.digest },
       })
+
       const retry = Number(response.headers.get('Retry-After'))
 
       assert.equal(response.status, 429)

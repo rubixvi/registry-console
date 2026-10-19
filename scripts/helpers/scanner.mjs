@@ -78,9 +78,12 @@ export async function scanImage(input, signal) {
         },
         stdio: ['ignore', 'pipe', 'ignore'],
       })
+
       const chunks = []
+
       let bytes = 0
       let failure
+
       const timer = setTimeout(() => {
         failure = new Error('Scan deadline exceeded.')
         child.kill('SIGKILL')
@@ -96,9 +99,11 @@ export async function scanImage(input, signal) {
           chunks.push(chunk)
         }
       })
+
       child.once('error', (error) => {
         failure = error
       })
+
       child.once('close', (code) => {
         clearTimeout(timer)
 
