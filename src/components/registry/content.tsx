@@ -36,7 +36,11 @@ export function RegistryContent({ id, registry, repository, reference, admin }: 
         key={`${repository}@${reference}`}
         pullUrl={
           registry.pullUrl ||
-          (registry.provider === 'dockerhub' ? 'https://docker.io' : env().PULL_URL)
+          (registry.provider === 'dockerhub'
+            ? 'https://registry-1.docker.io'
+            : registry.provider === 'github'
+              ? 'https://ghcr.io'
+              : env().PULL_URL)
         }
         reference={reference}
         registry={registry}

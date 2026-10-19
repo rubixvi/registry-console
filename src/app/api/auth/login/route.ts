@@ -20,6 +20,7 @@ import { loginInput } from '@/lib/validation/auth'
 
 const LOGIN_WINDOW_MS = 15 * 60_000
 const MAX_USER_ATTEMPTS = 8
+
 const enter = createGate(3, 1)
 
 export const POST = auditRequest(async (request: NextRequest) => {
