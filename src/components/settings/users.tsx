@@ -1,4 +1,4 @@
-import { Users } from 'lucide-react'
+import { UsersIcon } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { type users } from '@/lib/config/users'
@@ -7,11 +7,11 @@ type Props = {
   users: ReturnType<typeof users>
 }
 
-export function SettingsUsers({ users }: Props) {
+export function Users({ users }: Props) {
   return (
     <section className="rounded-xl border bg-card p-6">
       <h2 className="mb-5 flex items-center gap-2 font-semibold">
-        <Users aria-hidden="true" className="size-4 text-primary" />
+        <UsersIcon aria-hidden="true" className="size-4 text-primary" />
         Users
       </h2>
 

@@ -2,9 +2,9 @@ import { type Metadata } from 'next'
 import { redirect } from 'next/navigation'
 
 import { Heading } from '@/components/layout/heading'
-import { SettingsAccess } from '@/components/settings/access'
-import { BrandingForm } from '@/components/settings/branding'
-import { SettingsUsers } from '@/components/settings/users'
+import { Access } from '@/components/settings/access'
+import { Branding } from '@/components/settings/branding'
+import { Users } from '@/components/settings/users'
 import { getIdentity } from '@/lib/auth/session'
 import { users } from '@/lib/config/users'
 import { getSettings } from '@/lib/settings'
@@ -31,12 +31,12 @@ export default async function SettingsPage() {
 
       <div className="grid items-start gap-6 xl:grid-cols-[1.3fr_1fr]">
         <section className="min-w-0 rounded-xl border bg-card p-6 shadow-xs">
-          <BrandingForm branding={branding} />
+          <Branding branding={branding} />
         </section>
 
         <div className="min-w-0 space-y-6">
-          <SettingsUsers users={configUsers} />
-          <SettingsAccess />
+          <Users users={configUsers} />
+          <Access />
         </div>
       </div>
     </>

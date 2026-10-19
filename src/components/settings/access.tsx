@@ -2,7 +2,7 @@ import { ShieldCheck } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 
-export function SettingsAccess() {
+export function Access() {
   return (
     <section className="rounded-xl border bg-card p-6">
       <h2 className="mb-5 flex items-center gap-2 font-semibold">
