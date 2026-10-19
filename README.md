@@ -201,7 +201,7 @@ Remove the app's `ports` mapping and use `expose: ['3000']`. Add a Dokploy domai
 
 Keep the named data volumes across redeployments. The optional registry can be added to the same application; use a Dokploy file mount for its htpasswd file if no repository-relative file exists. Its internal address remains `http://registry:5000`. Set the connection's Pull URL to the registry's own public HTTPS domain, not the console's domain.
 
-Enable `TRUST_PROXY=true` only after verifying the proxy overwrites `X-Forwarded-For` and prevents direct access to the console. With proxy trust disabled, the proxy's socket IP is the source for login limits, so users behind that proxy share its per-IP allowance.
+Set `TRUST_PROXY=true` and configure `TRUSTED_PROXIES` with the proxy addresses or CIDR ranges in front of the console, including the proxy directly connected to the app. Each trusted proxy must correctly maintain `X-Forwarded-For`. When using explicit Compose environment mappings in Dokploy, pass both variables into the app service. With proxy trust disabled, the proxy's socket IP is the source for login limits, so users behind that proxy share its per-IP allowance.
 
 ## Configuration
 
@@ -223,7 +223,8 @@ Restart or recreate the console after changing environment configuration. The su
 | `ZITADEL_ID`, `ZITADEL_SECRET`, `ZITADEL_ISSUER` | Empty | Enable Zitadel sign-in with the exact instance issuer. |
 | `KEYCLOAK_ID`, `KEYCLOAK_SECRET`, `KEYCLOAK_ISSUER` | Empty | Enable Keycloak sign-in with the exact realm issuer. |
 | `SESSION_HOURS` | `8` | Local and SSO session lifetime, 1–24 hours. |
-| `TRUST_PROXY` | `false` | Trust the rightmost forwarded IP from a controlled proxy. |
+| `TRUST_PROXY` | `false` | Enable forwarded client IP resolution. With a trusted proxy list, walk the chain from the verified socket peer. |
+| `TRUSTED_PROXIES` | Empty | Comma-separated proxy IPv4/IPv6 addresses or CIDR ranges, up to 256 entries. Requires `TRUST_PROXY=true`; empty retains the single-proxy behavior described below. |
 | `AUDIT_RETENTION_DAYS` | `90` | Audit retention by age, 1–3650 days. Older events are pruned on subsequent audit writes. |
 | `BRAND_NAME` | `Registry Console` | Initial branding and passkey display name. Branding can also be saved through Settings. |
 | `REGISTRY_ALLOWED_ORIGINS` | Empty | Comma-separated exact registry origins the console may contact. |
@@ -433,9 +434,22 @@ Reports are reused for the same immutable digest and connection identity. They d
 
 Use HTTPS and an exact `APP_ORIGIN`. State-changing requests require the expected origin. Cookies are HttpOnly and Secure on HTTPS. Normal local sessions use SameSite Strict; SSO state, SSO verification and SSO sessions use SameSite Lax to support top-level identity-provider callbacks. SSO state, PKCE and nonces are validated, signed OIDC ID tokens are checked against provider keys, and callback state is single-use.
 
-The supplied Node launcher signs the actual socket peer internally and overwrites any client-supplied peer header. Keep `node --import ./scripts/peer.mjs server.js` when using a custom standalone launcher. Without this hook, production sign-in fails closed when proxy trust is disabled. The included image and package start scripts already load it.
+The supplied Node launcher signs the actual socket peer internally and overwrites any client-supplied peer header. Keep `node --import ./scripts/peer.mjs server.js` when using a custom standalone launcher. Without this hook, production sign-in fails closed when socket peer verification is required. The included image and package start scripts already load it.
 
-`TRUST_PROXY=true` uses the rightmost IP in `X-Forwarded-For`. Your final trusted proxy must overwrite that header with the actual client address and block direct access. An arbitrary multi-proxy chain is not inferred. Never enable this setting for a publicly reachable untrusted backend. Login protection applies per IP and per username plus IP; admin login verification has reserved capacity. Browsing privileges do not bypass authentication attempt limits.
+With `TRUST_PROXY=false`, forwarded headers are ignored and the socket peer is used. For multiple proxies, enable proxy trust and list only the proxy addresses and networks you control in `TRUSTED_PROXIES`. IPv4, IPv6 and CIDR ranges are supported; hostnames and URLs are not. Include the immediate proxy address as seen by the app, which may be its address on the container network.
+
+```dotenv
+TRUST_PROXY=true
+TRUSTED_PROXIES=192.0.2.10,198.51.100.0/24,2001:db8:1234::/48
+```
+
+Replace these documentation addresses with your actual proxy addresses or narrowly scoped proxy networks. Recreate the app after changing them. The console first verifies the signed socket peer. If that peer is untrusted, it ignores `X-Forwarded-For`. Otherwise it walks the header from right to left, skips trusted proxies and uses the first untrusted address as the client IP. Entries further left cannot override that result. When every address is trusted, the leftmost address is used. Malformed addresses encountered during traversal and chains longer than 16 entries are rejected.
+
+Each proxy must append the actual connecting address, or overwrite the header with a client address it has independently verified. If a proxy replaces the client's address with its own address and discards the original, the console cannot reconstruct the missing IP. Restrict direct access and do not include client networks in the proxy trust list.
+
+For compatibility, `TRUST_PROXY=true` with an empty `TRUSTED_PROXIES` still uses only the rightmost forwarded IP. In that mode, the final trusted proxy must overwrite the header with the actual client address and block direct access to the app.
+
+Audit events and sign-in limits use the same resolved client IP. Older audit events and background work have no recorded request IP. Login protection applies per IP and per username plus IP; admin login verification has reserved capacity. Browsing privileges do not bypass authentication attempt limits.
 
 ### Console, providers and registries
 
@@ -532,3 +546,4 @@ For support or inquiries:
 Rubix Studios
 
 [https://rubixstudios.com.au](https://rubixstudios.com.au)
+
