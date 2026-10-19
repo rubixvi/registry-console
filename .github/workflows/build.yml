@@ -18,6 +18,8 @@ concurrency:
 
 env:
   NEXT_TELEMETRY_DISABLED: '1'
+  IMAGE_REGISTRY: ${{ vars.IMAGE_REGISTRY || 'docker.io' }}
+  GITHUB_REGISTRY: ${{ vars.GITHUB_REGISTRY || 'ghcr.io' }}
   IMAGE_NAME: ${{ vars.IMAGE_NAME || github.repository }}
   GHCR_IMAGE_NAME: ${{ github.repository }}
 
@@ -125,10 +127,14 @@ jobs:
         id: image
         shell: bash
         run: |
+          image_registry="${IMAGE_REGISTRY,,}"
+          github_registry="${IMAGE2_REGISTRY,,}"
           dockerhub_name="${IMAGE_NAME,,}"
           ghcr_name="${GHCR_IMAGE_NAME,,}"
-          printf 'dockerhub=docker.io/%s\n' "$dockerhub_name" >> "$GITHUB_OUTPUT"
-          printf 'ghcr=ghcr.io/%s\n' "$ghcr_name" >> "$GITHUB_OUTPUT"
+          printf 'image_registry=%s\n' "$image_registry" >> "$GITHUB_OUTPUT"
+          printf 'github_registry=%s\n' "$github_registry" >> "$GITHUB_OUTPUT"
+          printf 'dockerhub=%s/%s\n' "$image_registry" "$dockerhub_name" >> "$GITHUB_OUTPUT"
+          printf 'ghcr=%s/%s\n' "$github_registry" "$ghcr_name" >> "$GITHUB_OUTPUT"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v4.4.0
@@ -141,14 +147,14 @@ jobs:
       - name: Authenticate to Docker Hub
         uses: docker/login-action@v4.6.0
         with:
-          registry: docker.io
+          registry: ${{ steps.image.outputs.image_registry }}
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
 
       - name: Authenticate to GHCR
         uses: docker/login-action@v4.6.0
         with:
-          registry: ghcr.io
+          registry: ${{ steps.image.outputs.github_registry }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
