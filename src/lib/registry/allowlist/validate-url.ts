@@ -4,6 +4,7 @@ import { env } from '@/lib/config/env'
 import { allowedOrigins } from '@/lib/registry/allowlist/allowed-origins'
 import { ALLOWED_PROTOCOLS } from '@/lib/registry/allowlist/constants'
 import { DOCKER_HUB_API, DOCKER_HUB_REGISTRY } from '@/lib/registry/dockerhub-settings'
+import { GITHUB_REGISTRY } from '@/lib/registry/github/constants'
 import { AppError } from '@/lib/security/error'
 import { type RegistryProvider } from '@/types/registry'
 
@@ -31,6 +32,7 @@ export function validateUrl(raw: string, provider?: RegistryProvider): string {
 
   const trusted =
     url.origin === DOCKER_HUB_REGISTRY ||
+    (provider === 'github' && url.origin === GITHUB_REGISTRY) ||
     (provider === 'dockerhub' && url.origin === DOCKER_HUB_API)
 
   if (!trusted && !allowedOrigins(config.REGISTRY_ALLOWED_ORIGINS).includes(url.origin)) {

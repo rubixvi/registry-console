@@ -66,7 +66,7 @@ async function unlockSecurity({ request, credentials }: Account) {
     body: { password: credentials.password },
   })
 
-  assert.equal(page.status, 200, 'viewers have an account security page')
+  assert.equal(page.status, 200, 'members have an account security page')
   assert.equal(enrollment.status, 400, 'enrollment requires fresh verification')
   assert.equal(incorrect.status, 401, 'incorrect reauthentication is rejected')
   assert.equal(verified.status, 200, 'password unlocks initial security setup')

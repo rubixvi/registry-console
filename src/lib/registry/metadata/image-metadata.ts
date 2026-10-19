@@ -1,5 +1,6 @@
 import 'server-only'
 
+import { requireRepository } from '@/lib/registry/access'
 import { hubPrivacy, hubTags } from '@/lib/registry/dockerhub'
 import { hubRequest } from '@/lib/registry/dockerhub-client'
 import { imageDetails } from '@/lib/registry/image'
@@ -17,6 +18,8 @@ export async function imageMetadata(
   reference: string,
   refresh = false
 ): Promise<ImageMetadata> {
+  await requireRepository(registry, repository)
+
   referenceName.parse(reference)
   const isPrivate = await hubPrivacy(registry, repository, refresh)
 

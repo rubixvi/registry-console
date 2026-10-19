@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { formatDateISO, formatDateShort } from '@/utils/format-date'
 
 type Props = {
   id: string
@@ -16,16 +17,6 @@ type Props = {
   onChange: (date: Date | undefined) => void
 }
 
-function dateValue(date: Date | undefined): string {
-  if (!date) return ''
-
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-
-  return `${year}-${month}-${day}`
-}
-
 export function DateFilter({ id, label, name, value, onChange }: Props) {
   const [open, setOpen] = useState(false)
 
@@ -33,7 +24,7 @@ export function DateFilter({ id, label, name, value, onChange }: Props) {
     <div className="grid gap-2">
       <Label htmlFor={id}>{label}</Label>
 
-      <input name={name} type="hidden" value={dateValue(value)} />
+      <input name={name} type="hidden" value={formatDateISO(value)} />
 
       <Popover onOpenChange={setOpen} open={open}>
         <PopoverTrigger asChild>
@@ -44,13 +35,7 @@ export function DateFilter({ id, label, name, value, onChange }: Props) {
             variant="outline"
           >
             <span className={value ? undefined : 'text-muted-foreground'}>
-              {value
-                ? value.toLocaleDateString('en-AU', {
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric',
-                  })
-                : 'Select date'}
+              {value ? formatDateShort(value) : 'Select date'}
             </span>
 
             <CalendarIcon aria-hidden="true" className="size-4 text-muted-foreground" />

@@ -83,7 +83,7 @@ export async function checkRegistry({
       assert.ok(fixture.state.tokens.every((token) => !token.scope.includes('evil')))
     })
 
-    await t.test('viewers can browse but cannot delete images', async () => {
+    await t.test('members can browse but cannot delete images', async () => {
       const catalogue = await request(`${api}/catalog`, {
         cookie: readerCookie,
       })

@@ -15,7 +15,7 @@ export const userSchema = z
     username: z.string().regex(/^[a-zA-Z0-9_.@-]{1,64}$/),
     passwordHash: passwordHashSchema.optional(),
     authProvider: z.enum(['local', 'ldap', 'sso']).optional(),
-    role: z.enum(['admin', 'viewer']),
+    role: z.enum(['admin', 'member', 'viewer']),
   })
   .superRefine((user, context) => {
     if ((!user.authProvider || user.authProvider === 'local') && !user.passwordHash) {

@@ -3,10 +3,10 @@
 import Link from 'next/link'
 import { Layers3, ShieldCheck } from 'lucide-react'
 
-import { CopyButton } from '@/components/registry/controls/copy-button'
-import { DeleteDialog } from '@/components/registry/controls/delete-dialog'
+import { CopyCommand } from '@/components/registry/image/copy-command'
+import { DeleteDialog } from '@/components/registry/image/delete-dialog'
 import { ImageHistory } from '@/components/registry/image/history'
-import { ImageScan } from '@/components/registry/security/scan'
+import { ImageScan } from '@/components/registry/scan'
 import { ErrorMessage } from '@/components/shared/error-message'
 import { Loading } from '@/components/shared/loading'
 import { useResource } from '@/hooks/shared/use-resource'
@@ -56,7 +56,7 @@ export function Inspector({ registry, repository, reference, admin, pullUrl }: P
 
   return (
     <div className="space-y-6">
-      <CopyButton command={command} />
+      <CopyCommand command={command} />
 
       <section className="rounded-xl border bg-card p-6 shadow-xs">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">

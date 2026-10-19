@@ -1,11 +1,15 @@
 import { type NextRequest, NextResponse } from 'next/server'
 
+import { auditRequest } from '@/lib/audit'
+import { findUser } from '@/lib/auth/accounts'
 import { auditAuthFailure } from '@/lib/auth/audit'
 import { verifyCredentials } from '@/lib/auth/credentials'
+import { authenticateDirectory } from '@/lib/auth/directory'
 import { limitSignIn } from '@/lib/auth/limit'
 import { issueRequest } from '@/lib/auth/requests'
 import { loginResponse } from '@/lib/auth/response'
 import { getAuthenticator } from '@/lib/auth/totp'
+import { env } from '@/lib/config/env'
 import { users } from '@/lib/config/users'
 import { apiError } from '@/lib/security/api'
 import { AppError } from '@/lib/security/error'
@@ -18,7 +22,7 @@ const LOGIN_WINDOW_MS = 15 * 60_000
 const MAX_USER_ATTEMPTS = 8
 const enter = createGate(3, 1)
 
-export async function POST(request: NextRequest) {
+export const POST = auditRequest(async (request: NextRequest) => {
   let actor = 'anonymous'
 
   try {
@@ -30,7 +34,8 @@ export async function POST(request: NextRequest) {
 
     rateLimit(`login-user:${username}:${source}`, MAX_USER_ATTEMPTS, LOGIN_WINDOW_MS)
 
-    const user = users().find((user) => user.username === username)
+    const configured = users()
+    let user = findUser(username)
 
     actor = user?.username ?? 'anonymous'
 
@@ -38,7 +43,15 @@ export async function POST(request: NextRequest) {
     const release = await enter(user?.role === 'admin')
 
     try {
-      valid = await verifyCredentials(password, user)
+      if (
+        !configured.some((entry) => entry.username.toLowerCase() === username.toLowerCase()) &&
+        env().LDAP_ENABLED === 'true'
+      ) {
+        user = (await authenticateDirectory(username, password)) ?? undefined
+        valid = Boolean(user)
+      } else {
+        valid = await verifyCredentials(password, user)
+      }
     } finally {
       release()
     }
@@ -46,6 +59,8 @@ export async function POST(request: NextRequest) {
     if (!user || !valid) {
       throw new AppError(401, 'Invalid username or password.')
     }
+
+    actor = user.username
 
     if (getAuthenticator(user)) {
       const response = NextResponse.json(
@@ -64,4 +79,4 @@ export async function POST(request: NextRequest) {
 
     return apiError(error)
   }
-}
+})

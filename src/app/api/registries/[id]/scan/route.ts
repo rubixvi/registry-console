@@ -1,5 +1,7 @@
 import { after, NextResponse } from 'next/server'
 
+import { auditBackground } from '@/lib/audit'
+import { requireRepository } from '@/lib/registry/access'
 import { hubPrivacy } from '@/lib/registry/dockerhub'
 import { requirePublic } from '@/lib/registry/scan-policy'
 import { getRegistry } from '@/lib/registry/store'
@@ -22,6 +24,8 @@ export const GET = api(async (request, context) => {
   }
 
   const registry = getRegistry(id)
+
+  await requireRepository(registry, parsed.data.repository)
 
   if ((await hubPrivacy(registry, parsed.data.repository)) !== false) {
     return NextResponse.json({ enabled: false, status: 'not-scanned' })
@@ -53,7 +57,7 @@ export const POST = api(async (request, context, identity) => {
     throw new AppError(422, 'This reference has no runnable image to scan.')
   }
 
-  if (job.started) after(() => withLimits(true, () => runScan(job)))
+  if (job.started) after(() => auditBackground(() => withLimits(true, () => runScan(job))))
 
   return NextResponse.json(scanStatus(registry, repository, digest), { status: 202 })
 }, 'admin')

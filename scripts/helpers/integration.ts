@@ -90,7 +90,8 @@ export async function startIntegration(context: TestContext) {
         ENCRYPTION_KEY: key.toString('hex'),
         AUTH_USERS_JSON: JSON.stringify([
           { username: 'admin', passwordHash: hash, role: 'admin' },
-          { username: 'reader', passwordHash: hash, role: 'viewer' },
+          { username: 'reader', passwordHash: hash, role: 'member' },
+          { username: 'public-reader', passwordHash: hash, role: 'viewer' },
         ]),
         TRUST_PROXY: 'false',
         REGISTRY_ALLOWED_ORIGINS: `${fixture.origin},${consoleFixture.origin},${browsingFixture.origin}`,

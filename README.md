@@ -1,8 +1,8 @@
 # Registry Console
 
-Registry Console is a self-hosted interface for Docker and OCI registries, including Docker Hub. It lets you browse repositories, filter and sort tags, inspect manifests and build history, review Trivy reports, and delete manifests with a preview of the affected tags.
+Registry Console is a self-hosted interface for Docker and OCI registries, including Docker Hub and GitHub Container Registry. It lets you browse repositories, filter and sort tags, inspect manifests and build history, review Trivy reports, and delete manifests with a preview of the affected tags.
 
-The console connects to your existing registries. Images stay in those registries; Docker clients continue to push and pull directly. Connection settings, accounts' security state, scan reports and audit events are stored in SQLite. Admin and viewer accounts share the configured connections.
+The console connects to your existing registries. Images stay in those registries; Docker clients continue to push and pull directly. Connection settings, accounts' security state, scan reports and audit events are stored in SQLite. Admin, member and viewer accounts share the configured connections, with private repositories restricted to admins and members.
 
 <img width="1912" height="914" alt="Registry browsing" src="https://github.com/user-attachments/assets/6d4d8836-2bee-45ce-8d5d-89b7f710efb0" />
 
@@ -12,12 +12,12 @@ The console connects to your existing registries. Images stay in those registrie
 
 ## Features
 
-- Multiple registry connections, repository search, tag filters and date sorting with newest first by default. Distribution registries support namespace trees; Docker Hub uses a flat namespace list.
+- Multiple registry connections, repository search, tag filters and date sorting with newest first by default. Distribution and GitHub registries support namespace trees; Docker Hub uses a flat namespace list.
 - Docker schema v2 and OCI manifests, multi-platform images, configuration, labels, layer sizes and build history. Public pull addresses can differ from internal connection addresses.
 - Trivy vulnerability reports for immutable digests, without a Docker socket. Build attestations and private Docker Hub repositories are excluded.
 - Individual and bulk manifest deletion with typed confirmation, a preview of all tags sharing each digest, and an audit trail.
-- Local passwords, LDAP, or SSO through Authentik, GitHub, Google, Zitadel and Keycloak. Local accounts can use passkeys; password and SSO logins can require authenticator or recovery codes.
-- Admin and viewer roles, encrypted registry credentials, configurable branding and an admin audit view.
+- Local passwords, LDAP with account provisioning and group roles, or SSO through Authentik, GitHub, Google, Zitadel and Keycloak. Local accounts can use passkeys; password and SSO logins can require authenticator or recovery codes.
+- Admin, member and viewer roles, encrypted registry credentials, configurable branding and an admin audit view.
 
 ## Published image
 
@@ -216,8 +216,12 @@ Restart or recreate the console after changing environment configuration. The su
 | `ENCRYPTION_KEYS_JSON` | `{}` | Previous key IDs and hex keys retained for decryption during rotation. |
 | `AUTH_USERNAME`, `AUTH_PASSWORD_HASH` | Required for single-account mode | Local admin username and generated scrypt hash. |
 | `AUTH_EMAIL`, `AUTH_USER_ID` | Empty | Optional normalized account email and explicit immutable account UUID. |
-| `AUTH_USERS_JSON` | Empty | Explicit account list; replaces single-account configuration. |
-| `SSO_PROVIDERS_JSON` | `[]` | Trusted SSO provider configuration. See below. |
+| `AUTH_USERS_JSON` | Empty | Explicit local and SSO account list; replaces single-account configuration. |
+| `GITHUB_ID`, `GITHUB_SECRET` | Empty | Enable GitHub sign-in when both are set. |
+| `GOOGLE_ID`, `GOOGLE_SECRET` | Empty | Enable Google sign-in when both are set. |
+| `AUTHENTIK_ID`, `AUTHENTIK_SECRET`, `AUTHENTIK_ISSUER` | Empty | Enable Authentik sign-in with the exact provider issuer. |
+| `ZITADEL_ID`, `ZITADEL_SECRET`, `ZITADEL_ISSUER` | Empty | Enable Zitadel sign-in with the exact instance issuer. |
+| `KEYCLOAK_ID`, `KEYCLOAK_SECRET`, `KEYCLOAK_ISSUER` | Empty | Enable Keycloak sign-in with the exact realm issuer. |
 | `SESSION_HOURS` | `8` | Local and SSO session lifetime, 1–24 hours. |
 | `TRUST_PROXY` | `false` | Trust the rightmost forwarded IP from a controlled proxy. |
 | `AUDIT_RETENTION_DAYS` | `90` | Audit retention by age, 1–3650 days. Older events are pruned on subsequent audit writes. |
@@ -238,22 +242,26 @@ docker compose run --rm -it --no-deps --entrypoint node app scripts/encrypt-secr
 
 ## Accounts and access
 
-All accounts share one workspace and its saved registry credentials. A viewer can inspect private repositories those credentials can read, without having a personal upstream account. There are no per-user registry assignments.
+All accounts share one workspace and its configured connections. Admins and members can read private repositories using saved registry credentials. Viewers can access only repositories confirmed to be public. Repository visibility is enforced in catalogue and search results, direct image and metadata requests, scan reports and server-rendered pages. Unknown visibility is denied. There are no per-user registry assignments.
 
-| Action | Admin | Viewer |
-| --- | --- | --- |
-| Browse repositories, inspect images and read reports | Yes | Yes |
-| Add or change connections, delete manifests, start or override scans | Yes | No |
-| Change workspace branding and read audit events | Yes | No |
-| Manage permitted personal sign-in methods | Yes | Yes |
+| Action | Admin | Member | Viewer |
+| --- | --- | --- | --- |
+| Browse public repositories and inspect public images | Yes | Yes | Yes |
+| Browse private repositories and inspect private images | Yes | Yes | No |
+| Read reports for accessible images | Yes | Yes | Yes |
+| Add or change connections, delete manifests, start or override scans | Yes | No | No |
+| Change workspace branding and read audit events | Yes | No | No |
+| Manage permitted personal sign-in methods | Yes | Yes | Yes |
 
-Use `AUTH_USERS_JSON` for multiple accounts. Each username and each nonempty email must be unique. Emails are trimmed and lowercased. At least one admin is required.
+Existing viewer accounts now have public access only. Change an account's role to `member` if it should retain read access to private repositories. This applies to local accounts, SSO accounts and LDAP group mappings.
+
+Use `AUTH_USERS_JSON` for multiple local or SSO accounts. Each username and each nonempty email must be unique. Emails are trimmed and lowercased. At least one configured admin is required.
 
 ```dotenv
 AUTH_USERS_JSON='[{"id":"00000000-0000-4000-8000-000000000001","username":"admin","email":"admin@example.com","passwordHash":"REPLACE_WITH_ADMIN_SCRYPT_HASH","role":"admin"},{"id":"00000000-0000-4000-8000-000000000002","username":"reader","email":"reader@example.com","authProvider":"sso","role":"viewer"}]'
 ```
 
-`authProvider` defaults to `local`, which requires a password hash. `sso` requires an email and has no local password. `ldap` uses a directory password and omits `passwordHash`. A local account with an email can also use SSO. LDAP accounts do not link through SSO.
+`authProvider` defaults to `local`, which requires a password hash. `sso` requires an email and has no local password. LDAP accounts are provisioned separately from directory groups and must not be listed in this JSON. A local account with an email can also use SSO. LDAP accounts do not link through SSO.
 
 Existing accounts can add an email without replacing enrolled security methods. A username change with the same email preserves the stored account identity and factors, and revokes old sessions. Password, email, role and authentication configuration changes invalidate existing sessions. Removing an account clears its security state at startup. Changing its explicit UUID replaces its identity and clears enrolled methods and SSO bindings; do not reuse an identity for a different person.
 
@@ -271,21 +279,44 @@ Supported providers are Authentik, GitHub, Google, Zitadel and Keycloak. Configu
 
 For example, the Google redirect URI for `APP_ORIGIN=https://console.example.com` is `https://console.example.com/api/auth/sso/google/callback`. Do not register wildcard callbacks. Enable the standard authorization-code flow and the `openid`, `profile` and `email` scopes for OIDC clients. GitHub uses `read:user` and `user:email`; it requires the account's verified primary email.
 
-Configure only the providers you use:
+Configure only the providers you use. Set both the client ID and secret to enable a provider. Leave both empty to disable it. Incomplete credentials stop startup with a configuration error. Authentik, Zitadel and Keycloak also require their issuer.
 
 ```dotenv
-SSO_PROVIDERS_JSON='[
-  {"id":"authentik","name":"Authentik","issuer":"https://auth.example.com/application/o/console/","clientId":"REPLACE","clientSecret":"REPLACE"},
-  {"id":"github","name":"GitHub","clientId":"REPLACE","clientSecret":"REPLACE"},
-  {"id":"google","name":"Google","clientId":"REPLACE","clientSecret":"REPLACE"},
-  {"id":"zitadel","name":"Zitadel","issuer":"https://identity.example.com","clientId":"REPLACE","clientSecret":"REPLACE","authMethod":"basic"},
-  {"id":"keycloak","name":"Keycloak","issuer":"https://identity.example.com/realms/console","clientId":"REPLACE","clientSecret":"REPLACE"}
-]'
+GITHUB_ID=REPLACE
+GITHUB_SECRET=REPLACE
+
+GOOGLE_ID=REPLACE
+GOOGLE_SECRET=REPLACE
+
+AUTHENTIK_ID=REPLACE
+AUTHENTIK_SECRET=REPLACE
+AUTHENTIK_ISSUER=https://auth.example.com/application/o/console/
+
+ZITADEL_ID=REPLACE
+ZITADEL_SECRET=REPLACE
+ZITADEL_ISSUER=https://identity.example.com
+ZITADEL_AUTH_METHOD=basic
+
+KEYCLOAK_ID=REPLACE
+KEYCLOAK_SECRET=REPLACE
+KEYCLOAK_ISSUER=https://identity.example.com/realms/console
 ```
 
-Use the issuer reported by your provider's discovery document, including its path and trailing slash. `authMethod` is `post` by default; set it to `basic` if the client uses HTTP Basic token-endpoint authentication. For Zitadel, select the matching client-secret authentication method when creating its Web application. For Authentik and Keycloak, ensure the email scope exposes `email` and a truthful boolean `email_verified`. A provider that cannot verify the email is rejected.
+These variables replace `SSO_PROVIDERS_JSON`. Move each existing provider's credentials and options to its own variables, remove the JSON setting and recreate the console. Provider IDs and callback paths stay the same, so existing identity bindings are retained.
 
-Discovery, token, user-info and signing-key requests require HTTPS and cannot follow redirects. Endpoints must share the issuer origin, apart from the built-in Google and GitHub destinations. If your trusted provider publishes an endpoint on another host, add its exact origin through the provider's `origins` array, for example `"origins":["https://keys.example.com"]`. These origins are security-sensitive: they can receive credentials or supply identity data.
+Use the issuer reported by your provider's discovery document, including its path and trailing slash. GitHub and Google use fixed issuers. Optional settings use the same provider prefix, such as `ZITADEL_NAME`, `ZITADEL_AUTH_METHOD` and `ZITADEL_ORIGINS`.
+
+| Suffix | Default | Purpose |
+| --- | --- | --- |
+| `_NAME` | Provider name | Label shown on the sign-in button. |
+| `_AUTH_METHOD` | `post` | Token-endpoint client-secret authentication, either `post` or `basic`. |
+| `_ORIGINS` | Empty | Comma-separated exact HTTPS origins for trusted endpoints outside the issuer origin, up to eight. |
+
+For Zitadel, select the matching client-secret authentication method when creating its Web application. For Authentik and Keycloak, ensure the email scope exposes `email` and a truthful boolean `email_verified`. A provider that cannot verify the email is rejected.
+
+Discovery, token, user-info and signing-key requests require HTTPS and cannot follow redirects. Endpoints must share the issuer origin, apart from the built-in Google and GitHub destinations. If your trusted provider publishes an endpoint on another host, set its exact origin, for example `AUTHENTIK_ORIGINS=https://keys.example.com`. These origins are security-sensitive because they can receive credentials or supply identity data.
+
+The supplied Compose file reads these settings from `.env`. For a deployment that lists environment variables individually, pass the chosen provider's ID, secret and issuer through to the app service. Keep SSO credentials out of the scanner service. GitHub sign-in credentials are separate from a registry connection's package access token.
 
 The first successful sign-in matches the verified provider email to an explicitly configured console account. It then binds that account to the provider's immutable subject and issuer. Subsequent logins must match both the binding and configured email. An email is a matching attribute, not an immutable identity: a reassigned email or changed provider subject cannot silently take over an existing binding. No accounts or admin roles are created from provider claims. Provider access tokens and client secrets are never returned to the browser or stored as console sessions.
 
@@ -307,7 +338,7 @@ This clears sessions, pending verifications, passkeys, authenticator setup, reco
 
 ### LDAP
 
-Directory users must be explicitly listed with `authProvider: "ldap"` and a console role. Directory membership does not grant access or roles automatically.
+LDAP users do not need entries in `AUTH_USERS_JSON`. After a successful directory password check, the console creates a local account record and assigns a role from configured directory groups. Unmatched groups deny access. A directory account cannot replace a configured local or SSO account, including through a matching email. Keep a configured recovery admin for directory outages.
 
 ```dotenv
 LDAP_ENABLED=true
@@ -317,20 +348,61 @@ LDAP_BASE_DN=ou=People,dc=example,dc=com
 LDAP_BIND_DN=cn=registry-search,ou=ServiceAccounts,dc=example,dc=com
 LDAP_BIND_PASSWORD_ENCRYPTED=REPLACE_WITH_ENCRYPTED_SEARCH_PASSWORD
 LDAP_USER_FILTER=(uid={username})
+LDAP_ID_ATTRIBUTE=entryUUID
+LDAP_USERNAME_ATTRIBUTE=uid
+LDAP_EMAIL_ATTRIBUTE=mail
+LDAP_GROUP_ATTRIBUTE=memberOf
+LDAP_ADMIN_GROUPS=cn=registry-admins,ou=Groups,dc=example,dc=com
+LDAP_MEMBER_GROUPS=cn=registry-members,ou=Groups,dc=example,dc=com
+LDAP_VIEWER_GROUPS=cn=registry-viewers,ou=Groups,dc=example,dc=com
+LDAP_CHECK_SECONDS=60
 LDAP_SESSION_MINUTES=15
 ```
 
-Encrypt the search password with `scripts/encrypt-secret.mjs` and the active console key. Use a least-privilege search account. `LDAP_BASE_DN`, `LDAP_BIND_DN` and the encrypted password are required when LDAP is enabled. The filter must contain exactly one `{username}` placeholder; inserted usernames are escaped. Searches must resolve exactly one entry.
+Encrypt the search password with `scripts/encrypt-secret.mjs` and the active console key. Use a search account permitted to read the configured identity, group and account-status attributes. Verified LDAPS or `ldap://` with `LDAP_STARTTLS=true` is required before either bind. Referrals, ambiguous results and missing immutable identifiers are rejected. Passwords are not stored.
 
-Use verified LDAPS, or `ldap://` with `LDAP_STARTTLS=true`; plaintext binds are rejected. LDAP sessions last 5–60 minutes, default 15. Directory disablement and password changes affect future sign-ins; remove the configured console user and recreate the app to revoke existing access immediately.
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `LDAP_ID_ATTRIBUTE` | `entryUUID` | Immutable directory identifier. Use `objectGUID` for Active Directory; binary GUIDs are preserved. Never use a username or email as the immutable identifier. |
+| `LDAP_USERNAME_ATTRIBUTE` | `uid` | Canonical username returned by the directory. |
+| `LDAP_EMAIL_ATTRIBUTE` | `mail` | Optional account email. It does not replace the immutable identity. |
+| `LDAP_GROUP_ATTRIBUTE` | `memberOf` | Attribute containing the user's group memberships. |
+| `LDAP_ADMIN_GROUPS` | Empty | Group values allowed to manage the console. |
+| `LDAP_MEMBER_GROUPS` | Empty | Group values allowed to read public and private repositories. |
+| `LDAP_VIEWER_GROUPS` | Empty | Group values allowed to read public repositories only. |
+| `LDAP_GROUP_BASE_DN` | Empty | Optional group search base for directories without a suitable membership attribute. |
+| `LDAP_GROUP_FILTER` | `(member={dn})` | Group search filter. Supports escaped `{dn}` and `{username}` placeholders. |
+| `LDAP_ACCESS_FILTER` | Empty | Additional user search condition for directory-specific access and enabled-account rules. |
+| `LDAP_CHECK_SECONDS` | `60` | Recheck active directory access after 15–300 seconds. |
+| `LDAP_SESSION_MINUTES` | `15` | Maximum directory session lifetime, 5–60 minutes. |
+
+At least one role group is required when LDAP is enabled. Multiple group values use semicolons or newlines; commas remain part of a distinguished name. Matching compares the complete trimmed group value without case sensitivity. The highest matching role wins, in the order `admin`, `member`, `viewer`. Nested groups are not expanded automatically. Configure a directory-supported group search if transitive membership is required.
+
+The user filter must contain exactly one `{username}` placeholder. `LDAP_ACCESS_FILTER` is combined with it and with later immutable-ID searches. For Active Directory, use `LDAP_USERNAME_ATTRIBUTE=sAMAccountName`, `LDAP_ID_ATTRIBUTE=objectGUID` and a matching user filter. Disabled and expired AD accounts, computed AD lockouts and permanent OpenLDAP locks are checked when their status attributes are returned. Use the access filter to enforce any additional rules required by your directory, and ensure the search account can read those attributes.
+
+Active requests revalidate group membership and access after the configured check interval. Removing all allowed groups or an account revokes its sessions; role, email and canonical username changes also revoke existing sessions. Directory outages deny access once a check is due, while local recovery accounts remain usable. No background sync is required. Password changes do not directly revoke a console session, which remains bounded by its lifetime and access checks.
+
+A rename preserves security methods only when the immutable directory identity stays the same. A reassigned username creates a new account identity and clears the previous account's security methods. Configuration changes invalidate directory sessions; changing the directory URL, base DN or identifier attribute changes its identity scope. LDAP users cannot use local passkeys to bypass directory access.
+
+For an existing deployment, remove entries with `authProvider: "ldap"` from `AUTH_USERS_JSON`, configure group mappings and restart. Legacy LDAP accounts must sign in again and re-enrol their console security methods. Local and SSO accounts remain configured through their existing settings.
 
 ## Registry connections and deletion
 
 Use a registry origin without `/v2` or a repository path. Distribution discovery requires its catalogue and tag APIs; vendor-specific project discovery is not implemented. Basic and Bearer authentication are supported. A dedicated registry account should have only the permissions the console needs.
 
+Viewer visibility uses Docker Hub's explicit privacy flag and GitHub Packages' `public` visibility. For Distribution registries, the console verifies anonymous repository pull access through the tag API without saved credentials. A registry that requires authentication for all repositories is private to viewers. Failed visibility checks hide the repository. Checks are shared within one request, and catalogue cursors are encrypted to avoid exposing hidden repository names. Shared credential and manifest caches cannot bypass the visibility check.
+
+
 Docker Hub connections use a user or organisation namespace, such as `rubixvi` or `library`. Public browsing can use empty credentials; private browsing needs a Docker username and suitable token. Docker Hub's registry, Hub API, token endpoint and recognised HTTPS blob CDN destinations are built in. Other destinations require explicit approval. Docker Hub defaults copied pull commands to `docker.io`; a connection can override it.
 
 Docker Hub is not forced to be read only. Deletion still depends on the connection setting, upstream permission and endpoint support. The console uses manifest deletion by digest through the Distribution API; it does not implement Docker Hub's separate tag-removal API. Upstream rate limits can still apply to admins. The console's browsing cache is reused unless an explicit refresh is requested; admin capacity is reserved in shared request and search queues.
+
+Choose **GitHub Container** to connect to `https://ghcr.io`. Set the namespace to the GitHub user or organisation that owns the packages. Provide your GitHub username and a separate personal access token (classic) with `read:packages`. For organisations that enforce SSO, authorise the token for that organisation. The console lists container packages through GitHub's API and reads tags, manifests and configuration through GHCR. Your own private user packages use the authenticated-user API; a different user's namespace uses GitHub's public package endpoints.
+
+GitHub connections can allow deletion. This requires `read:packages`, `delete:packages` and admin permission on the package. The console resolves the immutable digest to its active GitHub package version and deletes that version through the Packages API. Every tag attached to the version is affected. GitHub may refuse deletion, including for public versions with more than 5,000 downloads. The existing preview and confirmation steps apply.
+
+The fixed GHCR origin, GitHub Packages API and `pkg-containers.githubusercontent.com` blob origin are built in for GitHub connections. Redirected blob requests do not carry registry credentials. A GitHub connection's package token is stored encrypted with the other registry credentials and shared by console accounts with access to the workspace. It is independent of `GITHUB_ID` and `GITHUB_SECRET`, which configure console sign-in. The scanner receives only the selected connection's package credentials for a scan.
+
 
 Bulk deletion accepts up to 100 selected tags on the visible page. The preview resolves every repository tag to list all aliases of each selected digest, including unselected tags. If it cannot resolve the complete preview, deletion is not offered from that incomplete result. The plan belongs to the current admin session, lasts five minutes and can be used once. Tags can still change upstream after preview; concurrent registry writes are outside the console's transaction boundary.
 
@@ -338,7 +410,7 @@ Deleting a manifest can invalidate every tag pointing to it. It does not run reg
 
 ## Trivy scanning
 
-`TRIVY_ENABLED=true` enables scanning globally, including discovery and queued image references. Only runnable immutable digests are scanned. Build attestations are excluded; multi-platform images are scanned for up to eight runnable platforms. Private Docker Hub repositories are excluded even when saved credentials can read them. Unconfirmed Docker Hub privacy also prevents a scan. Private Distribution images can be scanned using connection credentials.
+`TRIVY_ENABLED=true` enables scanning globally, including discovery and queued image references. Only runnable immutable digests are scanned. Build attestations are excluded; multi-platform images are scanned for up to eight runnable platforms. Private Docker Hub repositories are excluded even when saved credentials can read them. Unconfirmed Docker Hub privacy also prevents a scan. Private Distribution and GitHub images can be scanned using connection credentials.
 
 One scan runs at a time. Other jobs remain queued and the inspector displays the current scanner actor and lease deadline. The deadline is a timeout, not a completion estimate. Queued and running states poll every three seconds. Requesting the same running digest returns its existing state. Admins can choose **Override scan limit**, including for queued work; this bypasses the hourly budget and spacing, but preserves single-job execution and eligibility checks.
 
@@ -369,7 +441,7 @@ The supplied Node launcher signs the actual socket peer internally and overwrite
 
 Allowlists constrain the console's registry requests, not DNS resolution or every process on the network. Token origins can receive registry credentials. SSO origins can receive provider client credentials and supply identity proofs. Configure only trusted services and use deployment egress policy when network isolation is required. HTTP registry access exposes credentials and content on that connection.
 
-Read-only connection settings prevent deletion through the console; they do not reduce upstream credential permissions. Image metadata can contain sensitive labels or build arguments. Viewer access includes that metadata and every accessible private repository in the shared workspace.
+Read-only connection settings prevent deletion through the console; they do not reduce upstream credential permissions. Image metadata can contain sensitive labels or build arguments. Members and admins can read that metadata from accessible private repositories; viewers can read metadata only from confirmed public repositories.
 
 ### Scanner
 

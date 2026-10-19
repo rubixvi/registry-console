@@ -83,6 +83,7 @@ export async function mockConsole() {
     if (pathname === '/v2/team/app/tags/list') {
       response.end(
         JSON.stringify({
+          name: 'team/app',
           tags: [...tags].filter(([, digest]) => !deleted.has(digest)).map(([tag]) => tag),
         })
       )

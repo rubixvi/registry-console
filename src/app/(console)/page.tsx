@@ -1,7 +1,7 @@
 import { type Metadata } from 'next'
 import { redirect } from 'next/navigation'
 
-import { RegistryList } from '@/components/registry/registry-list'
+import { RegistryList } from '@/components/registry/list'
 import { getIdentity } from '@/lib/auth/session'
 import { getRegistries } from '@/lib/registry/store'
 

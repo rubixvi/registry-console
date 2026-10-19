@@ -2,7 +2,7 @@
 
 import { type ReactNode } from 'react'
 
-import { ImageScan } from '@/components/registry/security/scan'
+import { ImageScan } from '@/components/registry/scan'
 import { useMetadata } from '@/hooks/registry/use-metadata'
 
 type Props = {

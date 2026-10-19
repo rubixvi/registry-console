@@ -8,13 +8,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useSettings } from '@/hooks/settings/use-settings'
-import { type Branding } from '@/types/branding'
+import { type Branding as BrandingType } from '@/types/branding'
 
 type Props = {
-  branding: Branding
+  branding: BrandingType
 }
 
-export function BrandingForm({ branding }: Props) {
+export function Branding({ branding }: Props) {
   const { busy, error, submit, remove } = useSettings()
   const [colour, setColour] = useState(branding.accent)
 

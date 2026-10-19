@@ -1,7 +1,15 @@
+import { type NextRequest } from 'next/server'
+
+export type AuditHandler<Args extends unknown[], Result> = (
+  request: NextRequest,
+  ...args: Args
+) => Result
+
 export type AuditEntry = {
   id: number
   at: string
   actor: string
+  ip: string
   action: string
   target: string
 }

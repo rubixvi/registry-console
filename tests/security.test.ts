@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { createHmac, randomBytes, scryptSync } from 'node:crypto'
+import { createHash, createHmac, randomBytes, scryptSync } from 'node:crypto'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
@@ -13,7 +13,7 @@ import { auditAuthFailure } from '../src/lib/auth/audit'
 import { limitSignIn } from '../src/lib/auth/limit'
 import { createSession, resolveSession, tokenHash } from '../src/lib/auth/session'
 import { generateTotpSecret, getAuthenticator } from '../src/lib/auth/totp'
-import { userFingerprint, users } from '../src/lib/config/users'
+import { users } from '../src/lib/config/users'
 import { database } from '../src/lib/database/client'
 import { apiError } from '../src/lib/security/api'
 import { encryptSecret } from '../src/lib/security/crypto'
@@ -86,17 +86,18 @@ test('legacy enrollment migrates without MFA downgrade, and role/hash changes re
   const session = createSession(original)
   const encrypted = encryptSecret(generateTotpSecret())
   const db = database()
+  const legacy = createHash('sha256').update(JSON.stringify(original)).digest('hex')
 
   db.prepare('INSERT INTO authenticators VALUES (?, ?, ?, ?, ?)').run(
     original.username,
-    userFingerprint(original),
+    legacy,
     encrypted,
     -1,
     '[]'
   )
   db.prepare(
     "INSERT INTO passkeys VALUES ('legacy-key', ?, ?, 'handle', 'public', 0, '[]', 'Legacy', 'now', NULL)"
-  ).run(original.username, userFingerprint(original))
+  ).run(original.username, legacy)
   securityAccounts(users())
 
   const stableId = securityId(original)

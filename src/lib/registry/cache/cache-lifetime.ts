@@ -10,6 +10,9 @@ export function cacheLifetime(path: string): number {
   }
 
   if (
+    /^\/(?:user|users\/[^/]+|orgs\/[^/]+)(?:\/packages(?:\/container\/[^/]+\/versions)?)?$/.test(
+      pathname
+    ) ||
     /^\/v2\/namespaces\/[^/]+\/repositories(?:\/[^/]+(?:\/tags(?:\/[^/]+)?)?)?$/.test(pathname) ||
     pathname === '/v2/_catalog' ||
     /\/(?:tags\/list|manifests\/[^/]+)$/.test(pathname)

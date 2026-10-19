@@ -1,10 +1,14 @@
 import { z } from 'zod'
 
 import { keyName } from '@/lib/validation/keys'
+import { ldapEnv } from '@/lib/validation/ldap'
+import { ssoEnv } from '@/lib/validation/sso-env'
 import { pullUrlSchema } from '@/lib/validation/url'
 import { TAG_ORDERS } from '@/utils/tag-order'
 
 export const envSchema = z.object({
+  ...ssoEnv.shape,
+  ...ldapEnv.shape,
   APP_ORIGIN: z.string().url(),
   DATA_DIR: z.string().default('./data'),
   ENCRYPTION_KEY: z.string().regex(/^[a-f0-9]{64}$/i, 'Must be 32 random bytes encoded as hex'),
@@ -17,7 +21,6 @@ export const envSchema = z.object({
   TRUST_PROXY: z.enum(['true', 'false']).default('false'),
   SESSION_HOURS: z.coerce.number().int().min(1).max(24).default(8),
   AUDIT_RETENTION_DAYS: z.coerce.number().int().min(1).max(3650).default(90),
-  SSO_PROVIDERS_JSON: z.string().max(65_536).default('[]'),
   PULL_URL: pullUrlSchema.default(''),
   TAGLIST_ORDER: z.enum(TAG_ORDERS).default('date-desc'),
   HISTORY_CUSTOM_LABELS: z

@@ -2,9 +2,10 @@ import 'server-only'
 
 import { createHash } from 'node:crypto'
 
+import { requireRepository } from '@/lib/registry/access'
 import { cachedResponse, cacheGeneration, rememberResponse } from '@/lib/registry/cache'
 import { registryRequest } from '@/lib/registry/client'
-import { assertRepository } from '@/lib/registry/dockerhub'
+import { assertRepository } from '@/lib/registry/repository'
 import { AppError } from '@/lib/security/error'
 import { manifestSchema } from '@/lib/validation/image'
 import { referenceName, repositoryName } from '@/lib/validation/registry'
@@ -17,6 +18,8 @@ export async function imageManifest(
   reference: string,
   refresh = false
 ): Promise<ManifestResult> {
+  await requireRepository(registry, repository)
+
   repositoryName.parse(repository)
   assertRepository(registry, repository)
   referenceName.parse(reference)

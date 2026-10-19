@@ -23,9 +23,15 @@ export async function register(): Promise<void> {
   }
 
   if (configured.some((user) => user.authProvider === 'ldap')) {
-    const { ldapConfiguration } = await import('@/lib/auth/ldap')
+    throw new Error(
+      'Remove LDAP users from AUTH_USERS_JSON and configure LDAP role groups instead.'
+    )
+  }
 
-    ldapConfiguration()
+  if (env().LDAP_ENABLED === 'true') {
+    const { directoryConfig } = await import('@/lib/auth/directory')
+
+    directoryConfig()
   }
 
   securityAccounts(configured)

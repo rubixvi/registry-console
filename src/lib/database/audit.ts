@@ -1,5 +1,6 @@
 import 'server-only'
 
+import { auditIp } from '@/lib/audit/ip'
 import { env } from '@/lib/config/env'
 import { database } from '@/lib/database/client'
 import { type AuditEntry, type AuditInput, type AuditPage } from '@/types/audit'
@@ -9,9 +10,9 @@ export function audit(actor: string, action: string, target: string): void {
   const timestamp = new Date().toISOString()
 
   db.prepare(`
-    INSERT INTO audit (at, actor, action, target)
-    VALUES (?, ?, ?, ?)
-  `).run(timestamp, actor, action, target)
+    INSERT INTO audit (at, actor, ip, action, target)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(timestamp, actor, auditIp(), action, target)
 
   const cutoff = new Date(Date.now() - env().AUDIT_RETENTION_DAYS * 86_400_000).toISOString()
 
@@ -37,9 +38,9 @@ export function auditPage(input: AuditInput): AuditPage {
     const query = `%${input.query.replace(/[\\%_]/g, '\\$&')}%`
 
     conditions.push(
-      "(actor LIKE ? ESCAPE '\\' OR action LIKE ? ESCAPE '\\' OR target LIKE ? ESCAPE '\\')"
+      "(actor LIKE ? ESCAPE '\\' OR ip LIKE ? ESCAPE '\\' OR action LIKE ? ESCAPE '\\' OR target LIKE ? ESCAPE '\\')"
     )
-    values.push(query, query, query)
+    values.push(query, query, query, query)
   }
 
   if (input.from) {
@@ -65,7 +66,7 @@ export function auditPage(input: AuditInput): AuditPage {
   const pageWhere = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
   const rows = db
     .prepare(`
-      SELECT id, at, actor, action, target FROM audit
+      SELECT id, at, actor, ip, action, target FROM audit
       ${pageWhere}
       ORDER BY id DESC
       LIMIT ?

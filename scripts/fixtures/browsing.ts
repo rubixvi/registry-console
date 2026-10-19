@@ -43,7 +43,7 @@ export async function checkBrowsing({ context, request, readerCookie, fixture }:
       assert.equal(unknownParameter.status, 400, 'unsupported parameters are rejected')
     })
 
-    await t.test('viewers receive the complete paginated catalogue', async () => {
+    await t.test('members receive the complete paginated catalogue', async () => {
       const response = await request(`${api}/browse`, {
         cookie: readerCookie,
       })

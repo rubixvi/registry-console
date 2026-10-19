@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { RefreshCw } from 'lucide-react'
 
 import { DateFilter } from '@/components/audit/date'
-import { Pagination } from '@/components/registry/filters/pagination'
+import { Pagination } from '@/components/registry/shared/pagination'
 import { ErrorMessage } from '@/components/shared/error-message'
 import { Loading } from '@/components/shared/loading'
 import { Button } from '@/components/ui/button'
@@ -38,7 +38,7 @@ export function AuditLog() {
             id="audit-query"
             maxLength={256}
             name="query"
-            placeholder="Actor, action, or target"
+            placeholder="Actor, IP, action or target"
           />
         </div>
 
@@ -101,11 +101,12 @@ export function AuditLog() {
           </div>
         ) : state.data?.items.length ? (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-200 text-left text-sm">
+            <table className="w-full min-w-240 text-left text-sm">
               <thead className="border-b bg-muted/30 text-xs text-muted-foreground">
                 <tr>
                   <th className="px-5 py-3 font-medium">Time (UTC)</th>
                   <th className="px-5 py-3 font-medium">Actor</th>
+                  <th className="px-5 py-3 font-medium">IP address</th>
                   <th className="px-5 py-3 font-medium">Action</th>
                   <th className="px-5 py-3 font-medium">Target</th>
                 </tr>
@@ -120,6 +121,10 @@ export function AuditLog() {
                     </td>
 
                     <td className="min-w-32 px-5 py-4 break-all">{entry.actor}</td>
+
+                    <td className="min-w-36 px-5 py-4 font-mono text-xs whitespace-nowrap">
+                      {entry.ip || <span className="text-muted-foreground">Not recorded</span>}
+                    </td>
 
                     <td className="min-w-48 max-w-64 px-5 py-4 break-all font-mono text-xs">
                       {entry.action}

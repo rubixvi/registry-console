@@ -1,8 +1,9 @@
 import 'server-only'
 
+import { requireRepository } from '@/lib/registry/access'
 import { registryRequest } from '@/lib/registry/client'
-import { assertRepository } from '@/lib/registry/dockerhub'
 import { imageManifest } from '@/lib/registry/image'
+import { assertRepository } from '@/lib/registry/repository'
 import { AppError } from '@/lib/security/error'
 import { digestName, referenceName, repositoryName } from '@/lib/validation/registry'
 import { type RegistryRecord } from '@/types/registry'
@@ -12,6 +13,8 @@ export async function imageDigest(
   repository: string,
   reference: string
 ): Promise<string> {
+  await requireRepository(registry, repository)
+
   repositoryName.parse(repository)
   referenceName.parse(reference)
   assertRepository(registry, repository)

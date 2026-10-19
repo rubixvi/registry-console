@@ -2,8 +2,10 @@ import 'server-only'
 
 import { type NextRequest, NextResponse } from 'next/server'
 
+import { auditRequest } from '@/lib/audit'
 import { auditAuthFailure } from '@/lib/auth/audit'
 import { getIdentity } from '@/lib/auth/session'
+import { hasRole, withIdentity } from '@/lib/security/access'
 import { withLimits } from '@/lib/security/context'
 import { AppError } from '@/lib/security/error'
 import { requireOrigin } from '@/lib/security/request'
@@ -19,7 +21,7 @@ const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS'])
 const DEFAULT_ERROR = 'Operation failed. Check the server configuration or registry connection.'
 
 export function api(handler: Handler, role?: Role) {
-  return async (request: NextRequest, context: Context): Promise<NextResponse> => {
+  return auditRequest(async (request: NextRequest, context: Context): Promise<NextResponse> => {
     let identity: Identity | null = null
 
     try {
@@ -29,23 +31,25 @@ export function api(handler: Handler, role?: Role) {
         throw new AppError(401, 'Sign in to continue.')
       }
 
-      if (role === 'admin' && identity.role !== 'admin') {
-        throw new AppError(403, 'Administrator access required.')
+      if (role && !hasRole(identity.role, role)) {
+        throw new AppError(403, `${role === 'admin' ? 'Admin' : 'Member'} access required.`)
       }
 
       const current = identity
 
-      return await withLimits(current.role !== 'admin', async () => {
-        if (!SAFE_METHODS.has(request.method)) {
-          requireOrigin(request)
-        }
+      return await withIdentity(current, () =>
+        withLimits(current.role !== 'admin', async () => {
+          if (!SAFE_METHODS.has(request.method)) {
+            requireOrigin(request)
+          }
 
-        const response = await handler(request, context, current)
+          const response = await handler(request, context, current)
 
-        response.headers.set('Cache-Control', 'no-store')
+          response.headers.set('Cache-Control', 'no-store')
 
-        return response
-      })
+          return response
+        })
+      )
     } catch (error) {
       const path = new URL(request.url).pathname
 
@@ -55,7 +59,7 @@ export function api(handler: Handler, role?: Role) {
 
       return apiError(error)
     }
-  }
+  })
 }
 
 export function apiError(error: unknown): NextResponse {

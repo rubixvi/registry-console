@@ -45,13 +45,21 @@ Object.assign(process.env, {
   DATA_DIR: directory,
   ENCRYPTION_KEY: 'a'.repeat(64),
   AUTH_USERS_JSON: JSON.stringify(configured),
-  SSO_PROVIDERS_JSON: JSON.stringify(
-    ids.map((id) => ({
-      id,
-      issuer: `https://${id}.example.com`,
-      clientId: `console-${id}`,
-      clientSecret: 'test-client-secret',
-    }))
+  ...Object.fromEntries(
+    ids.flatMap((id) => {
+      const prefix = id.toUpperCase()
+
+      return [
+        [`${prefix}_ID`, `console-${id}`],
+        [`${prefix}_SECRET`, 'test-client-secret'],
+        [`${prefix}_NAME`, ''],
+        [`${prefix}_ORIGINS`, ''],
+        [`${prefix}_AUTH_METHOD`, 'post'],
+        ...(['github', 'google'].includes(id)
+          ? []
+          : [[`${prefix}_ISSUER`, `https://${id}.example.com`]]),
+      ]
+    })
   ),
 })
 
@@ -156,7 +164,14 @@ function providerFetch(provider: Provider, signed: () => string) {
 }
 
 test('all five providers verify identity and match only the configured email and role', async (context) => {
-  for (const provider of ssoProviders()) {
+  const providers = ssoProviders()
+
+  assert.deepEqual(
+    providers.map((provider) => provider.id),
+    ids
+  )
+
+  for (const provider of providers) {
     const pending = state(provider)
 
     context.mock.method(
@@ -355,10 +370,15 @@ test('SSO start validates origin and returns state and PKCE without exposing the
     body: '{}',
   })
   const response = await begin(request, { params: Promise.resolve({ provider: 'keycloak' }) })
-  const body = await response.json()
-  const url = new URL(body.url)
 
   assert.equal(response.status, 200)
+
+  const body = await response.json()
+
+  assert.equal(typeof body.url, 'string')
+
+  const url = new URL(body.url)
+
   assert.equal(url.searchParams.get('code_challenge_method'), 'S256')
   assert.ok(url.searchParams.get('state'))
   assert.ok(url.searchParams.get('nonce'))
