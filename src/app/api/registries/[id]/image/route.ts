@@ -6,6 +6,7 @@ import { imageDetails } from '@/lib/registry/image'
 import { getRegistry } from '@/lib/registry/store'
 import { scanTarget, scheduleScan } from '@/lib/registry/trivy'
 import { scanPending } from '@/lib/registry/trivy-worker'
+import { withIdentity } from '@/lib/security/access'
 import { api } from '@/lib/security/api'
 import { withLimits } from '@/lib/security/context'
 import { AppError } from '@/lib/security/error'
@@ -37,7 +38,11 @@ export const GET = api(async (request, context) => {
   ) {
     const target = scanTarget(registry, repository, details.digest)
 
-    after(() => withLimits(true, () => scanPending(target)))
+    after(() =>
+      withIdentity({ username: 'system:trivy', role: 'admin' }, () =>
+        withLimits(true, () => scanPending(target))
+      )
+    )
   }
 
   return NextResponse.json({ ...details, isPrivate })

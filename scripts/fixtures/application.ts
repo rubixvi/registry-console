@@ -13,7 +13,7 @@ export async function checkApplication({
   server,
 }: ApplicationProps) {
   await context.test('Application settings and secrets', { concurrency: false }, async (t) => {
-    await t.test('viewers cannot change settings', async () => {
+    await t.test('members cannot change settings', async () => {
       const response = await request('/api/settings', {
         method: 'PUT',
         body: {},

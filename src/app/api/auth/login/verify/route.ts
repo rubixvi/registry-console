@@ -1,6 +1,7 @@
 import { type NextRequest, type NextResponse } from 'next/server'
 
 import { auditAuthFailure } from '@/lib/auth/audit'
+import { refreshDirectory } from '@/lib/auth/directory'
 import { limitSignIn } from '@/lib/auth/limit'
 import { verifyLogin } from '@/lib/auth/login'
 import { readRequest } from '@/lib/auth/requests'
@@ -25,6 +26,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     rateLimit(`two-factor-user:${pending.username}:${source}`, 8, 15 * 60_000)
 
     const user = configUser(pending.username)
+
+    await refreshDirectory(user)
 
     return verifyLogin(user, pending, code)
   } catch (error) {

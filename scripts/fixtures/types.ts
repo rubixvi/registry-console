@@ -86,6 +86,13 @@ export type DeletionProps = CheckProps & {
 
 export type LimitProps = CheckProps & AuthenticationProps
 
+export type VisibilityProps = CheckProps & {
+  viewerCookie: string
+  privateApi: string
+  digest: string
+  publicOrigin: string
+}
+
 export type BrowsingFixture = Awaited<ReturnType<typeof mockBrowsing>>
 export type ConsoleFixture = Awaited<ReturnType<typeof mockConsole>>
 export type RegistryFixture = Awaited<ReturnType<typeof mockRegistry>>

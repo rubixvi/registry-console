@@ -4,7 +4,7 @@ import { type ConsoleProps } from './types'
 
 export async function checkConsole({ context, request, readerCookie, fixture }: ConsoleProps) {
   await context.test('Console features', { concurrency: false }, async (t) => {
-    await t.test('audit access is restricted to administrators', async () => {
+    await t.test('audit access is restricted to admins', async () => {
       const anonymous = await request('/api/audit', { cookie: '' })
       const viewer = await request('/api/audit', { cookie: readerCookie })
       const viewerPage = await request('/audit', { cookie: readerCookie })
@@ -68,7 +68,7 @@ export async function checkConsole({ context, request, readerCookie, fixture }: 
       assert.ok(html.includes('href="/audit"'), 'admin sidebar includes audit navigation')
     })
 
-    await t.test('viewer navigation hides administrator pages', async () => {
+    await t.test('member navigation hides administrator pages', async () => {
       const response = await request('/', { cookie: readerCookie })
       const html = await response.text()
 
@@ -109,7 +109,7 @@ export async function checkConsole({ context, request, readerCookie, fixture }: 
       assert.equal(image.history[1].size, null)
     })
 
-    await t.test('viewers can search repositories by name and architecture', async () => {
+    await t.test('members can search repositories by name and architecture', async () => {
       const response = await request(`/api/search?registry=${id}&query=app&architecture=amd64`, {
         cookie: readerCookie,
       })
@@ -149,8 +149,8 @@ export async function checkConsole({ context, request, readerCookie, fixture }: 
           origin: 'https://evil.example',
         })
 
-        assert.equal(viewer.status, 403, 'viewers cannot start scans')
-        assert.equal(admin.status, 409, 'administrators cannot bypass scanner opt-in')
+        assert.equal(viewer.status, 403, 'members cannot start scans')
+        assert.equal(admin.status, 409, 'admins cannot bypass scanner opt-in')
         assert.equal(foreign.status, 403, 'scan starts reject cross-origin requests')
       }
     )

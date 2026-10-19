@@ -11,6 +11,7 @@ import { checkAuthentication } from './fixtures/authentication'
 import { checkBrowsing } from './fixtures/browsing'
 import { checkConsole } from './fixtures/console'
 import { checkRegistry, checkRegistryDeletion } from './fixtures/registry'
+import { checkVisibility } from './fixtures/visibility'
 import { startIntegration, waitForInspection } from './helpers/integration'
 import { createRequest, signIn } from './helpers/testing'
 
@@ -36,6 +37,12 @@ await test('Production integration', {
   })
 
   const request = createRequest({ base, origin, cookie })
+
+  const { cookie: viewerCookie } = await signIn({
+    request: anonymous,
+    username: 'public-reader',
+    password,
+  })
 
   await context.test('session cookies match the origin and retain security attributes', () => {
     const expectedName = server.loopbackHttp ? 'registry_session=' : '__Host-registry_session='
@@ -80,6 +87,14 @@ await test('Production integration', {
     fixture: server.consoleFixture,
   })
   await waitForInspection({ server, cookie, id })
+  await checkVisibility({
+    context,
+    request,
+    viewerCookie,
+    privateApi: api,
+    digest: fixture.digest,
+    publicOrigin: server.consoleFixture.origin,
+  })
   await checkRegistryDeletion({ context, request, api, digest: fixture.digest })
 
   await context.test('logged-out session cookies cannot be replayed', async () => {

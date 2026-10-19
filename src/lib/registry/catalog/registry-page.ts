@@ -1,12 +1,9 @@
 import 'server-only'
 
-import { registryRequest } from '@/lib/registry/client'
-import { hubPage } from '@/lib/registry/dockerhub'
-import { githubPage } from '@/lib/registry/github'
-import { nextCursor } from '@/lib/registry/pagination'
-import { assertRepository } from '@/lib/registry/repository'
-import { AppError } from '@/lib/security/error'
-import { catalogueSchema, tagsSchema } from '@/lib/validation/response/registry'
+import { requireRepository } from '@/lib/registry/access'
+import { readCursor } from '@/lib/registry/access/read-cursor'
+import { visiblePage } from '@/lib/registry/access/visible-page'
+import { loadPage } from '@/lib/registry/catalog/load-page'
 import { type RegistryPage, type RegistryPageInput, type RegistryRecord } from '@/types/registry'
 
 export async function registryPage(
@@ -14,67 +11,10 @@ export async function registryPage(
   input: RegistryPageInput,
   refresh = false
 ): Promise<RegistryPage> {
-  const { repository, last, n } = input
+  if (input.repository) await requireRepository(registry, input.repository)
 
-  if (registry.provider === 'dockerhub') {
-    return hubPage(registry, input, refresh)
-  }
+  const query = readCursor(registry, input)
+  const page = await loadPage(registry, query, refresh)
 
-  if (registry.provider === 'github' && !repository) {
-    return githubPage(registry, input, refresh)
-  }
-
-  if (repository) {
-    assertRepository(registry, repository)
-  }
-
-  let path = '/v2/_catalog'
-  let scope = 'registry:catalog:*'
-
-  if (repository) {
-    const encodedRepository = repository.split('/').map(encodeURIComponent).join('/')
-
-    path = `/v2/${encodedRepository}/tags/list`
-    scope = `repository:${repository}:pull`
-  }
-
-  const query = new URLSearchParams({ n: String(n) })
-
-  if (last) {
-    query.set('last', last)
-  }
-
-  const result = await registryRequest(registry, `${path}?${query}`, {
-    scope,
-    cache: refresh ? 'reload' : 'default',
-  })
-
-  try {
-    const body: unknown = JSON.parse(result.text)
-    let items: string[]
-
-    if (repository) {
-      items = tagsSchema.parse(body).tags ?? []
-    } else {
-      items = catalogueSchema.parse(body).repositories
-    }
-
-    if (items.length > n) {
-      throw new AppError(
-        502,
-        'Registry ignored pagination. Configure a compatible registry page limit.'
-      )
-    }
-
-    return {
-      items,
-      next: nextCursor(result.headers.get('link'), registry.url, path),
-    }
-  } catch (error) {
-    if (error instanceof AppError) {
-      throw error
-    }
-
-    throw new AppError(502, 'Registry returned an invalid catalogue or tag response.')
-  }
+  return visiblePage(registry, input, page)
 }

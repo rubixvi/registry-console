@@ -21,15 +21,20 @@ export function Users({ users }: Props) {
             className="flex items-center justify-between gap-3 py-3 text-sm first:pt-0 last:pb-0"
             key={user.username}
           >
-            <span className="min-w-0 truncate">{user.username}</span>
+            <span className="min-w-0 truncate">
+              {user.username}
+              {user.authProvider === 'ldap' && (
+                <span className="ml-2 text-xs text-muted-foreground">LDAP</span>
+              )}
+            </span>
             <Badge className="min-w-16 shrink-0 justify-center capitalize">{user.role}</Badge>
           </li>
         ))}
       </ul>
 
       <p className="mt-5 text-xs leading-6 text-muted-foreground">
-        Manage usernames, password hashes, and roles using environment variables. Restart the
-        application to apply changes.
+        Local and SSO accounts use the configured account list. LDAP accounts are created at sign-in
+        and receive roles from directory groups.
       </p>
     </section>
   )

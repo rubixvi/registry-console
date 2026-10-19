@@ -2,6 +2,12 @@ import { z } from 'zod'
 
 import { digestName, repositoryName } from '@/lib/validation/registry'
 
+export const githubPackage = z.object({
+  name: repositoryName,
+  owner: z.object({ login: z.string().min(1).max(39) }),
+  visibility: z.enum(['public', 'private', 'internal']),
+})
+
 export const githubOwner = z.object({
   login: z.string().min(1).max(39),
   type: z.enum(['User', 'Organization']),

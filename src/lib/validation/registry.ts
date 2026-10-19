@@ -33,7 +33,7 @@ export const registryInput = z
   .strict()
 
 export const pageInput = z.object({
-  last: z.string().max(255).default(''),
+  last: z.string().max(2048).default(''),
   n: z.coerce.number().int().min(1).max(100).default(100),
 })
 

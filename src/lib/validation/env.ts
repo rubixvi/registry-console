@@ -1,12 +1,14 @@
 import { z } from 'zod'
 
 import { keyName } from '@/lib/validation/keys'
+import { ldapEnv } from '@/lib/validation/ldap'
 import { ssoEnv } from '@/lib/validation/sso-env'
 import { pullUrlSchema } from '@/lib/validation/url'
 import { TAG_ORDERS } from '@/utils/tag-order'
 
 export const envSchema = z.object({
   ...ssoEnv.shape,
+  ...ldapEnv.shape,
   APP_ORIGIN: z.string().url(),
   DATA_DIR: z.string().default('./data'),
   ENCRYPTION_KEY: z.string().regex(/^[a-f0-9]{64}$/i, 'Must be 32 random bytes encoded as hex'),

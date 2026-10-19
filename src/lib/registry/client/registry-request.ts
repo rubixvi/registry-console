@@ -1,5 +1,6 @@
 import 'server-only'
 
+import { requireRepository } from '@/lib/registry/access'
 import { validateUrl } from '@/lib/registry/allowlist'
 import {
   cachedResponse,
@@ -23,6 +24,11 @@ export async function registryRequest(
   if (!path.startsWith('/v2/') || new URL(path, origin).origin !== origin) {
     throw new AppError(400, 'Invalid registry path.')
   }
+
+  const target = path.split('?')[0].match(/^\/v2\/(.+)\/(?:manifests|blobs|tags)\//)
+
+  if (target)
+    await requireRepository(registry, target[1].split('/').map(decodeURIComponent).join('/'))
 
   const deletion = options.method === 'DELETE'
   const readable = !options.method || options.method === 'GET'

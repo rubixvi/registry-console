@@ -4,6 +4,7 @@ import { activeScan, getScan, pendingScan, scanDelay } from '@/lib/database/scan
 import { assertRepository } from '@/lib/registry/repository'
 import { reportKey } from '@/lib/registry/trivy/report-key'
 import { scanAllowed } from '@/lib/registry/trivy/scan-allowed'
+import { privateAccess } from '@/lib/security/access'
 import { digestName, repositoryName } from '@/lib/validation/registry'
 import { type RegistryRecord } from '@/types/registry'
 import { type ScanStatus } from '@/types/scan'
@@ -36,7 +37,7 @@ export function scanStatus(
           actor: 'system:trivy',
           repository: '',
           digest: '',
-          ...JSON.parse(active.value),
+          ...(privateAccess() ? JSON.parse(active.value) : {}),
           expires: active.expires,
         }
       : undefined

@@ -1,5 +1,6 @@
 import { after, NextResponse } from 'next/server'
 
+import { requireRepository } from '@/lib/registry/access'
 import { hubPrivacy } from '@/lib/registry/dockerhub'
 import { requirePublic } from '@/lib/registry/scan-policy'
 import { getRegistry } from '@/lib/registry/store'
@@ -22,6 +23,8 @@ export const GET = api(async (request, context) => {
   }
 
   const registry = getRegistry(id)
+
+  await requireRepository(registry, parsed.data.repository)
 
   if ((await hubPrivacy(registry, parsed.data.repository)) !== false) {
     return NextResponse.json({ enabled: false, status: 'not-scanned' })

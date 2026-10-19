@@ -41,6 +41,19 @@ export const DATABASE_SCHEMA = `
     UNIQUE (provider, account_id)
   );
 
+  CREATE TABLE IF NOT EXISTS directory_users (
+    id TEXT NOT NULL UNIQUE,
+    source TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    username TEXT NOT NULL UNIQUE COLLATE NOCASE,
+    email TEXT NOT NULL DEFAULT '',
+    role TEXT NOT NULL CHECK (role IN ('admin', 'member', 'viewer')),
+    policy TEXT NOT NULL,
+    checked INTEGER NOT NULL,
+    active INTEGER NOT NULL DEFAULT 1,
+    PRIMARY KEY (source, subject)
+  );
+
   CREATE TABLE IF NOT EXISTS passkeys (
     id TEXT PRIMARY KEY,
     username TEXT NOT NULL,

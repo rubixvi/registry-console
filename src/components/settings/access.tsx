@@ -19,10 +19,17 @@ export function Access() {
         </dd>
 
         <dt>
+          <Badge className="min-w-16 justify-center">Member</Badge>
+        </dt>
+        <dd className="text-xs leading-6 text-muted-foreground">
+          Restricted public and private repositories access.
+        </dd>
+
+        <dt>
           <Badge className="min-w-16 justify-center">Viewer</Badge>
         </dt>
         <dd className="text-xs leading-6 text-muted-foreground">
-          Browse every configured registry.
+            Public repository access.
         </dd>
       </dl>
 

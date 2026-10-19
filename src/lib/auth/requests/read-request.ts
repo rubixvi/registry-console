@@ -1,10 +1,11 @@
 import 'server-only'
 
+import { findUser } from '@/lib/auth/accounts/find-user'
 import { cookieName } from '@/lib/auth/requests/cookie-name'
 import { cookieValue } from '@/lib/auth/requests/cookie-value'
 import { sessionId } from '@/lib/auth/requests/session-id'
 import { tokenHash } from '@/lib/auth/session'
-import { userFingerprint, users } from '@/lib/config/users'
+import { userFingerprint } from '@/lib/config/users'
 import { getRequest } from '@/lib/database/requests'
 import { AppError } from '@/lib/security/error'
 import { tokenSchema } from '@/lib/validation/auth'
@@ -24,7 +25,7 @@ export function readRequest(request: Request, purpose: Purpose, consume = false)
   }
 
   if (row.username) {
-    const user = users().find((entry) => entry.username === row.username)
+    const user = findUser(row.username)
 
     if (!user || row.fingerprint !== userFingerprint(user)) {
       throw new AppError(401, 'Account configuration changed. Sign in again.')

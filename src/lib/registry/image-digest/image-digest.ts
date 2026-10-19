@@ -1,5 +1,6 @@
 import 'server-only'
 
+import { requireRepository } from '@/lib/registry/access'
 import { registryRequest } from '@/lib/registry/client'
 import { imageManifest } from '@/lib/registry/image'
 import { assertRepository } from '@/lib/registry/repository'
@@ -12,6 +13,8 @@ export async function imageDigest(
   repository: string,
   reference: string
 ): Promise<string> {
+  await requireRepository(registry, repository)
+
   repositoryName.parse(repository)
   referenceName.parse(reference)
   assertRepository(registry, repository)

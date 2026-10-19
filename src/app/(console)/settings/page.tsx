@@ -7,6 +7,7 @@ import { Branding } from '@/components/settings/branding'
 import { Users } from '@/components/settings/users'
 import { getIdentity } from '@/lib/auth/session'
 import { users } from '@/lib/config/users'
+import { directoryRecords } from '@/lib/database/directory'
 import { getSettings } from '@/lib/settings'
 
 export const metadata: Metadata = {
@@ -20,7 +21,10 @@ export default async function SettingsPage() {
   if (identity?.role !== 'admin') redirect('/')
 
   const branding = getSettings()
-  const configUsers = users()
+  const configUsers = [
+    ...users(),
+    ...directoryRecords().map((user) => ({ ...user, authProvider: 'ldap' as const })),
+  ]
 
   return (
     <>

@@ -1,4 +1,4 @@
-export type Role = 'admin' | 'viewer'
+export type Role = 'admin' | 'member' | 'viewer'
 export type Providers = 'local' | 'ldap' | 'sso'
 
 export type User = {
@@ -8,6 +8,7 @@ export type User = {
   role: Role
   passwordHash?: string
   authProvider?: Providers
+  directory?: { source: string; subject: string }
 }
 
 export type Identity = {
