@@ -113,6 +113,7 @@ export async function checkConsole({ context, request, readerCookie, fixture }: 
       const response = await request(`/api/search?registry=${id}&query=app&architecture=amd64`, {
         cookie: readerCookie,
       })
+
       const search = await response.json()
 
       assert.equal(search.results.length, 1)
@@ -142,6 +143,7 @@ export async function checkConsole({ context, request, readerCookie, fixture }: 
           body,
           cookie: readerCookie,
         })
+
         const admin = await request(`${api}/scan`, { method: 'POST', body })
         const foreign = await request(`${api}/scan`, {
           method: 'POST',
@@ -161,16 +163,19 @@ export async function checkConsole({ context, request, readerCookie, fixture }: 
         body: selection,
         cookie: readerCookie,
       })
+
       const viewerDelete = await request(`${api}/bulk`, {
         method: 'DELETE',
         body: {},
         cookie: readerCookie,
       })
+
       const foreign = await request(`${api}/bulk`, {
         method: 'POST',
         body: selection,
         origin: 'https://evil.example',
       })
+
       const duplicates = await request(`${api}/bulk`, {
         method: 'POST',
         body: { repository, tags: ['latest', 'latest'] },

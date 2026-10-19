@@ -30,11 +30,8 @@ export async function mockConsole() {
   const configDigest = contentDigest(config)
 
   const manifests = new Map<string, string>()
-
   const tags = new Map<string, string>()
-
   const deletes = new Map<string, number>()
-
   const deleted = new Set<string>()
 
   for (const name of ['app', 'worker', 'protected']) {
@@ -99,9 +96,7 @@ export async function mockConsole() {
 
     if (pathname.startsWith('/v2/team/app/manifests/')) {
       const reference = pathname.slice('/v2/team/app/manifests/'.length)
-
       const digest = tags.get(reference) ?? reference
-
       const manifest = manifests.get(digest)
 
       if (request.method === 'DELETE') {

@@ -20,6 +20,7 @@ await test('Production integration', {
 }, async (context) => {
   const server = await startIntegration(context)
   const { base, origin, password, fixture } = server
+
   const anonymous = createRequest({ base, origin })
 
   await checkAccess({ context, request: anonymous, password })
@@ -80,12 +81,14 @@ await test('Production integration', {
     readerCookie,
     fixture: server.browsingFixture,
   })
+
   await checkConsole({
     context,
     request,
     readerCookie,
     fixture: server.consoleFixture,
   })
+
   await waitForInspection({ server, cookie, id })
   await checkVisibility({
     context,
@@ -95,6 +98,7 @@ await test('Production integration', {
     digest: fixture.digest,
     publicOrigin: server.consoleFixture.origin,
   })
+
   await checkRegistryDeletion({ context, request, api, digest: fixture.digest })
 
   await context.test('logged-out session cookies cannot be replayed', async () => {
@@ -111,11 +115,13 @@ await test('Production integration', {
   await context.test('Account security lifecycle', () =>
     checkAuthentication({ base, origin, password })
   )
+
   await checkAuthenticationAudit({
     context,
     directory: server.directory,
     password,
   })
+
   await checkLoginLimits({
     context,
     request: anonymous,

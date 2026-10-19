@@ -36,11 +36,11 @@ export async function checkBrowsing({ context, request, readerCookie, fixture }:
     })
 
     await t.test('complete listings validate query parameters', async () => {
-      const invalidRepository = await request(`${api}/browse?repository=..%2Fprivate`)
-      const unknownParameter = await request(`${api}/browse?unknown=true`)
+      const invalid = await request(`${api}/browse?repository=..%2Fprivate`)
+      const unknown = await request(`${api}/browse?unknown=true`)
 
-      assert.equal(invalidRepository.status, 400, 'repository names are validated')
-      assert.equal(unknownParameter.status, 400, 'unsupported parameters are rejected')
+      assert.equal(invalid.status, 400, 'repository names are validated')
+      assert.equal(unknown.status, 400, 'unsupported parameters are rejected')
     })
 
     await t.test('members receive the complete paginated catalogue', async () => {

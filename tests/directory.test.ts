@@ -8,11 +8,7 @@ import { Client, type Entry, InvalidCredentialsError } from 'ldapts'
 
 import { POST as login } from '../src/app/api/auth/login/route'
 import { findUser, securityAccounts, securityId } from '../src/lib/auth/accounts'
-import {
-  authenticateDirectory,
-  directoryConfig,
-  refreshDirectory,
-} from '../src/lib/auth/directory'
+import { authenticateDirectory, directoryConfig, refreshDirectory } from '../src/lib/auth/directory'
 import { directoryRole } from '../src/lib/auth/directory/role'
 import { createSession, resolveSession, sessionCookieName } from '../src/lib/auth/session'
 import { env } from '../src/lib/config/env'

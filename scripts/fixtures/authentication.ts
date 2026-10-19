@@ -21,7 +21,7 @@ export async function checkAuthentication({
   const request = createRequest({ base, origin, jar, method: 'POST' })
   const credentials = { username: 'reader', password }
 
-  await checkEnrollmentAccess(request)
+  await checkEnrollment(request)
   await signIn({ request, ...credentials })
 
   const oldCookie = [...jar].map(([name, value]) => `${name}=${value}`).join('; ')
@@ -45,7 +45,7 @@ export async function checkAuthentication({
   await disableAuthenticator({ request, credentials, authenticator })
 }
 
-async function checkEnrollmentAccess(request: TestRequest) {
+async function checkEnrollment(request: TestRequest) {
   const anonymous = await request('/api/account/passkeys/options')
   const foreign = await request('/api/auth/passkey/options', {
     cookie: '',
@@ -246,12 +246,14 @@ async function checkPasskeyAccess({
     passkey,
     verified: false,
   })
+
   const verified = await passkeySignIn({
     request,
     origin,
     passkey,
     verified: true,
   })
+
   const authenticated = await request('/api/registries', { method: 'GET' })
 
   assert.equal(unverified.status, 401, 'unverified passkey cannot bypass 2FA')
@@ -261,6 +263,7 @@ async function checkPasskeyAccess({
   const passwordOnly = await request('/api/account/security/verify', {
     body: { password },
   })
+
   const unlocked = await request('/api/account/security/verify', {
     body: { password, code: authenticator.recovery[1] },
   })
@@ -302,10 +305,12 @@ async function checkSecurityGrant({
     username: 'admin',
     password,
   })
+
   const grantCookie = [...jar]
     .filter(([name]) => name.includes('registry_security'))
     .map(([name, value]) => `${name}=${value}`)
     .join('; ')
+
   const response = await request('/api/account/passkeys', {
     method: 'DELETE',
     body: { id: passkey.device.id },
@@ -325,6 +330,7 @@ async function disableAuthenticator({
   const recovered = await request('/api/auth/login/verify', {
     body: { code: authenticator.recovery[2] },
   })
+
   const verified = await request('/api/account/security/verify', {
     body: { password: credentials.password, code: authenticator.recovery[3] },
   })
@@ -346,9 +352,11 @@ async function disableAuthenticator({
 
 function code(secret: string, step: number): string {
   const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
+
   const bits = [...secret]
     .map((letter) => alphabet.indexOf(letter).toString(2).padStart(5, '0'))
     .join('')
+
   const key = Buffer.from(bits.match(/.{8}/g)!.map((part) => Number.parseInt(part, 2)))
   const time = Buffer.alloc(8)
 

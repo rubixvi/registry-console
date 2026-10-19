@@ -8,6 +8,7 @@ export function createRequest({ base, origin, method = 'GET', cookie, jar }: Req
       Origin: options.origin ?? origin,
       'Content-Type': 'application/json',
     })
+
     const session =
       options.cookie ??
       (jar ? [...jar].map(([name, value]) => `${name}=${value}`).join('; ') : cookie)
