@@ -1,4 +1,4 @@
-import { SeverityBadge } from '@/components/registry/security/badges'
+import { SeverityBadge } from '@/components/registry/scan/badges'
 import { type Vulnerability } from '@/types/scan'
 
 type Props = {

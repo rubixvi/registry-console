@@ -1,4 +1,4 @@
-import { Counts } from '@/components/registry/security/counts'
+import { Counts } from '@/components/registry/scan/counts'
 import { type ScanStatus } from '@/types/scan'
 
 type Props = {

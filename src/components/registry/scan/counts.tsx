@@ -1,4 +1,4 @@
-import { styles } from '@/components/registry/security/styles'
+import { styles } from '@/components/registry/scan/styles'
 import { Badge } from '@/components/ui/badge'
 import { type ScanReport, SEVERITIES } from '@/types/scan'
 
