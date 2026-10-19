@@ -19,7 +19,7 @@ concurrency:
 env:
   NEXT_TELEMETRY_DISABLED: '1'
   IMAGE_REGISTRY: ${{ vars.IMAGE_REGISTRY || 'docker.io' }}
-  GITHUB_REGISTRY: ${{ vars.GITHUB_REGISTRY || 'ghcr.io' }}
+  MIRROR_REGISTRY: ${{ vars.MIRROR_REGISTRY || 'ghcr.io' }}
   IMAGE_NAME: ${{ vars.IMAGE_NAME || github.repository }}
   GHCR_IMAGE_NAME: ${{ github.repository }}
 
