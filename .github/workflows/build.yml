@@ -128,7 +128,7 @@ jobs:
         shell: bash
         run: |
           image_registry="${IMAGE_REGISTRY,,}"
-          github_registry="${IMAGE2_REGISTRY,,}"
+          github_registry="${MIRROR_REGISTRY,,}"
           dockerhub_name="${IMAGE_NAME,,}"
           ghcr_name="${GHCR_IMAGE_NAME,,}"
           printf 'image_registry=%s\n' "$image_registry" >> "$GITHUB_OUTPUT"
