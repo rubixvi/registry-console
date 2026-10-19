@@ -1,8 +1,7 @@
 import 'server-only'
 
-import { createHash } from 'node:crypto'
-
-import { usersSchema } from '@/lib/validation/auth'
+import { keyedFingerprint } from '@/lib/security/fingerprint'
+import { passwordHashSchema, usersSchema } from '@/lib/validation/auth'
 import { type User } from '@/types/auth'
 
 export function users(): User[] {
@@ -54,13 +53,26 @@ export function users(): User[] {
 }
 
 export function userFingerprint(user: User): string {
-  const value =
-    user.authProvider === 'ldap'
-      ? {
-          ...user,
-          ldap: [process.env.LDAP_URL, process.env.LDAP_BASE_DN, process.env.LDAP_USER_FILTER],
-        }
-      : user
+  const provider = user.authProvider ?? 'local'
+  const passwordHash =
+    provider === 'local' ? passwordHashSchema.parse(user.passwordHash) : undefined
 
-  return createHash('sha256').update(JSON.stringify(value)).digest('hex')
+  return keyedFingerprint('user-session', {
+    id: user.id,
+    username: user.username,
+    email: user.email,
+    role: user.role,
+    provider,
+    passwordHash,
+    directory:
+      provider === 'ldap'
+        ? {
+            source: user.directory?.source,
+            subject: user.directory?.subject,
+            url: process.env.LDAP_URL,
+            base: process.env.LDAP_BASE_DN,
+            filter: process.env.LDAP_USER_FILTER,
+          }
+        : undefined,
+  })
 }
