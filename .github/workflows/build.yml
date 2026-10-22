@@ -6,7 +6,7 @@ on:
     branches:
       - main
     tags:
-      - 'v*.*.*'
+      - "v*.*.*"
   workflow_dispatch:
 
 permissions:
@@ -17,7 +17,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
-  NEXT_TELEMETRY_DISABLED: '1'
+  NEXT_TELEMETRY_DISABLED: "1"
   IMAGE_REGISTRY: ${{ vars.IMAGE_REGISTRY || 'docker.io' }}
   MIRROR_REGISTRY: ${{ vars.MIRROR_REGISTRY || 'ghcr.io' }}
   IMAGE_NAME: ${{ vars.IMAGE_NAME || github.repository }}
@@ -42,7 +42,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v7.1.0
         with:
-          node-version: '24'
+          node-version: "24"
           cache: pnpm
 
       - name: Restore Next.js cache
@@ -69,7 +69,7 @@ jobs:
       - name: Test HTTP loopback configuration
         run: pnpm run test:integration
         env:
-          INTEGRATION_HTTP: 'true'
+          INTEGRATION_HTTP: "true"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4.4.1
