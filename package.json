@@ -27,7 +27,7 @@
     "secret:rotate": "node --env-file=.env scripts/rotate-key.mjs"
   },
   "engines": {
-    "node": "24.x || 25.x",
+    "node": ">=24.22.1 <25 || >=26.12.1",
     "pnpm": ">=10"
   },
   "dependencies": {
