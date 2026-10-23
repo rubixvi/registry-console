@@ -98,8 +98,7 @@ jobs:
         run: |
           docker run --rm --user 0:0 \
             --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock,readonly \
-            --entrypoint /usr/local/bin/trivy \
-            registry-console:ci image \
+            aquasec/trivy:0.76.1 image \
             --image-src docker \
             --scanners vuln \
             --severity HIGH,CRITICAL \
