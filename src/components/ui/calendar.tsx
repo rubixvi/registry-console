@@ -7,6 +7,8 @@ import { type DayButton, DayPicker, getDefaultClassNames } from 'react-day-picke
 import { Button, buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
+type CalendarComponents = NonNullable<ComponentProps<typeof DayPicker>['components']>
+
 function Calendar({
   className,
   classNames,
@@ -103,30 +105,10 @@ function Calendar({
         ...classNames,
       }}
       components={{
-        Root: ({ className, rootRef, ...props }) => {
-          return <div className={cn(className)} data-slot="calendar" ref={rootRef} {...props} />
-        },
-        Chevron: ({ className, orientation, ...props }) => {
-          if (orientation === 'left') {
-            return <ChevronLeft className={cn('size-4', className)} {...props} />
-          }
-
-          if (orientation === 'right') {
-            return <ChevronRight className={cn('size-4', className)} {...props} />
-          }
-
-          return <ChevronDown className={cn('size-4', className)} {...props} />
-        },
+        Root,
+        Chevron,
         DayButton: CalendarDayButton,
-        WeekNumber: ({ children, ...props }) => {
-          return (
-            <td {...props}>
-              <div className="flex size-(--cell-size) items-center justify-center text-center">
-                {children}
-              </div>
-            </td>
-          )
-        },
+        WeekNumber,
         ...components,
       }}
       formatters={{
@@ -177,6 +159,43 @@ function CalendarDayButton({
       {...props}
     />
   )
+}
+
+function Chevron({
+  className,
+  orientation,
+  ...props
+}: ComponentProps<NonNullable<CalendarComponents['Chevron']>>) {
+  if (orientation === 'left') {
+    return <ChevronLeft className={cn('size-4', className)} {...props} />
+  }
+
+  if (orientation === 'right') {
+    return <ChevronRight className={cn('size-4', className)} {...props} />
+  }
+
+  return <ChevronDown className={cn('size-4', className)} {...props} />
+}
+
+function WeekNumber({
+  children,
+  ...props
+}: ComponentProps<NonNullable<CalendarComponents['WeekNumber']>>) {
+  return (
+    <td {...props}>
+      <div className="flex size-(--cell-size) items-center justify-center text-center">
+        {children}
+      </div>
+    </td>
+  )
+}
+
+function Root({
+  className,
+  rootRef,
+  ...props
+}: ComponentProps<NonNullable<CalendarComponents['Root']>>) {
+  return <div className={cn(className)} data-slot="calendar" ref={rootRef} {...props} />
 }
 
 export { Calendar, CalendarDayButton }
