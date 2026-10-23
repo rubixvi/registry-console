@@ -34,7 +34,7 @@ services:
   app:
     image: ${REGISTRY_CONSOLE_IMAGE:-rubixvi/registry-console:edge}
     pull_policy: always
-    user: '1000:1000'
+    user: "1000:1000"
     init: true
     restart: unless-stopped
     env_file:
@@ -42,12 +42,12 @@ services:
     environment:
       NODE_ENV: production
       HOSTNAME: 0.0.0.0
-      PORT: '3000'
+      PORT: "3000"
       DATA_DIR: /app/data
-      NEXT_TELEMETRY_DISABLED: '1'
+      NEXT_TELEMETRY_DISABLED: "1"
       TRIVY_RUNNER_URL: http://scanner:3001
     ports:
-      - '127.0.0.1:3000:3000'
+      - "127.0.0.1:3000:3000"
     volumes:
       - registry-data:/app/data
     tmpfs:
@@ -74,10 +74,10 @@ services:
   scanner:
     image: ${REGISTRY_CONSOLE_IMAGE:-rubixvi/registry-console:edge}
     pull_policy: always
-    user: '1001:1001'
+    user: "1001:1001"
     init: true
     restart: unless-stopped
-    entrypoint: ['node', 'scripts/scanner.mjs']
+    entrypoint: [ "node", "scripts/scanner.mjs" ]
     environment:
       NODE_ENV: production
       SCANNER_DIR: /app/scanner
@@ -87,7 +87,7 @@ services:
       ALLOW_HTTP_REGISTRIES: ${ALLOW_HTTP_REGISTRIES:-false}
       TRIVY_TIMEOUT_SECONDS: ${TRIVY_TIMEOUT_SECONDS:-180}
     expose:
-      - '3001'
+      - "3001"
     volumes:
       - scanner-data:/app/scanner
     read_only: true
@@ -99,7 +99,13 @@ services:
     mem_limit: 2g
     cpus: 2
     healthcheck:
-      test: ['CMD', 'node', '-e', "fetch('http://127.0.0.1:3001/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3001/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
       interval: 30s
       timeout: 5s
       start_period: 10s
@@ -175,10 +181,10 @@ services:
     image: registry:3.1.2
     restart: unless-stopped
     ports:
-      - '127.0.0.1:5000:5000'
+      - "127.0.0.1:5000:5000"
     environment:
-      REGISTRY_STORAGE_DELETE_ENABLED: 'true'
-      REGISTRY_HEALTH_STORAGEDRIVER_ENABLED: 'false'
+      REGISTRY_STORAGE_DELETE_ENABLED: "true"
+      REGISTRY_HEALTH_STORAGEDRIVER_ENABLED: "false"
       REGISTRY_HTTP_SECRET: ${REGISTRY_HTTP_SECRET:?Set REGISTRY_HTTP_SECRET}
       REGISTRY_AUTH: htpasswd
       REGISTRY_AUTH_HTPASSWD_REALM: Registry Realm
@@ -207,33 +213,33 @@ Set `TRUST_PROXY=true` and configure `TRUSTED_PROXIES` with the proxy addresses 
 
 Restart or recreate the console after changing environment configuration. The supplied Compose file passes `.env` to the app; the scanner receives only the explicit variables in its own service definition.
 
-| Variable | Default | Purpose |
-| --- | --- | --- |
-| `APP_ORIGIN` | Required | Browser-facing origin used for request checks, cookies, passkeys and SSO callbacks. Production requires HTTPS except on loopback. |
-| `DATA_DIR` | `./data`; `/app/data` in Compose | Console database and branding storage. Use one console instance per data directory. |
-| `ENCRYPTION_KEY` | Required | 32 random bytes encoded as 64 hex characters. Protect and back up this key. |
-| `ENCRYPTION_KEY_ID` | `main` | Active key name, 1–32 letters, digits, underscores or hyphens. |
-| `ENCRYPTION_KEYS_JSON` | `{}` | Previous key IDs and hex keys retained for decryption during rotation. |
-| `AUTH_USERNAME`, `AUTH_PASSWORD_HASH` | Required for single-account mode | Local admin username and generated scrypt hash. |
-| `AUTH_EMAIL`, `AUTH_USER_ID` | Empty | Optional normalized account email and explicit immutable account UUID. |
-| `AUTH_USERS_JSON` | Empty | Explicit local and SSO account list; replaces single-account configuration. |
-| `GITHUB_ID`, `GITHUB_SECRET` | Empty | Enable GitHub sign-in when both are set. |
-| `GOOGLE_ID`, `GOOGLE_SECRET` | Empty | Enable Google sign-in when both are set. |
-| `AUTHENTIK_ID`, `AUTHENTIK_SECRET`, `AUTHENTIK_ISSUER` | Empty | Enable Authentik sign-in with the exact provider issuer. |
-| `ZITADEL_ID`, `ZITADEL_SECRET`, `ZITADEL_ISSUER` | Empty | Enable Zitadel sign-in with the exact instance issuer. |
-| `KEYCLOAK_ID`, `KEYCLOAK_SECRET`, `KEYCLOAK_ISSUER` | Empty | Enable Keycloak sign-in with the exact realm issuer. |
-| `SESSION_HOURS` | `8` | Local and SSO session lifetime, 1–24 hours. |
-| `TRUST_PROXY` | `false` | Enable forwarded client IP resolution. With a trusted proxy list, walk the chain from the verified socket peer. |
-| `TRUSTED_PROXIES` | Empty | Comma-separated proxy IPv4/IPv6 addresses or CIDR ranges, up to 256 entries. Requires `TRUST_PROXY=true`; empty retains the single-proxy behavior described below. |
-| `AUDIT_RETENTION_DAYS` | `90` | Audit retention by age, 1–3650 days. Older events are pruned on subsequent audit writes. |
-| `BRAND_NAME` | `Registry Console` | Initial branding and passkey display name. Branding can also be saved through Settings. |
-| `REGISTRY_ALLOWED_ORIGINS` | Empty | Comma-separated exact registry origins the console may contact. |
-| `REGISTRY_TOKEN_ORIGINS` | Empty | Approved external Bearer token-service origins. |
-| `REGISTRY_BLOB_ORIGINS` | Empty | Approved HTTPS blob/CDN origins. Authorization is stripped on redirects. |
-| `ALLOW_HTTP_REGISTRIES` | `false` | Allows cleartext access to otherwise approved HTTP registry and token origins. |
-| `PULL_URL` | Empty | Default public address for copied pull commands. Each connection can override it. |
-| `TAGLIST_ORDER` | `date-desc` | `date-desc`, `date-asc`, `natural-asc`, `natural-desc`, `alpha-asc` or `alpha-desc`. |
-| `HISTORY_CUSTOM_LABELS` | Empty | Comma-separated configuration label names to display, up to 32. |
+| Variable                                               | Default                          | Purpose                                                                                                                                                            |
+| ------------------------------------------------------ | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `APP_ORIGIN`                                           | Required                         | Browser-facing origin used for request checks, cookies, passkeys and SSO callbacks. Production requires HTTPS except on loopback.                                  |
+| `DATA_DIR`                                             | `./data`; `/app/data` in Compose | Console database and branding storage. Use one console instance per data directory.                                                                                |
+| `ENCRYPTION_KEY`                                       | Required                         | 32 random bytes encoded as 64 hex characters. Protect and back up this key.                                                                                        |
+| `ENCRYPTION_KEY_ID`                                    | `main`                           | Active key name, 1–32 letters, digits, underscores or hyphens.                                                                                                     |
+| `ENCRYPTION_KEYS_JSON`                                 | `{}`                             | Previous key IDs and hex keys retained for decryption during rotation.                                                                                             |
+| `AUTH_USERNAME`, `AUTH_PASSWORD_HASH`                  | Required for single-account mode | Local admin username and generated scrypt hash.                                                                                                                    |
+| `AUTH_EMAIL`, `AUTH_USER_ID`                           | Empty                            | Optional normalized account email and explicit immutable account UUID.                                                                                             |
+| `AUTH_USERS_JSON`                                      | Empty                            | Explicit local and SSO account list; replaces single-account configuration.                                                                                        |
+| `GITHUB_ID`, `GITHUB_SECRET`                           | Empty                            | Enable GitHub sign-in when both are set.                                                                                                                           |
+| `GOOGLE_ID`, `GOOGLE_SECRET`                           | Empty                            | Enable Google sign-in when both are set.                                                                                                                           |
+| `AUTHENTIK_ID`, `AUTHENTIK_SECRET`, `AUTHENTIK_ISSUER` | Empty                            | Enable Authentik sign-in with the exact provider issuer.                                                                                                           |
+| `ZITADEL_ID`, `ZITADEL_SECRET`, `ZITADEL_ISSUER`       | Empty                            | Enable Zitadel sign-in with the exact instance issuer.                                                                                                             |
+| `KEYCLOAK_ID`, `KEYCLOAK_SECRET`, `KEYCLOAK_ISSUER`    | Empty                            | Enable Keycloak sign-in with the exact realm issuer.                                                                                                               |
+| `SESSION_HOURS`                                        | `8`                              | Local and SSO session lifetime, 1–24 hours.                                                                                                                        |
+| `TRUST_PROXY`                                          | `false`                          | Enable forwarded client IP resolution. With a trusted proxy list, walk the chain from the verified socket peer.                                                    |
+| `TRUSTED_PROXIES`                                      | Empty                            | Comma-separated proxy IPv4/IPv6 addresses or CIDR ranges, up to 256 entries. Requires `TRUST_PROXY=true`; empty retains the single-proxy behavior described below. |
+| `AUDIT_RETENTION_DAYS`                                 | `90`                             | Audit retention by age, 1–3650 days. Older events are pruned on subsequent audit writes.                                                                           |
+| `BRAND_NAME`                                           | `Registry Console`               | Initial branding and passkey display name. Branding can also be saved through Settings.                                                                            |
+| `REGISTRY_ALLOWED_ORIGINS`                             | Empty                            | Comma-separated exact registry origins the console may contact.                                                                                                    |
+| `REGISTRY_TOKEN_ORIGINS`                               | Empty                            | Approved external Bearer token-service origins.                                                                                                                    |
+| `REGISTRY_BLOB_ORIGINS`                                | Empty                            | Approved HTTPS blob/CDN origins. Authorization is stripped on redirects.                                                                                           |
+| `ALLOW_HTTP_REGISTRIES`                                | `false`                          | Allows cleartext access to otherwise approved HTTP registry and token origins.                                                                                     |
+| `PULL_URL`                                             | Empty                            | Default public address for copied pull commands. Each connection can override it.                                                                                  |
+| `TAGLIST_ORDER`                                        | `date-desc`                      | `date-desc`, `date-asc`, `natural-asc`, `natural-desc`, `alpha-asc` or `alpha-desc`.                                                                               |
+| `HISTORY_CUSTOM_LABELS`                                | Empty                            | Comma-separated configuration label names to display, up to 32.                                                                                                    |
 
 Optional initial connection variables are `REGISTRY_URL`, `REGISTRY_NAME`, `REGISTRY_USERNAME`, `REGISTRY_PASSWORD_ENCRYPTED` and `REGISTRY_READ_ONLY`. The connection is seeded once at startup; subsequent environment edits do not overwrite saved connection settings. Generate encrypted values with the existing active console key:
 
@@ -245,14 +251,14 @@ docker compose run --rm -it --no-deps --entrypoint node app scripts/encrypt-secr
 
 All accounts share one workspace and its configured connections. Admins and members can read private repositories using saved registry credentials. Viewers can access only repositories confirmed to be public. Repository visibility is enforced in catalogue and search results, direct image and metadata requests, scan reports and server-rendered pages. Unknown visibility is denied. There are no per-user registry assignments.
 
-| Action | Admin | Member | Viewer |
-| --- | --- | --- | --- |
-| Browse public repositories and inspect public images | Yes | Yes | Yes |
-| Browse private repositories and inspect private images | Yes | Yes | No |
-| Read reports for accessible images | Yes | Yes | Yes |
-| Add or change connections, delete manifests, start or override scans | Yes | No | No |
-| Change workspace branding and read audit events | Yes | No | No |
-| Manage permitted personal sign-in methods | Yes | Yes | Yes |
+| Action                                                               | Admin | Member | Viewer |
+| -------------------------------------------------------------------- | ----- | ------ | ------ |
+| Browse public repositories and inspect public images                 | Yes   | Yes    | Yes    |
+| Browse private repositories and inspect private images               | Yes   | Yes    | No     |
+| Read reports for accessible images                                   | Yes   | Yes    | Yes    |
+| Add or change connections, delete manifests, start or override scans | Yes   | No     | No     |
+| Change workspace branding and read audit events                      | Yes   | No     | No     |
+| Manage permitted personal sign-in methods                            | Yes   | Yes    | Yes    |
 
 Existing viewer accounts now have public access only. Change an account's role to `member` if it should retain read access to private repositories. This applies to local accounts, SSO accounts and LDAP group mappings.
 
@@ -270,13 +276,13 @@ Existing accounts can add an email without replacing enrolled security methods. 
 
 Supported providers are Authentik, GitHub, Google, Zitadel and Keycloak. Configure an authorization-code client with PKCE; use a confidential web client with a client secret. Register the exact callback URL shown below, substituting your `APP_ORIGIN`.
 
-| Provider ID | Issuer | Callback path |
-| --- | --- | --- |
+| Provider ID | Issuer                                                                                     | Callback path                      |
+| ----------- | ------------------------------------------------------------------------------------------ | ---------------------------------- |
 | `authentik` | Provider's exact OpenID issuer, commonly `https://auth.example.com/application/o/console/` | `/api/auth/sso/authentik/callback` |
-| `github` | Fixed to `https://github.com`; uses an OAuth App | `/api/auth/sso/github/callback` |
-| `google` | Fixed to `https://accounts.google.com`; use a Web application client | `/api/auth/sso/google/callback` |
-| `zitadel` | Your instance's exact HTTPS issuer | `/api/auth/sso/zitadel/callback` |
-| `keycloak` | `https://identity.example.com/realms/YOUR_REALM` | `/api/auth/sso/keycloak/callback` |
+| `github`    | Fixed to `https://github.com`; uses an OAuth App                                           | `/api/auth/sso/github/callback`    |
+| `google`    | Fixed to `https://accounts.google.com`; use a Web application client                       | `/api/auth/sso/google/callback`    |
+| `zitadel`   | Your instance's exact HTTPS issuer                                                         | `/api/auth/sso/zitadel/callback`   |
+| `keycloak`  | `https://identity.example.com/realms/YOUR_REALM`                                           | `/api/auth/sso/keycloak/callback`  |
 
 For example, the Google redirect URI for `APP_ORIGIN=https://console.example.com` is `https://console.example.com/api/auth/sso/google/callback`. Do not register wildcard callbacks. Enable the standard authorization-code flow and the `openid`, `profile` and `email` scopes for OIDC clients. GitHub uses `read:user` and `user:email`; it requires the account's verified primary email.
 
@@ -307,11 +313,11 @@ These variables replace `SSO_PROVIDERS_JSON`. Move each existing provider's cred
 
 Use the issuer reported by your provider's discovery document, including its path and trailing slash. GitHub and Google use fixed issuers. Optional settings use the same provider prefix, such as `ZITADEL_NAME`, `ZITADEL_AUTH_METHOD` and `ZITADEL_ORIGINS`.
 
-| Suffix | Default | Purpose |
-| --- | --- | --- |
-| `_NAME` | Provider name | Label shown on the sign-in button. |
-| `_AUTH_METHOD` | `post` | Token-endpoint client-secret authentication, either `post` or `basic`. |
-| `_ORIGINS` | Empty | Comma-separated exact HTTPS origins for trusted endpoints outside the issuer origin, up to eight. |
+| Suffix         | Default       | Purpose                                                                                           |
+| -------------- | ------------- | ------------------------------------------------------------------------------------------------- |
+| `_NAME`        | Provider name | Label shown on the sign-in button.                                                                |
+| `_AUTH_METHOD` | `post`        | Token-endpoint client-secret authentication, either `post` or `basic`.                            |
+| `_ORIGINS`     | Empty         | Comma-separated exact HTTPS origins for trusted endpoints outside the issuer origin, up to eight. |
 
 For Zitadel, select the matching client-secret authentication method when creating its Web application. For Authentik and Keycloak, ensure the email scope exposes `email` and a truthful boolean `email_verified`. A provider that cannot verify the email is rejected.
 
@@ -362,20 +368,20 @@ LDAP_SESSION_MINUTES=15
 
 Encrypt the search password with `scripts/encrypt-secret.mjs` and the active console key. Use a search account permitted to read the configured identity, group and account-status attributes. Verified LDAPS or `ldap://` with `LDAP_STARTTLS=true` is required before either bind. Referrals, ambiguous results and missing immutable identifiers are rejected. Passwords are not stored.
 
-| Variable | Default | Purpose |
-| --- | --- | --- |
-| `LDAP_ID_ATTRIBUTE` | `entryUUID` | Immutable directory identifier. Use `objectGUID` for Active Directory; binary GUIDs are preserved. Never use a username or email as the immutable identifier. |
-| `LDAP_USERNAME_ATTRIBUTE` | `uid` | Canonical username returned by the directory. |
-| `LDAP_EMAIL_ATTRIBUTE` | `mail` | Optional account email. It does not replace the immutable identity. |
-| `LDAP_GROUP_ATTRIBUTE` | `memberOf` | Attribute containing the user's group memberships. |
-| `LDAP_ADMIN_GROUPS` | Empty | Group values allowed to manage the console. |
-| `LDAP_MEMBER_GROUPS` | Empty | Group values allowed to read public and private repositories. |
-| `LDAP_VIEWER_GROUPS` | Empty | Group values allowed to read public repositories only. |
-| `LDAP_GROUP_BASE_DN` | Empty | Optional group search base for directories without a suitable membership attribute. |
-| `LDAP_GROUP_FILTER` | `(member={dn})` | Group search filter. Supports escaped `{dn}` and `{username}` placeholders. |
-| `LDAP_ACCESS_FILTER` | Empty | Additional user search condition for directory-specific access and enabled-account rules. |
-| `LDAP_CHECK_SECONDS` | `60` | Recheck active directory access after 15–300 seconds. |
-| `LDAP_SESSION_MINUTES` | `15` | Maximum directory session lifetime, 5–60 minutes. |
+| Variable                  | Default         | Purpose                                                                                                                                                       |
+| ------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `LDAP_ID_ATTRIBUTE`       | `entryUUID`     | Immutable directory identifier. Use `objectGUID` for Active Directory; binary GUIDs are preserved. Never use a username or email as the immutable identifier. |
+| `LDAP_USERNAME_ATTRIBUTE` | `uid`           | Canonical username returned by the directory.                                                                                                                 |
+| `LDAP_EMAIL_ATTRIBUTE`    | `mail`          | Optional account email. It does not replace the immutable identity.                                                                                           |
+| `LDAP_GROUP_ATTRIBUTE`    | `memberOf`      | Attribute containing the user's group memberships.                                                                                                            |
+| `LDAP_ADMIN_GROUPS`       | Empty           | Group values allowed to manage the console.                                                                                                                   |
+| `LDAP_MEMBER_GROUPS`      | Empty           | Group values allowed to read public and private repositories.                                                                                                 |
+| `LDAP_VIEWER_GROUPS`      | Empty           | Group values allowed to read public repositories only.                                                                                                        |
+| `LDAP_GROUP_BASE_DN`      | Empty           | Optional group search base for directories without a suitable membership attribute.                                                                           |
+| `LDAP_GROUP_FILTER`       | `(member={dn})` | Group search filter. Supports escaped `{dn}` and `{username}` placeholders.                                                                                   |
+| `LDAP_ACCESS_FILTER`      | Empty           | Additional user search condition for directory-specific access and enabled-account rules.                                                                     |
+| `LDAP_CHECK_SECONDS`      | `60`            | Recheck active directory access after 15–300 seconds.                                                                                                         |
+| `LDAP_SESSION_MINUTES`    | `15`            | Maximum directory session lifetime, 5–60 minutes.                                                                                                             |
 
 At least one role group is required when LDAP is enabled. Multiple group values use semicolons or newlines; commas remain part of a distinguished name. Matching compares the complete trimmed group value without case sensitivity. The highest matching role wins, in the order `admin`, `member`, `viewer`. Nested groups are not expanded automatically. Configure a directory-supported group search if transitive membership is required.
 
@@ -415,16 +421,16 @@ Deleting a manifest can invalidate every tag pointing to it. It does not run reg
 
 One scan runs at a time. Other jobs remain queued and the inspector displays the current scanner actor and lease deadline. The deadline is a timeout, not a completion estimate. Queued and running states poll every three seconds. Requesting the same running digest returns its existing state. Admins can choose **Override scan limit**, including for queued work; this bypasses the hourly budget and spacing, but preserves single-job execution and eligibility checks.
 
-| Variable | Default | Purpose |
-| --- | --- | --- |
-| `TRIVY_ENABLED` | `false` | Global scanning switch in the console. |
-| `TRIVY_RUNNER_URL` | Empty; `http://scanner:3001` in Compose | Private worker origin. Required for production scanning. |
-| `TRIVY_RUNNER_TOKEN` | Required when using the worker | Independent 32-byte random hex bearer secret, shared only by app and worker. |
-| `TRIVY_PATH` | `/usr/local/bin/trivy` | Scanner executable in the worker. |
-| `TRIVY_TIMEOUT_SECONDS` | `180` | Total deadline, 30–600 seconds, across an image's platforms. Set consistently on app and worker. |
-| `TRIVY_SCANS_PER_HOUR` | `16` | Shared automatic scan-start budget, 1–60 per hour, with spacing. Failed starts consume budget. |
-| `SCANNER_DIR` | `/app/scanner` | Worker's private writable cache and temporary workspaces. |
-| `SCANNER_PORT`, `SCANNER_HOST` | `3001`, `0.0.0.0` | Worker listener; keep it private. |
+| Variable                       | Default                                 | Purpose                                                                                          |
+| ------------------------------ | --------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `TRIVY_ENABLED`                | `false`                                 | Global scanning switch in the console.                                                           |
+| `TRIVY_RUNNER_URL`             | Empty; `http://scanner:3001` in Compose | Private worker origin. Required for production scanning.                                         |
+| `TRIVY_RUNNER_TOKEN`           | Required when using the worker          | Independent 32-byte random hex bearer secret, shared only by app and worker.                     |
+| `TRIVY_PATH`                   | `/usr/local/bin/trivy`                  | Scanner executable in the worker.                                                                |
+| `TRIVY_TIMEOUT_SECONDS`        | `180`                                   | Total deadline, 30–600 seconds, across an image's platforms. Set consistently on app and worker. |
+| `TRIVY_SCANS_PER_HOUR`         | `16`                                    | Shared automatic scan-start budget, 1–60 per hour, with spacing. Failed starts consume budget.   |
+| `SCANNER_DIR`                  | `/app/scanner`                          | Worker's private writable cache and temporary workspaces.                                        |
+| `SCANNER_PORT`, `SCANNER_HOST` | `3001`, `0.0.0.0`                       | Worker listener; keep it private.                                                                |
 
 Reports are reused for the same immutable digest and connection identity. They do not refresh automatically when the vulnerability database changes. Severity totals include all returned findings; detail tables retain up to 1,000. Counts are per platform. The scanner needs outbound access to registry authentication, image layers and Trivy databases, plus sufficient cache storage and memory for the images being scanned.
 
@@ -518,17 +524,17 @@ The utility atomically re-encrypts saved registry passwords and authenticator se
 
 `GET /api/health` checks console database readiness; it does not verify registries, identity providers or Trivy. The scanner's `/health` checks its listener, not a real image scan. Admins can inspect Audit for authentication failures, security changes, registry changes, scan starts and deletions. Events older than `AUDIT_RETENTION_DAYS` are pruned on audit writes.
 
-| Symptom | Check |
-| --- | --- |
-| Sign-in fails behind a proxy | Exact `APP_ORIGIN`, HTTPS cookies, peer launcher and trusted forwarding configuration. |
-| SSO is rejected | Exact callback URI and issuer, matching verified configured email, token authentication method, endpoint origins and an existing conflicting subject binding. |
-| Registry or token access is rejected | Server-reachable approved origins, registry credentials and deliberate HTTP opt-in. |
-| Docker Hub returns a rate-limit response | Its upstream quota and credentials. An admin cannot bypass Docker Hub's own limits. |
-| A scan remains queued | Running job and lease deadline, hourly budget, worker health, token and origin configuration. |
-| A Docker Hub image cannot be scanned | It must be confirmed public and runnable; private images and attestations are excluded. |
-| Trivy cannot start or download its database | UID and volume ownership, executable, timeout, outbound network, certificates and memory. |
-| Deletion fails | Admin role, connection read-only setting, upstream permissions and endpoint support. |
-| State disappears on redeploy | Same persistent console volume and original key material. |
+| Symptom                                     | Check                                                                                                                                                         |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Sign-in fails behind a proxy                | Exact `APP_ORIGIN`, HTTPS cookies, peer launcher and trusted forwarding configuration.                                                                        |
+| SSO is rejected                             | Exact callback URI and issuer, matching verified configured email, token authentication method, endpoint origins and an existing conflicting subject binding. |
+| Registry or token access is rejected        | Server-reachable approved origins, registry credentials and deliberate HTTP opt-in.                                                                           |
+| Docker Hub returns a rate-limit response    | Its upstream quota and credentials. An admin cannot bypass Docker Hub's own limits.                                                                           |
+| A scan remains queued                       | Running job and lease deadline, hourly budget, worker health, token and origin configuration.                                                                 |
+| A Docker Hub image cannot be scanned        | It must be confirmed public and runnable; private images and attestations are excluded.                                                                       |
+| Trivy cannot start or download its database | UID and volume ownership, executable, timeout, outbound network, certificates and memory.                                                                     |
+| Deletion fails                              | Admin role, connection read-only setting, upstream permissions and endpoint support.                                                                          |
+| State disappears on redeploy                | Same persistent console volume and original key material.                                                                                                     |
 
 ## Licence
 
@@ -537,7 +543,6 @@ Registry Console is licensed under the GNU Affero General Public License, versio
 ## Support
 
 For support or inquiries:
-
 - LinkedIn: [rubixvi](https://www.linkedin.com/in/rubixvi/)
 - Website: [Rubix Studios](https://rubixstudios.com.au)
 
@@ -546,4 +551,3 @@ For support or inquiries:
 Rubix Studios
 
 [https://rubixstudios.com.au](https://rubixstudios.com.au)
-

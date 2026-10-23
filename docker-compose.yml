@@ -4,7 +4,7 @@ services:
   app:
     image: ${REGISTRY_CONSOLE_IMAGE:-rubixvi/registry-console:edge}
     pull_policy: always
-    user: '1000:1000'
+    user: "1000:1000"
     init: true
     restart: unless-stopped
     env_file:
@@ -12,12 +12,12 @@ services:
     environment:
       NODE_ENV: production
       HOSTNAME: 0.0.0.0
-      PORT: '3000'
+      PORT: "3000"
       DATA_DIR: /app/data
-      NEXT_TELEMETRY_DISABLED: '1'
+      NEXT_TELEMETRY_DISABLED: "1"
       TRIVY_RUNNER_URL: http://scanner:3001
     ports:
-      - '127.0.0.1:3000:3000'
+      - "127.0.0.1:3000:3000"
     volumes:
       - registry-data:/app/data
     tmpfs:
@@ -44,10 +44,10 @@ services:
   scanner:
     image: ${REGISTRY_CONSOLE_IMAGE:-rubixvi/registry-console:edge}
     pull_policy: always
-    user: '1001:1001'
+    user: "1001:1001"
     init: true
     restart: unless-stopped
-    entrypoint: ['node', 'scripts/scanner.mjs']
+    entrypoint: [ "node", "scripts/scanner.mjs" ]
     environment:
       NODE_ENV: production
       SCANNER_DIR: /app/scanner
@@ -57,7 +57,7 @@ services:
       ALLOW_HTTP_REGISTRIES: ${ALLOW_HTTP_REGISTRIES:-false}
       TRIVY_TIMEOUT_SECONDS: ${TRIVY_TIMEOUT_SECONDS:-180}
     expose:
-      - '3001'
+      - "3001"
     volumes:
       - scanner-data:/app/scanner
     read_only: true
@@ -69,7 +69,13 @@ services:
     mem_limit: 2g
     cpus: 2
     healthcheck:
-      test: ['CMD', 'node', '-e', "fetch('http://127.0.0.1:3001/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3001/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
       interval: 30s
       timeout: 5s
       start_period: 10s
