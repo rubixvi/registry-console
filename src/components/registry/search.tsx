@@ -57,7 +57,7 @@ export function Search({
           </SelectTrigger>
 
           <SelectContent position="popper">
-            <SelectItem value="all">Registries</SelectItem>
+            <SelectItem value="all">Network</SelectItem>
 
             {registries.map((connection) => (
               <SelectItem key={connection.id} value={connection.id}>
