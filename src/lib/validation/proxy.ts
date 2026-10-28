@@ -27,4 +27,3 @@ export const proxyList = z
       .filter(Boolean)
   )
   .pipe(z.array(proxyRange).max(256))
-  

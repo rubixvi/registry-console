@@ -18,7 +18,9 @@ export const userSchema = z
     role: z.enum(['admin', 'member', 'viewer']),
   })
   .superRefine((user, context) => {
-    if ((!user.authProvider || user.authProvider === 'local') && !user.passwordHash) {
+    const provider = user.authProvider ?? 'local'
+
+    if (provider === 'local' && !user.passwordHash) {
       context.addIssue({
         code: 'custom',
         path: ['passwordHash'],
@@ -26,7 +28,7 @@ export const userSchema = z
       })
     }
 
-    if ((user.authProvider === 'ldap' || user.authProvider === 'sso') && user.passwordHash) {
+    if (provider !== 'local' && user.passwordHash) {
       context.addIssue({
         code: 'custom',
         path: ['passwordHash'],
@@ -34,7 +36,7 @@ export const userSchema = z
       })
     }
 
-    if (user.authProvider === 'sso' && !user.email) {
+    if (provider === 'sso' && !user.email) {
       context.addIssue({
         code: 'custom',
         path: ['email'],

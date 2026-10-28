@@ -14,4 +14,5 @@ export const auditInput = z
   })
   .refine((value) => !value.from || !value.to || value.from <= value.to, {
     message: 'The start date must be before the end date.',
+    path: ['to'],
   })
