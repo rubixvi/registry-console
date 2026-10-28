@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { findUser } from '@/lib/auth/accounts/find-user'
+import { findUser } from '@/lib/auth/accounts'
 import { AppError } from '@/lib/security/error'
 import { type User } from '@/types/auth'
 

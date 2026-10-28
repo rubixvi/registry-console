@@ -23,9 +23,9 @@ export default async function AccountPage() {
   if (!identity) redirect('/login')
 
   const user = configUser(identity.username)
-  const authenticator = getAuthenticator(user)
+  const auth = getAuthenticator(user)
 
-  const recovery = authenticator ? (JSON.parse(authenticator.recovery) as string[]).length : 0
+  const recovery = auth ? (JSON.parse(auth.recovery) as string[]).length : 0
 
   let ssoVerified = false
 
@@ -49,7 +49,7 @@ export default async function AccountPage() {
           ssoAccount: user.authProvider === 'sso',
           ssoVerified,
           providers: user.email && user.authProvider !== 'ldap' ? getSso() : [],
-          totpEnabled: Boolean(authenticator),
+          totpEnabled: Boolean(auth),
           recoveryRemaining: recovery,
         }}
       />

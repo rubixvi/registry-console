@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { accessState } from '@/lib/security/access/state'
+import { accessState } from '@/lib/security/access'
 import { type Identity } from '@/types/auth'
 
 export function withIdentity<T>(identity: Identity, task: () => T): T {

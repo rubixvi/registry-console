@@ -2,9 +2,8 @@ import 'server-only'
 
 import { type Client } from 'ldapts'
 
-import { directoryAttribute } from '@/lib/auth/directory/attribute'
+import { directoryAttribute, directoryRole } from '@/lib/auth/directory'
 import { type directoryConfig } from '@/lib/auth/directory/config'
-import { directoryRole } from '@/lib/auth/directory/role'
 import { escapeLdapFilter } from '@/lib/auth/ldap'
 import { userSchema } from '@/lib/validation/auth'
 import { emailSchema } from '@/lib/validation/sso'

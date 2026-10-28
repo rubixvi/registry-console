@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { findUser } from '@/lib/auth/accounts/find-user'
+import { findUser } from '@/lib/auth/accounts'
 import { cookieName } from '@/lib/auth/requests/cookie-name'
 import { cookieValue } from '@/lib/auth/requests/cookie-value'
 import { sessionId } from '@/lib/auth/requests/session-id'

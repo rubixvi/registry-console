@@ -1,16 +1,13 @@
 import 'server-only'
 
-import { publicRepository } from '@/lib/registry/access/public-repository'
+import { publicRep } from '@/lib/registry/access'
 import { registryCacheIdentity } from '@/lib/registry/identity'
-import { accessState } from '@/lib/security/access/state'
+import { accessState } from '@/lib/security/access'
 import { AppError } from '@/lib/security/error'
 import { keyedFingerprint } from '@/lib/security/fingerprint'
 import { type RegistryRecord } from '@/types/registry'
 
-export async function requireRepository(
-  registry: RegistryRecord,
-  repository: string
-): Promise<void> {
+export async function requireRepo(registry: RegistryRecord, repository: string): Promise<void> {
   const access = accessState.getStore()
 
   if (access?.identity.role !== 'viewer') return
@@ -19,7 +16,7 @@ export async function requireRepository(
   let result = access.repositories.get(key)
 
   if (!result) {
-    result = publicRepository(registry, repository)
+    result = publicRep(registry, repository)
     access.repositories.set(key, result)
   }
 

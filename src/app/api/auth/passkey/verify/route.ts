@@ -1,7 +1,7 @@
 import { type NextRequest, type NextResponse } from 'next/server'
 
 import { auditRequest } from '@/lib/audit'
-import { auditAuthFailure } from '@/lib/auth/audit'
+import { auditAuth } from '@/lib/auth/audit'
 import { limitSignIn } from '@/lib/auth/limit'
 import { authenticatePasskey, findPasskey } from '@/lib/auth/passkey'
 import { readRequest } from '@/lib/auth/requests'
@@ -38,7 +38,7 @@ export const POST = auditRequest(async (request: NextRequest): Promise<NextRespo
 
     return loginResponse(user, 'passkey')
   } catch (error) {
-    auditAuthFailure(actor, 'login.passkey.failed', error)
+    auditAuth(actor, 'login.passkey.failed', error)
 
     return apiError(error)
   }

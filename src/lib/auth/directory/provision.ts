@@ -2,7 +2,7 @@ import 'server-only'
 
 import { randomUUID } from 'node:crypto'
 
-import { securityId } from '@/lib/auth/accounts/security-id'
+import { securityId } from '@/lib/auth/accounts'
 import { directoryConfig } from '@/lib/auth/directory/config'
 import { directoryUser } from '@/lib/auth/directory/user'
 import { users } from '@/lib/config/users'

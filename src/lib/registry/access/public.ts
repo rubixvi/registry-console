@@ -11,10 +11,7 @@ import { githubPackage } from '@/lib/validation/response/github'
 import { tagsSchema } from '@/lib/validation/response/registry'
 import { type RegistryRecord } from '@/types/registry'
 
-export async function publicRepository(
-  registry: RegistryRecord,
-  repository: string
-): Promise<boolean> {
+export async function publicRep(registry: RegistryRecord, repository: string): Promise<boolean> {
   try {
     repositoryName.parse(repository)
     assertRepository(registry, repository)

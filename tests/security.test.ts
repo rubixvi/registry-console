@@ -9,7 +9,7 @@ import { NextRequest } from 'next/server'
 
 import { POST as login } from '../src/app/api/auth/login/route'
 import { securityAccounts, securityId } from '../src/lib/auth/accounts'
-import { auditAuthFailure } from '../src/lib/auth/audit'
+import { auditAuth } from '../src/lib/auth/audit'
 import { limitSignIn } from '../src/lib/auth/limit'
 import { createSession, resolveSession, tokenHash } from '../src/lib/auth/session'
 import { generateTotpSecret, getAuthenticator } from '../src/lib/auth/totp'
@@ -237,7 +237,7 @@ test('explicit account replacement and removal revoke old security methods', () 
 })
 
 test('failure audit records include actor, event, and status without submitted credentials', () => {
-  auditAuthFailure('owner', 'login.passkey.failed', new AppError(401, 'A private submitted value'))
+  auditAuth('owner', 'login.passkey.failed', new AppError(401, 'A private submitted value'))
 
   const row = database()
     .prepare(

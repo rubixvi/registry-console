@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { findUser } from '@/lib/auth/accounts/find-user'
+import { findUser } from '@/lib/auth/accounts'
 import { tokenHash } from '@/lib/auth/session/token-hash'
 import { env } from '@/lib/config/env'
 import { userFingerprint } from '@/lib/config/users'

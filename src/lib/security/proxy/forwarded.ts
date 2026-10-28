@@ -1,7 +1,7 @@
 import 'server-only'
 
 import { AppError } from '@/lib/security/error'
-import { ipAddress } from '@/lib/security/proxy/address'
+import { ipAddress } from '@/lib/security/proxy'
 import { trustedProxy } from '@/lib/security/proxy/trusted'
 
 export function forwardedAddress(request: Request, peer?: string): string {

@@ -6,12 +6,7 @@ import { AppError } from '@/lib/security/error'
 let windowExpires = 0
 let records = 0
 
-export function auditAuthFailure(
-  actor: string,
-  action: string,
-  error: unknown,
-  path?: string
-): void {
+export function auditAuth(actor: string, action: string, error: unknown, path?: string): void {
   if (!(error instanceof AppError) || error.status >= 500) {
     return
   }
