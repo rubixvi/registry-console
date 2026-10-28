@@ -8,7 +8,10 @@ export type User = {
   role: Role
   passwordHash?: string
   authProvider?: Providers
-  directory?: { source: string; subject: string }
+  directory?: {
+    source: string
+    subject: string
+  }
 }
 
 export type Identity = {
