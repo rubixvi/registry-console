@@ -16,29 +16,27 @@ import { type User } from '@/types/auth'
 
 export function securityId(user: User): string {
   const id = user.id ?? ''
-  const current = getAccount(user.username)
-
-  if (current?.configured_id === id) {
-    if (current.email !== (user.email ?? '')) updateAccount(user.username, user.email ?? '')
-    return current.account_id
-  }
+  const email = user.email ?? ''
 
   return transaction(() => {
-    const linked = user.email ? emailAccount(user.email) : undefined
+    const current = getAccount(user.username)
 
-    if (!current && linked && linked.configured_id === id) {
-      updateAccount(user.username, user.email!, linked.username)
-      audit('system', 'security.account.renamed', user.username)
-      return linked.account_id
+    if (current?.configured_id === id) {
+      if (current.email !== email) updateAccount(user.username, email)
+      return current.account_id
     }
 
-    const existing = getAccount(user.username)
+    if (!current && id && email) {
+      const linked = emailAccount(email)
 
-    if (existing?.configured_id === id) {
-      return existing.account_id
+      if (linked?.configured_id === id) {
+        updateAccount(user.username, email, linked.username)
+        audit('system', 'security.account.renamed', user.username)
+        return linked.account_id
+      }
     }
 
-    if (existing) {
+    if (current) {
       clearAccount(user.username)
       audit('system', 'security.account.replaced', user.username)
     }
@@ -49,7 +47,7 @@ export function securityId(user: User): string {
       username: user.username,
       account_id: accountId,
       configured_id: id,
-      email: user.email ?? '',
+      email,
     })
 
     if (migrateAccount(user.username, accountId)) {
