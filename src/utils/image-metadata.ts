@@ -1,15 +1,30 @@
 import { type ImageManifest, type ManifestEntry } from '@/types/image'
 
+function validPlatform(config: unknown): boolean {
+  if (!config || typeof config !== 'object') return false
+  if (!('os' in config) || !('architecture' in config)) return false
+
+  return [config.os, config.architecture].every(
+    (value) => typeof value === 'string' && value.length > 0 && value !== 'unknown'
+  )
+}
+
 export function isAttestation(entry: Omit<ManifestEntry, 'digest'>): boolean {
+  if (entry.platform?.os === 'unknown' && entry.platform.architecture === 'unknown') {
+    return true
+  }
+
+  if (entry.artifactType === 'application/vnd.docker.attestation.manifest.v1+json') {
+    return true
+  }
+
   const annotations = entry.annotations
 
   return (
-    (typeof annotations === 'object' &&
-      annotations !== null &&
-      'vnd.docker.reference.type' in annotations &&
-      annotations['vnd.docker.reference.type'] === 'attestation-manifest') ||
-    (entry.platform?.os === 'unknown' && entry.platform.architecture === 'unknown') ||
-    entry.artifactType === 'application/vnd.docker.attestation.manifest.v1+json'
+    typeof annotations === 'object' &&
+    annotations !== null &&
+    'vnd.docker.reference.type' in annotations &&
+    annotations['vnd.docker.reference.type'] === 'attestation-manifest'
   )
 }
 
@@ -30,18 +45,7 @@ export function isRunnable(manifest: ImageManifest, config: unknown): boolean {
     return false
   }
 
-  return (
-    typeof config === 'object' &&
-    config !== null &&
-    'os' in config &&
-    typeof config.os === 'string' &&
-    config.os.length > 0 &&
-    config.os !== 'unknown' &&
-    'architecture' in config &&
-    typeof config.architecture === 'string' &&
-    config.architecture.length > 0 &&
-    config.architecture !== 'unknown'
-  )
+  return validPlatform(config)
 }
 
 export function imageCreated(value: unknown): string | null {
@@ -58,8 +62,8 @@ export function imageCreated(value: unknown): string | null {
 
 export function createdAnnotation(annotations: unknown): string | null {
   if (
+    !annotations ||
     typeof annotations !== 'object' ||
-    annotations === null ||
     !('org.opencontainers.image.created' in annotations)
   ) {
     return null
