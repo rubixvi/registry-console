@@ -22,16 +22,20 @@ export function securityId(user: User): string {
     const current = getAccount(user.username)
 
     if (current?.configured_id === id) {
-      if (current.email !== email) updateAccount(user.username, email)
+      if (current.email !== email) {
+        updateAccount(user.username, email)
+      }
+
       return current.account_id
     }
 
-    if (!current && id && email) {
+    if (!current && email) {
       const linked = emailAccount(email)
 
       if (linked?.configured_id === id) {
         updateAccount(user.username, email, linked.username)
         audit('system', 'security.account.renamed', user.username)
+
         return linked.account_id
       }
     }
