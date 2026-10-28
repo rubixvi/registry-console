@@ -51,16 +51,15 @@ export function RegistryForm({ registry }: Props) {
 
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>Registry</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-xl">Registry</DialogTitle>
+
+          <DialogDescription className="text-xs">
             Configure your registry connection and authentication details.
           </DialogDescription>
         </DialogHeader>
 
         <form aria-busy={busy} className="space-y-5" onSubmit={submit}>
           <div className="grid gap-2">
-            <Label htmlFor={`${id}-provider`}>Registry type</Label>
-
             <Select
               name="provider"
               onValueChange={(value) => setProvider(value as RegistryProvider)}
@@ -78,38 +77,18 @@ export function RegistryForm({ registry }: Props) {
             </Select>
           </div>
 
-          {hosted && (
-            <div className="grid gap-2">
-              <Label htmlFor={`${id}-namespace`}>Namespace</Label>
-              <Input
-                defaultValue={registry?.namespace}
-                id={`${id}-namespace`}
-                maxLength={64}
-                name="namespace"
-                placeholder="Username or organisation"
-                required
-              />
-              <p className="text-xs text-muted-foreground">
-                {provider === 'github'
-                  ? 'Use a personal access token with read:packages. Deletion also requires delete:packages and package admin access.'
-                  : 'Use an access token to access private repositories and manage images with the required permissions.'}
-              </p>
-            </div>
-          )}
-
           <div className="grid gap-2">
-            <Label htmlFor={`${id}-name`}>Connection</Label>
+            <Label htmlFor={`${id}-name`}>Name</Label>
             <Input
               defaultValue={registry?.name}
               id={`${id}-name`}
               maxLength={64}
               name="name"
-              placeholder="Production registry"
               required
             />
           </div>
 
-          <div className="grid gap-2">
+          <div className="grid gap-2 hidden">
             <Label htmlFor={`${id}-url`}>Registry</Label>
             <Input
               aria-describedby={`${id}-url-help`}
@@ -128,28 +107,20 @@ export function RegistryForm({ registry }: Props) {
               required
               type="url"
             />
-            <p className="text-xs text-muted-foreground" id={`${id}-url-help`}>
-              {hosted
-                ? `${provider === 'github' ? 'GitHub Container Registry' : 'Docker Hub'} is automatically permitted.`
-                : 'The registry must be permitted by the server configuration.'}
-            </p>
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor={`${id}-pull-url`}>Pull URL</Label>
-            <Input
-              aria-describedby={`${id}-pull-url-help`}
-              defaultValue={registry?.pullUrl}
-              id={`${id}-pull-url`}
-              maxLength={2048}
-              name="pullUrl"
-              placeholder="https://registry.example.com"
-              type="url"
-            />
-            <p className="text-xs text-muted-foreground" id={`${id}-pull-url-help`}>
-              Registry address used in copied pull commands. Leave blank to use the default.
-            </p>
-          </div>
+          {hosted && (
+            <div className="grid gap-2">
+              <Label htmlFor={`${id}-namespace`}>Namespace</Label>
+              <Input
+                defaultValue={registry?.namespace}
+                id={`${id}-namespace`}
+                maxLength={64}
+                name="namespace"
+                required
+              />
+            </div>
+          )}
 
           <div className="grid gap-5 sm:grid-cols-2">
             <div className="grid gap-2">
@@ -178,13 +149,17 @@ export function RegistryForm({ registry }: Props) {
             </div>
           </div>
 
-          {isEditing && (
-            <p className="text-xs text-muted-foreground" id={`${id}-password-help`}>
-              {provider === 'github'
-                ? 'Re-enter the current package token or provide a new one.'
-                : 'Re-enter the current password or provide a new one. Leave blank to remove the stored password.'}
-            </p>
-          )}
+          <div className="grid gap-2">
+            <Label htmlFor={`${id}-pull-url`}>Pull URL</Label>
+            <Input
+              aria-describedby={`${id}-pull-url-help`}
+              defaultValue={registry?.pullUrl}
+              id={`${id}-pull-url`}
+              maxLength={2048}
+              name="pullUrl"
+              type="url"
+            />
+          </div>
 
           <label className="flex items-center gap-2 text-sm">
             <input
@@ -193,7 +168,7 @@ export function RegistryForm({ registry }: Props) {
               name="readOnly"
               type="checkbox"
             />
-            Read only
+            Read
           </label>
 
           <ErrorMessage message={error} />

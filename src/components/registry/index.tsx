@@ -67,7 +67,7 @@ export function Registry({ id, registry, repository, reference, admin }: Props) 
 
       <Heading description={registry.url} title={repository || registry.name}>
         {!repository && <Actions admin={admin} registry={registry} />}
-        {!registry.readOnly && <Badge>Read</Badge>}
+        {registry.readOnly && <Badge>Read</Badge>}
       </Heading>
 
       {repository && (

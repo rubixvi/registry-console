@@ -42,7 +42,6 @@ export function Manifest({ id, repository, reference }: Props) {
   const summary = imageSummary(data)
   const children = summary.children
   const images = children.filter((child) => !isAttestation(child))
-  const attestations = children.filter(isAttestation)
   const manifest = data.manifest
 
   const layers =
@@ -123,23 +122,6 @@ export function Manifest({ id, repository, reference }: Props) {
           </li>
         )
       })}
-
-      {attestations.map((child) => (
-        <li className="relative" key={child.digest}>
-          <span
-            aria-hidden="true"
-            className="pointer-events-none absolute -left-3 top-4.75 h-px w-3 bg-border"
-          />
-          <Link
-            className="group flex min-h-9 items-center gap-2 rounded-md px-2 py-1 hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            href={{ pathname: registryPath, query: { repository, reference: child.digest } }}
-          >
-            <FileCode2 aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
-
-            <span className="text-xs group-hover:text-primary">Build attestation</span>
-          </Link>
-        </li>
-      ))}
 
       <Layers layers={layers} />
     </ul>

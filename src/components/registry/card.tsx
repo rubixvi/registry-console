@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ArrowUpRight, Container, Eye } from 'lucide-react'
+import { Container } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { type Registry } from '@/types/registry'
@@ -19,23 +19,11 @@ export function RegistryCard({ registry }: Props) {
           <Container aria-hidden="true" className="size-6" />
         </span>
 
-        <ArrowUpRight
-          aria-hidden="true"
-          className="size-5 text-muted-foreground transition-colors group-hover:text-primary"
-        />
+        {registry.readOnly && <Badge>Read</Badge>}
       </div>
 
       <h2 className="truncate font-semibold">{registry.name}</h2>
       <p className="mt-2 truncate text-sm text-muted-foreground">{registry.url}</p>
-
-      {registry.readOnly && (
-        <div className="mt-auto flex flex-wrap gap-2 pt-6">
-          <Badge>
-            <Eye aria-hidden="true" className="size-3" />
-            Read only
-          </Badge>
-        </div>
-      )}
     </Link>
   )
 }
