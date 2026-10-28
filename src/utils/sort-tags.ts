@@ -47,10 +47,8 @@ export function sortTags(
       if (firstDate === undefined && secondDate !== undefined) return 1
       if (secondDate === undefined && firstDate !== undefined) return -1
 
-      if (firstDate !== undefined && secondDate !== undefined) {
-        if (firstDate !== secondDate) {
-          return (firstDate - secondDate) * direction
-        }
+      if (firstDate !== undefined && secondDate !== undefined && firstDate !== secondDate) {
+        return (firstDate - secondDate) * direction
       }
 
       return collator.compare(first, second) || lexical
