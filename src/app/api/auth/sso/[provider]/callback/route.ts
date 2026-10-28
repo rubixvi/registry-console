@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
 
 import { auditRequest } from '@/lib/audit'
-import { auditAuthFailure } from '@/lib/auth/audit'
+import { auditAuth } from '@/lib/auth/audit'
 import { clearRequest, issueRequest, readRequest } from '@/lib/auth/requests'
 import { loginResponse } from '@/lib/auth/response'
 import { linkUser, ssoProfile, ssoProviders } from '@/lib/auth/sso'
@@ -71,7 +71,7 @@ export const GET = auditRequest(
 
       return response
     } catch (error) {
-      auditAuthFailure(
+      auditAuth(
         'anonymous',
         'login.sso.failed',
         error instanceof AppError ? error : new AppError(401, 'SSO verification failed.')

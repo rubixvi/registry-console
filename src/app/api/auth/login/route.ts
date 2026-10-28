@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server'
 
 import { auditRequest } from '@/lib/audit'
 import { findUser } from '@/lib/auth/accounts'
-import { auditAuthFailure } from '@/lib/auth/audit'
+import { auditAuth } from '@/lib/auth/audit'
 import { verifyCredentials } from '@/lib/auth/credentials'
 import { authenticateDirectory } from '@/lib/auth/directory'
 import { limitSignIn } from '@/lib/auth/limit'
@@ -76,7 +76,7 @@ export const POST = auditRequest(async (request: NextRequest) => {
 
     return loginResponse(user, 'success')
   } catch (error) {
-    auditAuthFailure(actor, 'login.password.failed', error)
+    auditAuth(actor, 'login.password.failed', error)
 
     return apiError(error)
   }

@@ -3,7 +3,7 @@ import 'server-only'
 import { type NextRequest, NextResponse } from 'next/server'
 
 import { auditRequest } from '@/lib/audit'
-import { auditAuthFailure } from '@/lib/auth/audit'
+import { auditAuth } from '@/lib/auth/audit'
 import { getIdentity } from '@/lib/auth/session'
 import { hasRole, withIdentity } from '@/lib/security/access'
 import { withLimits } from '@/lib/security/context'
@@ -54,7 +54,7 @@ export function api(handler: Handler, role?: Role) {
       const path = new URL(request.url).pathname
 
       if (path.startsWith('/api/account/')) {
-        auditAuthFailure(identity?.username ?? 'anonymous', 'security.request.failed', error, path)
+        auditAuth(identity?.username ?? 'anonymous', 'security.request.failed', error, path)
       }
 
       return apiError(error)
