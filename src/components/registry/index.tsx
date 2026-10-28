@@ -2,24 +2,24 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 
 import { Heading } from '@/components/layout/heading'
-import { RegistryBreadcrumbs } from '@/components/registry/breadcrumbs'
+import { Breadcrumbs } from '@/components/registry/breadcrumbs'
 import { Actions } from '@/components/registry/connection/actions'
 import { Inspector } from '@/components/registry/image/inspector'
-import { Repository } from '@/components/registry/repository/list'
+import { Repository } from '@/components/registry/repository'
 import { Tag } from '@/components/registry/tags/list'
 import { Badge } from '@/components/ui/badge'
 import { env } from '@/lib/config/env'
-import { type Registry } from '@/types/registry'
+import { type Registry as RegistryType } from '@/types/registry'
 
 type Props = {
   id: string
-  registry: Registry
+  registry: RegistryType
   repository?: string
   reference?: string
   admin: boolean
 }
 
-export function RegistryContent({ id, registry, repository, reference, admin }: Props) {
+export function Registry({ id, registry, repository, reference, admin }: Props) {
   const path = `/registries/${encodeURIComponent(id)}`
 
   const repoLink = {
@@ -27,7 +27,7 @@ export function RegistryContent({ id, registry, repository, reference, admin }: 
     query: { repository },
   }
 
-  let content = <Repository id={id} key={id} provider={registry.provider} />
+  let content = <Repository id={id} key={id} />
 
   if (repository && reference) {
     content = (
@@ -63,22 +63,12 @@ export function RegistryContent({ id, registry, repository, reference, admin }: 
 
   return (
     <>
-      <RegistryBreadcrumbs
-        id={id}
-        name={registry.name}
-        reference={reference}
-        repository={repository}
-      />
+      <Breadcrumbs id={id} name={registry.name} reference={reference} repository={repository} />
 
-      <Heading
-        description={registry.url}
-        eyebrow={repository ? 'Repository' : 'Registry'}
-        title={repository || registry.name}
-      >
-        {registry.readOnly && <Badge>Read only</Badge>}
+      <Heading description={registry.url} title={repository || registry.name}>
+        {!repository && <Actions admin={admin} registry={registry} />}
+        {!registry.readOnly && <Badge>Read only</Badge>}
       </Heading>
-
-      {!repository && <Actions admin={admin} registry={registry} />}
 
       {repository && (
         <Link

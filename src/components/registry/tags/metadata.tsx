@@ -15,6 +15,7 @@ type Props = {
 
 export function Metadata({ id, repository, reference, trivyEnabled, children }: Props) {
   const { container, data, error } = useMetadata(id, repository, reference)
+
   const date = data?.created ?? data?.pushedAt
 
   return (

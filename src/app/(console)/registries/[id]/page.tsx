@@ -1,6 +1,6 @@
 import { type Metadata } from 'next'
 
-import { RegistryContent } from '@/components/registry/content'
+import { Registry } from '@/components/registry'
 import { getRegistry } from '@/lib/registry/page'
 import { type RegistryProps } from '@/types/registry'
 
@@ -31,7 +31,7 @@ export default async function RegistryPage(props: RegistryProps) {
   const { identity, id, registry, repository, reference } = await getRegistry(props)
 
   return (
-    <RegistryContent
+    <Registry
       admin={identity.role === 'admin'}
       id={id}
       reference={reference}

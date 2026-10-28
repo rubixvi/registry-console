@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { LogoutButton } from '@/components/auth/logout-button'
 import { Brand } from '@/components/layout/brand'
 import { Navigation } from '@/components/layout/navigation'
-import { RegistrySelector } from '@/components/registry/selector'
+import { Network } from '@/components/layout/network'
 import { buttonVariants } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { cn } from '@/lib/utils'
@@ -32,13 +32,13 @@ export function Sidebar({ branding, identity, registries }: Props) {
         </div>
       </div>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:mt-6 lg:grid-cols-1 lg:gap-6">
-        <div className="min-w-0 lg:order-2">
+      <div className="mt-5 grid gap-3 grid-cols-2 lg:mt-6 lg:grid-cols-1 lg:gap-6">
+        <div className="lg:order-2">
           <Navigation admin={isAdmin} />
         </div>
 
-        <div className="min-w-0 lg:order-1">
-          <RegistrySelector registries={registries} />
+        <div className="lg:order-1">
+          <Network registries={registries} />
         </div>
       </div>
 

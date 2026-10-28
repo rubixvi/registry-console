@@ -1,5 +1,7 @@
 'use client'
 
+import { Settings } from 'lucide-react'
+
 import { ErrorMessage } from '@/components/shared/error-message'
 import {
   AlertDialog,
@@ -13,6 +15,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { useConnection } from '@/hooks/registry/use-connection'
 import { type Registry } from '@/types/registry'
 import { RegistryForm } from './form'
@@ -26,47 +29,58 @@ export function Actions({ registry, admin }: Props) {
   const { busy, error, test, remove } = useConnection(registry.id)
 
   return (
-    <section className="mb-7 space-y-3">
-      <div className="flex flex-wrap items-start gap-3">
-        <Button disabled={busy} onClick={test} type="button" variant="outline">
-          Test
-        </Button>
+    <section className="space-y-3">
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button type="button" variant="outline">
+            <Settings aria-hidden="true" className="size-4" />
+          </Button>
+        </PopoverTrigger>
 
-        {admin && (
-          <>
-            <RegistryForm registry={registry} />
+        <PopoverContent align="end" className="w-auto p-2" sideOffset={10}>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button disabled={busy} onClick={test} type="button" variant="outline">
+              Test
+            </Button>
 
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button disabled={busy} type="button" variant="destructive">
-                  Remove
-                </Button>
-              </AlertDialogTrigger>
+            {admin && (
+              <>
+                <RegistryForm registry={registry} />
 
-              <AlertDialogContent aria-busy={busy}>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Remove</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This removes {registry.name} from this workspace. Images in the registry are
-                    retained.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button disabled={busy} type="button" variant="destructive">
+                      Remove
+                    </Button>
+                  </AlertDialogTrigger>
 
-                <AlertDialogFooter>
-                  <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    className="bg-destructive text-white hover:bg-destructive/90"
-                    disabled={busy}
-                    onClick={remove}
-                  >
-                    {busy ? 'Removing…' : 'Remove'}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </>
-        )}
-      </div>
+                  <AlertDialogContent aria-busy={busy}>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Remove</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This removes {registry.name} from this workspace. Images in the registry are
+                        retained.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+
+                    <AlertDialogFooter>
+                      <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
+
+                      <AlertDialogAction
+                        className="bg-destructive text-white hover:bg-destructive/90"
+                        disabled={busy}
+                        onClick={remove}
+                      >
+                        {busy ? 'Removing…' : 'Remove'}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </>
+            )}
+          </div>
+        </PopoverContent>
+      </Popover>
 
       <ErrorMessage message={error} />
     </section>

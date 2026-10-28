@@ -27,6 +27,7 @@ type Props = {
 
 export function BulkDelete({ repository, state }: Props) {
   const id = useId()
+
   const canDelete = !state.busy && Boolean(state.plan) && state.confirmation === repository
 
   return (

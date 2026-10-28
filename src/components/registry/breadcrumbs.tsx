@@ -8,7 +8,7 @@ type Props = {
   reference?: string
 }
 
-export function RegistryBreadcrumbs({ id, name, repository, reference }: Props) {
+export function Breadcrumbs({ id, name, repository, reference }: Props) {
   const path = `/registries/${encodeURIComponent(id)}`
 
   return (

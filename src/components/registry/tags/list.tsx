@@ -34,9 +34,10 @@ type Props = {
 }
 
 export function Tag({ id, repository, admin, readOnly, defaultOrder, trivyEnabled }: Props) {
+  const { mutate } = useSWRConfig()
+
   const ordering = useTagOrder(defaultOrder)
   const state = useRegistryPage(id, repository, ordering.order)
-  const { mutate } = useSWRConfig()
 
   const scope = `${id}/${repository}/${ordering.order}/${state.query}/${state.page}/${state.items.join(',')}`
   const bulk = useBulkDelete(id, repository, scope, state.items, refresh)
@@ -140,7 +141,7 @@ export function Tag({ id, repository, admin, readOnly, defaultOrder, trivyEnable
             }}
             value={ordering.order}
           >
-            <SelectTrigger aria-label="Tag order" className="w-full sm:w-34">
+            <SelectTrigger aria-label="Tag order" className="w-full sm:w-34 h-8">
               <SelectValue />
             </SelectTrigger>
 
@@ -164,9 +165,9 @@ export function Tag({ id, repository, admin, readOnly, defaultOrder, trivyEnable
 
             <Input
               aria-label="Filter tags"
-              className="pl-9"
+              className="pl-9 h-8 max-w-40"
               onChange={state.changeQuery}
-              placeholder="Filter tags"
+              placeholder="Search..."
               value={state.query}
             />
           </div>

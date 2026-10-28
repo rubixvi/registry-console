@@ -51,7 +51,7 @@ export function Inspector({ registry, repository, reference, admin, pullUrl }: P
   const multiple = data.platformDetails.length > 1
   const canDelete = admin && !registry.readOnly
 
-  const digestLabel = data.verified ? 'Digest verified' : 'Digest calculated'
+  const digestLabel = data.verified ? 'Verified' : 'Calculated'
   const digestColour = data.verified ? 'text-emerald-700' : 'text-muted-foreground'
 
   return (

@@ -6,7 +6,7 @@ import { Network } from 'lucide-react'
 import { Heading } from '@/components/layout/heading'
 import { RegistryCard } from '@/components/registry/card'
 import { RegistryForm } from '@/components/registry/connection/form'
-import { RegistrySearch } from '@/components/registry/search'
+import { Search } from '@/components/registry/search'
 import { ErrorMessage } from '@/components/shared/error-message'
 import { Loading } from '@/components/shared/loading'
 import { useResource } from '@/hooks/shared/use-resource'
@@ -56,8 +56,6 @@ export function RegistryList({ registries, identity }: Props) {
     return selected && supported && found
   })
 
-  const filtered = text.length > 0 || registry !== 'all' || platform
-  const label = count === 1 ? 'connection' : 'connections'
   const message = failures.map((item) => `${item.registryName} · ${item.message}`).join('\n')
 
   let content: ReactNode
@@ -100,22 +98,12 @@ export function RegistryList({ registries, identity }: Props) {
 
   return (
     <>
-      <Heading description="Browse and manage your connected registries." title="Registries" />
-
-      <div className="mb-7 flex flex-wrap items-center justify-between gap-4">
-        <p aria-live="polite" className="text-sm text-muted-foreground">
-          {loading
-            ? 'platform registries…'
-            : filtered
-              ? `${items.length} of ${count} ${label}`
-              : `${count} configured ${label}`}
-        </p>
-
+      <Heading description="Manage your registries." title="Registries">
         {admin && <RegistryForm />}
-      </div>
+      </Heading>
 
       {count > 0 && (
-        <RegistrySearch
+        <Search
           architecture={architecture}
           onArchitectureChange={setArchitecture}
           onQueryChange={setQuery}
