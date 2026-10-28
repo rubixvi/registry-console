@@ -30,11 +30,14 @@ type Props = {
 
 export function Repository({ id, provider }: Props) {
   const state = useRegistryPage(id)
-  const { mutate } = useSWRConfig()
-  const [view, setView] = useState('tree')
-  const tree = provider !== 'dockerhub' && view === 'tree'
 
-  const registryPath = `/registries/${encodeURIComponent(id)}`
+  const { mutate } = useSWRConfig()
+
+  const [view, setView] = useState('tree')
+
+  const tree = provider === 'distribution' && view === 'tree'
+
+  const path = `/registries/${encodeURIComponent(id)}`
 
   async function refresh(): Promise<void> {
     await state.refresh()
@@ -71,7 +74,7 @@ export function Repository({ id, provider }: Props) {
       <ul className="divide-y">
         {state.items.map((name) => {
           const href = {
-            pathname: registryPath,
+            pathname: path,
             query: { repository: name },
           }
 

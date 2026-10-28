@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 
 import { useResource } from '@/hooks/shared/use-resource'
 import { apiRequest } from '@/lib/http/client'
-import { sortTags, type TagOrder } from '@/utils/tag-order'
+import { sortTags, type TagOrder } from '@/utils/sort-tags'
 
 const PAGE_SIZE = 100
 

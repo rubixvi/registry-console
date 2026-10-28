@@ -19,6 +19,8 @@ type SettingsRow = {
 }
 
 export function getSettings(): Branding {
+  const brandName = env().BRAND_NAME
+
   const row = database().prepare("SELECT value FROM settings WHERE id = 'branding'").get() as
     | SettingsRow
     | undefined
@@ -37,8 +39,8 @@ export function getSettings(): Branding {
   }
 
   return {
-    name: env().BRAND_NAME,
-    footer: '© 2026 Rubix Studios.',
+    name: brandName,
+    footer: `© ${new Date().getFullYear()} ${brandName}.`,
     accent: '#6366f1',
     logoPath: '',
   }

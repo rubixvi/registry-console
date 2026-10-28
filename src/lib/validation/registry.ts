@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 import { pullUrlSchema } from '@/lib/validation/url'
-import { TAG_ORDERS } from '@/utils/tag-order'
+import { TAG_ORDERS } from '@/utils/sort-tags'
 
 export const repositoryName = z
   .string()

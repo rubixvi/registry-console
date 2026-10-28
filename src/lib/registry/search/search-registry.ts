@@ -7,7 +7,7 @@ import { orderTags } from '@/lib/registry/search/order-tags'
 import { enter } from '@/lib/registry/search/state'
 import { hasLimits } from '@/lib/security/context'
 import { type RegistryRecord } from '@/types/registry'
-import { type TagOrder } from '@/utils/tag-order'
+import { type TagOrder } from '@/utils/sort-tags'
 
 export async function searchRegistry(
   registry: RegistryRecord,

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 
-import { isTagOrder, type TagOrder } from '@/utils/tag-order'
+import { isTagOrder, type TagOrder } from '@/utils/sort-tags'
 
 const STORAGE_KEY = 'registry-console:tag-order'
 

@@ -74,6 +74,7 @@ export function LoginForm({ providers = [], initialFactor = false, ssoError = fa
       )}
 
       <ErrorMessage message={error} />
+
       {ssoError && (
         <ErrorMessage message="SSO sign-in could not be verified. Check your configured email and provider." />
       )}

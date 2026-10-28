@@ -22,8 +22,8 @@ import { envSchema } from '../src/lib/validation/env'
 import { type RegistryRecord } from '../src/types/registry'
 import { imageLabels } from '../src/utils/image-labels'
 import { namespaceTree } from '../src/utils/namespace-tree'
-import { isTagOrder, sortTags } from '../src/utils/tag-order'
-import { selectTags } from '../src/utils/tag-selection'
+import { selectTags } from '../src/utils/select-tags'
+import { isTagOrder, sortTags } from '../src/utils/sort-tags'
 
 const directory = mkdtempSync(path.join(tmpdir(), 'registry-browsing-'))
 let fixture: Awaited<ReturnType<typeof mockBrowsing>>

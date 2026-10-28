@@ -29,6 +29,7 @@ export function Brand({ branding }: Props) {
         <span className="truncate text-base leading-tight font-semibold tracking-tight">
           {branding.name}
         </span>
+
         <span className="truncate text-[9px] leading-none font-semibold tracking-[0.12em] uppercase opacity-50">
           Container Management
         </span>

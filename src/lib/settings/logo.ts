@@ -23,25 +23,34 @@ export function validateLogo(bytes: Buffer): string {
   let width = 0
   let height = 0
   let ended = false
+
   const compressed: Buffer[] = []
 
   while (offset + 12 <= bytes.length) {
     const length = bytes.readUInt32BE(offset)
     const end = offset + 12 + length
+
     if (end > bytes.length) throw invalid()
+
     const type = bytes.toString('ascii', offset + 4, offset + 8)
+
     let crc = 0xffffffff
+
     for (const byte of bytes.subarray(offset + 4, end - 4)) {
       crc ^= byte
       for (let bit = 0; bit < 8; bit++) crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0)
     }
+
     if ((crc ^ 0xffffffff) >>> 0 !== bytes.readUInt32BE(end - 4)) throw invalid()
 
     if (offset === 8) {
       if (type !== 'IHDR' || length !== 13) throw invalid()
+
       width = bytes.readUInt32BE(offset + 8)
       height = bytes.readUInt32BE(offset + 12)
+
       if (!width || !height || width > 2048 || height > 2048) throw invalid()
+
       const depth = bytes[offset + 16]
       const colour = bytes[offset + 17]
       const depths: Record<number, number[]> = {
@@ -51,6 +60,7 @@ export function validateLogo(bytes: Buffer): string {
         4: [8, 16],
         6: [8, 16],
       }
+
       if (
         !depths[colour]?.includes(depth) ||
         bytes[offset + 18] !== 0 ||
@@ -61,10 +71,14 @@ export function validateLogo(bytes: Buffer): string {
     } else if (type === 'IHDR') throw invalid()
 
     if (type === 'IDAT') compressed.push(bytes.subarray(offset + 8, end - 4))
+
     offset = end
+
     if (type === 'IEND') {
       if (length !== 0 || offset !== bytes.length) throw invalid()
+
       ended = true
+
       break
     }
   }
@@ -74,6 +88,7 @@ export function validateLogo(bytes: Buffer): string {
     const pixels = inflateSync(Buffer.concat(compressed), {
       maxOutputLength: 34 * 1024 * 1024,
     })
+
     if (!pixels.length) throw invalid()
   } catch {
     throw invalid()
@@ -86,5 +101,6 @@ export function getLogo(): Buffer | null {
   const row = database().prepare("SELECT value FROM settings WHERE id = 'brand-logo'").get() as
     | { value: string }
     | undefined
+
   return row ? Buffer.from(row.value, 'base64') : null
 }

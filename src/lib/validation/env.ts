@@ -5,7 +5,7 @@ import { ldapEnv } from '@/lib/validation/ldap'
 import { proxyList } from '@/lib/validation/proxy'
 import { ssoEnv } from '@/lib/validation/sso-env'
 import { pullUrlSchema } from '@/lib/validation/url'
-import { TAG_ORDERS } from '@/utils/tag-order'
+import { TAG_ORDERS } from '@/utils/sort-tags'
 
 export const envSchema = z.object({
   ...ssoEnv.shape,
