@@ -39,7 +39,7 @@ export function RegistrySelector({ registries }: Props) {
       </SelectTrigger>
 
       <SelectContent>
-        <SelectItem value="all">All registries</SelectItem>
+        <SelectItem value="all">Registries</SelectItem>
 
         {registries.map((registry) => (
           <SelectItem key={registry.id} value={registry.id}>
