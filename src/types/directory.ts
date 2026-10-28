@@ -1,5 +1,10 @@
 import { type Role, type User } from '@/types/auth'
 
+export type Identity = {
+  source: string
+  subject: string
+}
+
 export type DirectoryProfile = {
   subject: string
   username: string
@@ -19,4 +24,6 @@ export type DirectoryRow = {
   active: number
 }
 
-export type DirectoryUser = User & { directory: { source: string; subject: string } }
+export type DirectoryUser = User & {
+  directory: Identity
+}
