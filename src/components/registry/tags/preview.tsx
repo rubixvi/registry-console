@@ -14,8 +14,8 @@ type Props = {
 }
 
 export function Tags({ id, repository }: Props) {
-  const container = useRef<HTMLDivElement>(null)
   const [visible, setVisible] = useState(false)
+  const container = useRef<HTMLDivElement>(null)
 
   const params = new URLSearchParams({ repository, n: '100' })
   const endpoint = `/api/registries/${encodeURIComponent(id)}/tags?${params}`

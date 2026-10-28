@@ -1,6 +1,6 @@
 'use client'
 
-import { Search } from 'lucide-react'
+import { SearchIcon } from 'lucide-react'
 
 import { Architecture } from '@/components/registry/shared/architecture'
 import { Input } from '@/components/ui/input'
@@ -23,7 +23,7 @@ type Props = {
   onArchitectureChange: (value: string) => void
 }
 
-export function RegistrySearch({
+export function Search({
   registries,
   query,
   registry,
@@ -33,10 +33,10 @@ export function RegistrySearch({
   onArchitectureChange,
 }: Props) {
   return (
-    <section aria-label="Registry filters" className="mb-7 rounded-xl border bg-card p-5">
-      <div className="flex flex-wrap gap-3">
-        <div className="relative min-w-48 flex-1">
-          <Search
+    <section aria-label="Registry filters" className="mb-5 rounded-xl border bg-card p-3 sm:p-4">
+      <div className="grid grid-cols-2 items-center gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
+        <div className="relative col-span-2 min-w-0 sm:col-span-1">
+          <SearchIcon
             aria-hidden="true"
             className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
           />
@@ -52,11 +52,11 @@ export function RegistrySearch({
         </div>
 
         <Select onValueChange={onRegistryChange} value={registry}>
-          <SelectTrigger aria-label="Registry filter" className="w-full sm:w-48">
+          <SelectTrigger aria-label="Registry filter" className="w-full sm:w-40">
             <SelectValue />
           </SelectTrigger>
 
-          <SelectContent>
+          <SelectContent position="popper">
             <SelectItem value="all">Registries</SelectItem>
 
             {registries.map((connection) => (
