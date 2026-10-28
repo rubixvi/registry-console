@@ -2,7 +2,7 @@ import 'server-only'
 
 import { cookies } from 'next/headers'
 
-import { findUser } from '@/lib/auth/accounts/find-user'
+import { findUser } from '@/lib/auth/accounts'
 import { refreshDirectory } from '@/lib/auth/directory/refresh'
 import { resolveSession } from '@/lib/auth/session/resolve-session'
 import { sessionCookieName } from '@/lib/auth/session/session-cookie-name'

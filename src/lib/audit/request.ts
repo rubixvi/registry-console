@@ -13,7 +13,7 @@ export function auditRequest<Args extends unknown[], Result>(
     try {
       ip = clientAddress(request) ?? ''
     } catch {
-      ip = ''
+      // Continue auditing
     }
 
     return auditState.run(ip, () => handler(request, ...args))
