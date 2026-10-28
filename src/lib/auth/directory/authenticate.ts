@@ -2,9 +2,7 @@ import 'server-only'
 
 import { InvalidCredentialsError } from 'ldapts'
 
-import { directoryProfile } from '@/lib/auth/directory/profile'
-import { provisionDirectory } from '@/lib/auth/directory/provision'
-import { withDirectory } from '@/lib/auth/directory/with-directory'
+import { directoryProfile, provisionDirectory, withDirectory } from '@/lib/auth/directory'
 import { escapeLdapFilter } from '@/lib/auth/ldap'
 import { decryptSecret } from '@/lib/security/crypto'
 import { createGate } from '@/lib/security/gate'

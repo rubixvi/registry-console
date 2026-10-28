@@ -1,6 +1,11 @@
 import 'server-only'
 
+export * from '@/lib/auth/directory/attribute'
 export * from '@/lib/auth/directory/authenticate'
 export * from '@/lib/auth/directory/config'
+export * from '@/lib/auth/directory/directory'
+export * from '@/lib/auth/directory/profile'
+export * from '@/lib/auth/directory/provision'
 export * from '@/lib/auth/directory/refresh'
+export * from '@/lib/auth/directory/role'
 export * from '@/lib/auth/directory/user'
