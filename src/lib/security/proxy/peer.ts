@@ -3,7 +3,7 @@ import 'server-only'
 import { createHmac, timingSafeEqual } from 'node:crypto'
 
 import { AppError } from '@/lib/security/error'
-import { ipAddress } from '@/lib/security/proxy/address'
+import { ipAddress } from '@/lib/security/proxy'
 
 export function peerAddress(request: Request): string | undefined {
   const key = process.env.REGISTRY_PEER_KEY

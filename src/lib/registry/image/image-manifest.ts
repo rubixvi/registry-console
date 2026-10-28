@@ -2,7 +2,7 @@ import 'server-only'
 
 import { createHash } from 'node:crypto'
 
-import { requireRepository } from '@/lib/registry/access'
+import { requireRepo } from '@/lib/registry/access'
 import { cachedResponse, cacheGeneration, rememberResponse } from '@/lib/registry/cache'
 import { registryRequest } from '@/lib/registry/client'
 import { assertRepository } from '@/lib/registry/repository'
@@ -18,7 +18,7 @@ export async function imageManifest(
   reference: string,
   refresh = false
 ): Promise<ManifestResult> {
-  await requireRepository(registry, repository)
+  await requireRepo(registry, repository)
 
   repositoryName.parse(repository)
   assertRepository(registry, repository)

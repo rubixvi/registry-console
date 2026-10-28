@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { requireRepository } from '@/lib/registry/access/require-repository'
+import { requireRepo } from '@/lib/registry/access'
 import { registryCacheIdentity } from '@/lib/registry/identity'
 import { privateAccess } from '@/lib/security/access'
 import { encryptSecret } from '@/lib/security/crypto'
@@ -24,7 +24,7 @@ export async function visiblePage(
 
     const batch = page.items.slice(index, index + 4)
     const results = await Promise.allSettled(
-      batch.map((repository) => requireRepository(registry, repository))
+      batch.map((repository) => requireRepo(registry, repository))
     )
 
     for (const [offset, result] of results.entries()) {

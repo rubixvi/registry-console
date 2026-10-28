@@ -1,5 +1,6 @@
 import 'server-only'
 
-export * from '@/lib/security/access/has-role'
-export * from '@/lib/security/access/private-access'
-export * from '@/lib/security/access/with-identity'
+export * from '@/lib/security/access/identity'
+export * from '@/lib/security/access/private'
+export * from '@/lib/security/access/role'
+export * from '@/lib/security/access/state'

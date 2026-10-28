@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { requireRepository } from '@/lib/registry/access'
+import { requireRepo } from '@/lib/registry/access'
 import { validateUrl } from '@/lib/registry/allowlist'
 import {
   cachedResponse,
@@ -27,8 +27,7 @@ export async function registryRequest(
 
   const target = path.split('?')[0].match(/^\/v2\/(.+)\/(?:manifests|blobs|tags)\//)
 
-  if (target)
-    await requireRepository(registry, target[1].split('/').map(decodeURIComponent).join('/'))
+  if (target) await requireRepo(registry, target[1].split('/').map(decodeURIComponent).join('/'))
 
   const deletion = options.method === 'DELETE'
   const readable = !options.method || options.method === 'GET'

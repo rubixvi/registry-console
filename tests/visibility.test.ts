@@ -7,7 +7,7 @@ import { after, test } from 'node:test'
 
 import { database } from '../src/lib/database/client'
 import { claimScan } from '../src/lib/database/scan'
-import { requireRepository } from '../src/lib/registry/access'
+import { requireRepo } from '../src/lib/registry/access'
 import { registryPage } from '../src/lib/registry/catalog'
 import { registryRequest } from '../src/lib/registry/client'
 import { imageManifest } from '../src/lib/registry/image'
@@ -168,18 +168,18 @@ test('Docker Hub visibility is checked again for each request and unknown privac
   })
 
   await withIdentity(viewer, async () => {
-    await requireRepository(value, 'team/app')
-    await requireRepository(value, 'team/app')
+    await requireRepo(value, 'team/app')
+    await requireRepo(value, 'team/app')
   })
   assert.equal(requests, 1)
   visibility = true
   await assert.rejects(
-    withIdentity(viewer, () => requireRepository(value, 'team/app')),
+    withIdentity(viewer, () => requireRepo(value, 'team/app')),
     /not found/
   )
   visibility = undefined
   await assert.rejects(
-    withIdentity(viewer, () => requireRepository(value, 'team/app')),
+    withIdentity(viewer, () => requireRepo(value, 'team/app')),
     /not found/
   )
   assert.equal(requests, 3)
@@ -204,16 +204,16 @@ test('GitHub public, private and internal packages are classified explicitly and
     return Response.json({ name: 'app/nested', owner: { login: 'team' }, visibility })
   })
 
-  await withIdentity(viewer, () => requireRepository(value, 'team/app/nested'))
+  await withIdentity(viewer, () => requireRepo(value, 'team/app/nested'))
   for (const state of ['private', 'internal', 'unknown']) {
     visibility = state
     await assert.rejects(
-      withIdentity(viewer, () => requireRepository(value, 'team/app/nested')),
+      withIdentity(viewer, () => requireRepo(value, 'team/app/nested')),
       /not found/
     )
   }
 
-  await withIdentity(member, () => requireRepository(value, 'team/app/nested'))
+  await withIdentity(member, () => requireRepo(value, 'team/app/nested'))
 })
 
 test('viewer scan feedback cannot reveal a private active image or its actor', () => {
