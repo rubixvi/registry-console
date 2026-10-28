@@ -22,7 +22,7 @@ import {
 import { useBulkDelete } from '@/hooks/registry/use-bulk-delete'
 import { useTagOrder } from '@/hooks/registry/use-order'
 import { useRegistryPage } from '@/hooks/registry/use-page'
-import { type TagOrder } from '@/utils/tag-order'
+import { type TagOrder } from '@/utils/sort-tags'
 
 type Props = {
   id: string

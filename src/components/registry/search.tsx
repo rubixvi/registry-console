@@ -57,7 +57,7 @@ export function RegistrySearch({
           </SelectTrigger>
 
           <SelectContent>
-            <SelectItem value="all">All registries</SelectItem>
+            <SelectItem value="all">Registries</SelectItem>
 
             {registries.map((connection) => (
               <SelectItem key={connection.id} value={connection.id}>

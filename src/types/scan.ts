@@ -55,16 +55,23 @@ export type ScanJob = ScanTarget & {
   started?: boolean
 }
 
-export type ScanLease = { expires: number; started: boolean }
+export type ScanLease = {
+  expires: number
+  started: boolean
+}
 
-export type QueuedScan = ScanTarget & { actor: string; override: number; available: number }
+export type QueuedScan = ScanTarget & {
+  actor: string
+  override: number
+  available: number
+}
 
 export type ScanClaim = ScanJob & {
   override?: boolean
 }
 
 export type ScanRow = {
-  status: ScanStatus['status']
+  status: Status
   value: string
   expires: number
 }

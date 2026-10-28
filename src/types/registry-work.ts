@@ -1,11 +1,15 @@
 import { type ImageManifest, type PlatformDetails } from '@/types/image'
 import { type RegistryRecord } from '@/types/registry'
 
+type Failure = {
+  error: unknown
+}
+
 export type BatchState<T, R> = {
   items: T[]
   results: R[]
   cursor: number
-  failure?: { error: unknown }
+  failure?: Failure
 }
 
 export type ImageInspection = {
@@ -18,10 +22,10 @@ export type ImageInspection = {
   order: Map<string, number>
   waiting: (() => void)[]
   active: number
-  failure?: { error: unknown }
   platformDetails: PlatformDetails[]
   deadline: number
   config: unknown
+  failure?: Failure
 }
 
 export type ImageQueue = {

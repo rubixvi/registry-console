@@ -1,5 +1,18 @@
 import { type NamespaceNode } from '@/types/registry'
 
+function sortTree(nodes: NamespaceNode[]): void {
+  nodes.sort((a, b) => {
+    if (a.children.length && !b.children.length) return -1
+    if (b.children.length && !a.children.length) return 1
+
+    return a.name < b.name ? -1 : a.name > b.name ? 1 : 0
+  })
+
+  for (const node of nodes) {
+    sortTree(node.children)
+  }
+}
+
 export function namespaceTree(repositories: string[]): NamespaceNode[] {
   const roots: NamespaceNode[] = []
   const nodes = new Map<string, NamespaceNode>()
@@ -25,17 +38,7 @@ export function namespaceTree(repositories: string[]): NamespaceNode[] {
     }
   }
 
-  function sort(children: NamespaceNode[]): void {
-    children.sort(
-      (a, b) =>
-        Number(b.children.length > 0) - Number(a.children.length > 0) ||
-        (a.name < b.name ? -1 : a.name > b.name ? 1 : 0)
-    )
-
-    for (const node of children) sort(node.children)
-  }
-
-  sort(roots)
+  sortTree(roots)
 
   return roots
 }

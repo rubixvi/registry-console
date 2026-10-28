@@ -2,6 +2,18 @@ import { type z } from 'zod'
 
 import { type manifestSchema } from '@/lib/validation/image'
 
+export type ImageConfig = {
+  created?: string
+  os?: string
+  architecture?: string
+}
+
+export type ImagePlatform = {
+  os: string
+  architecture: string
+  variant?: string
+}
+
 export type ImageMetadata = {
   isPrivate: boolean | null
   digest: string
@@ -25,16 +37,10 @@ export type ImageDetails = {
   labels: ImageLabel[]
 }
 
-export type ImageConfig = {
-  created?: string
-  os?: string
-  architecture?: string
-}
-
-export type ImagePlatform = {
-  os: string
-  architecture: string
-  variant?: string
+export type ImageSummary = {
+  created: string
+  platform: string
+  children: ManifestEntry[]
 }
 
 export type ManifestEntry = {
@@ -44,26 +50,18 @@ export type ManifestEntry = {
   artifactType?: string
 }
 
-export type PlatformDetails = {
-  digest: string
-  platform: string
-  size: number
-  created: string | null
-}
-
-export type ImageSummary = {
-  created: string
-  platform: string
-  children: ManifestEntry[]
-}
-
-export type ImageManifest = z.infer<typeof manifestSchema>
-
 export type ManifestResult = {
   manifest: ImageManifest
   digest: string
   verified: boolean
   mediaType: string
+}
+
+export type PlatformDetails = {
+  digest: string
+  platform: string
+  size: number
+  created: string | null
 }
 
 export type HistoryEntry = {
@@ -81,3 +79,5 @@ export type ImageLabel = {
   name: string
   value: string
 }
+
+export type ImageManifest = z.infer<typeof manifestSchema>

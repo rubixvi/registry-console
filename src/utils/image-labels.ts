@@ -23,9 +23,17 @@ export function imageLabels(config: unknown, custom: string[] = []): ImageLabel[
 
   if (!labels || typeof labels !== 'object' || Array.isArray(labels)) return []
 
-  return [...new Set([...STANDARD_LABELS, ...custom])].flatMap((name) => {
-    const value: unknown = Object.hasOwn(labels, name) ? Reflect.get(labels, name) : undefined
+  const result: ImageLabel[] = []
 
-    return typeof value === 'string' && value.trim() ? [{ name, value }] : []
-  })
+  for (const name of new Set([...STANDARD_LABELS, ...custom])) {
+    if (!Object.hasOwn(labels, name)) continue
+
+    const value = Reflect.get(labels, name)
+
+    if (typeof value === 'string' && value.trim()) {
+      result.push({ name, value })
+    }
+  }
+
+  return result
 }

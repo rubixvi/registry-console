@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 
 import { apiRequest } from '@/lib/http/client'
 import { type BulkDeletionResult, type DeletionPlan } from '@/types/deletion'
-import { selectTags } from '@/utils/tag-selection'
+import { selectTags } from '@/utils/select-tags'
 
 export function useBulkDelete(
   id: string,

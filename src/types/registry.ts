@@ -1,4 +1,9 @@
+export const REGISTRY_METHODS = ['GET', 'HEAD', 'DELETE'] as const
+export const REGISTRY_CACHE = ['default', 'reload'] as const
+
 export type RegistryProvider = 'distribution' | 'dockerhub' | 'github'
+export type RegistryMethod = (typeof REGISTRY_METHODS)[number]
+export type RegistryCache = (typeof REGISTRY_CACHE)[number]
 
 export type RegistryProps = {
   params: Promise<{ id: string }>
@@ -9,9 +14,6 @@ export type RegistryProps = {
 }
 
 export type Registry = {
-  provider?: RegistryProvider
-  namespace?: string
-  trivyEnabled?: boolean
   id: string
   name: string
   url: string
@@ -19,10 +21,17 @@ export type Registry = {
   username: string
   hasPassword: boolean
   readOnly: boolean
+  provider?: RegistryProvider
+  namespace?: string
+  trivyEnabled?: boolean
 }
 
 export type RegistryRecord = Omit<Registry, 'hasPassword'> & {
   revision?: string
+  password: string
+}
+
+export type RegistryInput = Omit<Registry, 'id' | 'hasPassword' | 'trivyEnabled'> & {
   password: string
 }
 
@@ -35,17 +44,6 @@ export type RegistryPage = RegistryListing & {
   next: string | null
 }
 
-export type RegistryInput = {
-  provider?: RegistryProvider
-  namespace?: string
-  name: string
-  url: string
-  pullUrl: string
-  username: string
-  password: string
-  readOnly: boolean
-}
-
 export type RegistryPageInput = {
   repository?: string
   dates?: boolean
@@ -54,9 +52,9 @@ export type RegistryPageInput = {
 }
 
 export type RegistryOptions = {
-  method?: 'GET' | 'HEAD' | 'DELETE'
+  method?: RegistryMethod
   scope?: string
-  cache?: 'default' | 'reload'
+  cache?: RegistryCache
 }
 
 export type RegistryResponse = {

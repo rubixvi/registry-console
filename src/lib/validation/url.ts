@@ -9,10 +9,9 @@ export const pullUrlSchema = z
 
     try {
       const url = new URL(value)
-      const protocol = url.protocol === 'http:' || url.protocol === 'https:'
 
       return (
-        protocol &&
+        (url.protocol === 'http:' || url.protocol === 'https:') &&
         !url.username &&
         !url.password &&
         !url.search &&

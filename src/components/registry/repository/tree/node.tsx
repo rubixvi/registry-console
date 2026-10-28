@@ -17,6 +17,7 @@ type Props = {
 
 export function Node({ id, node, expanded }: Props) {
   const [open, setOpen] = useState(expanded)
+
   const href = {
     pathname: `/registries/${encodeURIComponent(id)}`,
     query: { repository: node.path },

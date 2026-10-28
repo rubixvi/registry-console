@@ -1,16 +1,21 @@
 import { z } from 'zod'
 
 export const providerName = z.enum(['authentik', 'github', 'google', 'zitadel', 'keycloak'])
+
+const action = z.enum(['login', 'verify'])
+
 const endpoint = z
   .url()
   .max(2048)
   .refine((value) => {
-    if (!URL.canParse(value)) return false
-
     const url = new URL(value)
 
     return url.protocol === 'https:' && !url.username && !url.password && !url.search && !url.hash
   }, 'Use HTTPS without credentials, query parameters or fragments.')
+
+const origin = endpoint
+  .refine((value) => new URL(value).pathname === '/', 'Use an exact origin without a path.')
+  .transform((value) => new URL(value).origin)
 
 export const emailSchema = z
   .string()
@@ -26,29 +31,23 @@ export const providerSchema = z
     issuer: endpoint.optional(),
     clientId: z.string().min(1).max(2048),
     clientSecret: z.string().min(1).max(4096),
-    origins: z
-      .array(
-        endpoint
-          .refine(
-            (value) => URL.canParse(value) && new URL(value).pathname === '/',
-            'Use an exact origin without a path.'
-          )
-          .transform((value) => new URL(value).origin)
-      )
-      .max(8)
-      .default([]),
+    origins: z.array(origin).max(8).default([]),
     authMethod: z.enum(['post', 'basic']).default('post'),
   })
   .strict()
 
-export const ssoInput = z.object({ action: z.enum(['login', 'verify']).default('login') }).strict()
+export const ssoInput = z
+  .object({
+    action: action.default('login'),
+  })
+  .strict()
 
 export const ssoState = z.object({
   provider: providerName,
   state: z.string().min(32).max(128),
   verifier: z.string().min(43).max(128),
   nonce: z.string().min(32).max(128),
-  action: z.enum(['login', 'verify']),
+  action,
   session: z.string().max(128),
   username: z.string().max(64),
   fingerprint: z.string().max(128),
@@ -60,7 +59,16 @@ export const verifiedEmail = z.object({
   email_verified: z.literal(true),
 })
 
-export const githubUser = z.object({ id: z.number().int().positive().safe() })
+export const githubUser = z.object({
+  id: z.number().int().positive().safe(),
+})
+
 export const githubEmails = z
-  .array(z.object({ email: emailSchema, verified: z.boolean(), primary: z.boolean() }))
+  .array(
+    z.object({
+      email: emailSchema,
+      verified: z.boolean(),
+      primary: z.boolean(),
+    })
+  )
   .max(100)

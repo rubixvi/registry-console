@@ -11,8 +11,9 @@ const proxyRange = z
 
     if (!version || address.includes('%') || extra !== undefined) return false
     if (prefix === undefined) return true
+    if (!/^(0|[1-9][0-9]{0,2})$/.test(prefix)) return false
 
-    return /^(0|[1-9][0-9]{0,2})$/.test(prefix) && Number(prefix) <= (version === 4 ? 32 : 128)
+    return Number(prefix) <= (version === 4 ? 32 : 128)
   }, 'Use an IPv4 or IPv6 address or CIDR range.')
 
 export const proxyList = z

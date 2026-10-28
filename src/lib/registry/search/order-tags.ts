@@ -4,7 +4,7 @@ import { imageDetails } from '@/lib/registry/image'
 import { MAX_DURATION } from '@/lib/registry/search/constants'
 import { AppError } from '@/lib/security/error'
 import { type RegistryListing, type RegistryRecord } from '@/types/registry'
-import { sortTags, type TagOrder } from '@/utils/tag-order'
+import { sortTags, type TagOrder } from '@/utils/sort-tags'
 
 export async function orderTags(
   registry: RegistryRecord,

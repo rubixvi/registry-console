@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 import { pullUrlSchema } from '@/lib/validation/url'
-import { TAG_ORDERS } from '@/utils/tag-order'
+import { TAG_ORDERS } from '@/utils/sort-tags'
 
 export const repositoryName = z
   .string()
@@ -15,6 +15,8 @@ export const referenceName = z
   .regex(/^(?:[\w][\w.-]{0,127}|sha256:[a-f0-9]{64})$/)
 
 export const digestName = z.string().regex(/^sha256:[a-f0-9]{64}$/)
+
+export const architectureName = z.string().regex(/^[a-z0-9][a-z0-9_-]{0,31}$/)
 
 export const registryInput = z
   .object({
@@ -37,8 +39,6 @@ export const pageInput = z.object({
   n: z.coerce.number().int().min(1).max(100).default(100),
 })
 
-export const architectureName = z.string().regex(/^[a-z0-9][a-z0-9_-]{0,31}$/)
-
 export const browseInput = z
   .object({
     repository: repositoryName.optional(),
@@ -60,7 +60,10 @@ export const deleteInput = z
     confirmation: repositoryName,
   })
   .strict()
-  .refine((value) => value.repository === value.confirmation)
+  .refine((value) => value.repository === value.confirmation, {
+    message: 'Repository confirmation does not match.',
+    path: ['confirmation'],
+  })
 
 export const tagsInput = pageInput.extend({
   repository: repositoryName,
@@ -73,7 +76,9 @@ export const bulkPreviewInput = z
       .array(referenceName)
       .min(1)
       .max(100)
-      .refine((tags) => new Set(tags).size === tags.length),
+      .refine((tags) => new Set(tags).size === tags.length, {
+        message: 'Duplicate tags are not allowed.',
+      }),
   })
   .strict()
 

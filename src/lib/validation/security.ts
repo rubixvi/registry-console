@@ -1,5 +1,15 @@
 import { z } from 'zod'
 
+const passkeyId = z.string().min(1).max(2048)
+
+const credential = {
+  id: passkeyId,
+  rawId: passkeyId,
+  type: z.literal('public-key'),
+  clientExtensionResults: z.object({}).loose(),
+  authenticatorAttachment: z.enum(['platform', 'cross-platform']).optional(),
+}
+
 export const verificationInput = z
   .object({
     password: z.string().max(1024).default(''),
@@ -15,7 +25,7 @@ export const codeInput = z
 
 export const passkeyIdInput = z
   .object({
-    id: z.string().min(1).max(2048),
+    id: passkeyId,
   })
   .strict()
 
@@ -24,9 +34,7 @@ export const passkeyRegistrationInput = z
     name: z.string().trim().min(1).max(64),
     credential: z
       .object({
-        id: z.string().min(1).max(2048),
-        rawId: z.string().min(1).max(2048),
-        type: z.literal('public-key'),
+        ...credential,
         response: z
           .object({
             clientDataJSON: z.string().max(8192),
@@ -37,8 +45,6 @@ export const passkeyRegistrationInput = z
               .optional(),
           })
           .loose(),
-        clientExtensionResults: z.object({}).loose(),
-        authenticatorAttachment: z.enum(['platform', 'cross-platform']).optional(),
       })
       .loose(),
   })
@@ -46,9 +52,7 @@ export const passkeyRegistrationInput = z
 
 export const passkeyAuthenticationInput = z
   .object({
-    id: z.string().min(1).max(2048),
-    rawId: z.string().min(1).max(2048),
-    type: z.literal('public-key'),
+    ...credential,
     response: z
       .object({
         clientDataJSON: z.string().max(8192),
@@ -57,7 +61,5 @@ export const passkeyAuthenticationInput = z
         userHandle: z.string().max(128).optional(),
       })
       .loose(),
-    clientExtensionResults: z.object({}).loose(),
-    authenticatorAttachment: z.enum(['platform', 'cross-platform']).optional(),
   })
   .loose()

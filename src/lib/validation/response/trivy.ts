@@ -11,15 +11,12 @@ export const vulnerabilitySchema = z.object({
   Title: z.string().max(4096).default(''),
 })
 
+const scanResult = z.object({
+  Target: z.string().max(2048),
+  Vulnerabilities: z.array(vulnerabilitySchema).max(50_000).optional(),
+})
+
 export const outputSchema = z.object({
   SchemaVersion: z.literal(2),
-  Results: z
-    .array(
-      z.object({
-        Target: z.string().max(2048),
-        Vulnerabilities: z.array(vulnerabilitySchema).max(50_000).optional(),
-      })
-    )
-    .max(1000)
-    .optional(),
+  Results: z.array(scanResult).max(1000).optional(),
 })
