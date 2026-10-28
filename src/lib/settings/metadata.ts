@@ -11,7 +11,7 @@ export function brandMetadata(): Metadata {
   const logo = getLogo()
 
   const icon = logo
-    ? `/branding/logo.png?v=${createHash('sha256').update(logo).digest('hex').slice(0, 12)}`
+    ? `/api/branding/logo.png?v=${createHash('sha256').update(logo).digest('hex').slice(0, 12)}`
     : undefined
 
   return {

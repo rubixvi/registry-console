@@ -15,10 +15,10 @@ import { transaction } from '@/lib/database/transaction'
 import { type User } from '@/types/auth'
 
 export function securityId(user: User): string {
-  const configuredId = user.id ?? ''
+  const id = user.id ?? ''
   const current = getAccount(user.username)
 
-  if (current?.configured_id === configuredId) {
+  if (current?.configured_id === id) {
     if (current.email !== (user.email ?? '')) updateAccount(user.username, user.email ?? '')
     return current.account_id
   }
@@ -26,7 +26,7 @@ export function securityId(user: User): string {
   return transaction(() => {
     const linked = user.email ? emailAccount(user.email) : undefined
 
-    if (!current && linked && linked.configured_id === configuredId) {
+    if (!current && linked && linked.configured_id === id) {
       updateAccount(user.username, user.email!, linked.username)
       audit('system', 'security.account.renamed', user.username)
       return linked.account_id
@@ -34,7 +34,7 @@ export function securityId(user: User): string {
 
     const existing = getAccount(user.username)
 
-    if (existing?.configured_id === configuredId) {
+    if (existing?.configured_id === id) {
       return existing.account_id
     }
 
@@ -48,7 +48,7 @@ export function securityId(user: User): string {
     insertAccount({
       username: user.username,
       account_id: accountId,
-      configured_id: configuredId,
+      configured_id: id,
       email: user.email ?? '',
     })
 
