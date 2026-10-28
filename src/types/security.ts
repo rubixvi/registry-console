@@ -1,4 +1,5 @@
 import { type Session } from '@/types/auth'
+import { type SsoButton } from '@/types/sso'
 
 export type Purpose =
   | 'sso'
@@ -65,7 +66,7 @@ export type PasskeyRow = {
 export type SecurityStatus = {
   ssoAccount?: boolean
   ssoVerified?: boolean
-  providers?: import('@/types/sso').SsoButton[]
+  providers?: SsoButton[]
   directoryAccount?: boolean
   passkeys: PasskeySummary[]
   totpEnabled: boolean
