@@ -26,8 +26,8 @@ export async function authenticateDirectory(
         '{username}',
         escapeLdapFilter(username)
       )
-      const profile = await directoryProfile(client, settings, filter)
 
+      const profile = await directoryProfile(client, settings, filter)
       if (!profile) return null
 
       try {

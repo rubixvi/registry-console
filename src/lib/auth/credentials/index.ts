@@ -1,3 +1,3 @@
 import 'server-only'
 
-export * from '@/lib/auth/credentials/verify-credentials'
+export * from '@/lib/auth/credentials/verify'
