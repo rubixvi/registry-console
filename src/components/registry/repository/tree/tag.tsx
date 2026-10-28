@@ -36,7 +36,7 @@ export function ImageTag({ id, repository, tag }: Props) {
         </button>
 
         <Link
-          className="flex min-w-0 flex-1 items-center gap-2 rounded-sm font-mono text-sm hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex min-w-0 flex-1 items-center gap-2 rounded-sm text-xs hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           href={{
             pathname: `/registries/${encodeURIComponent(id)}`,
             query: { repository, reference: tag },

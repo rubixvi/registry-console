@@ -43,7 +43,7 @@ export function Search({
 
           <Input
             aria-label="Search..."
-            className="pl-9"
+            className="pl-9 h-8"
             maxLength={128}
             onChange={(event) => onQueryChange(event.target.value)}
             placeholder="Search..."
@@ -52,7 +52,7 @@ export function Search({
         </div>
 
         <Select onValueChange={onRegistryChange} value={registry}>
-          <SelectTrigger aria-label="Registry filter" className="w-full sm:w-40">
+          <SelectTrigger aria-label="Registry filter" className="w-full sm:w-40 h-8">
             <SelectValue />
           </SelectTrigger>
 
