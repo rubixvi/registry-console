@@ -29,9 +29,9 @@ import {
   scheduleScan,
   startScan,
 } from '../src/lib/registry/trivy'
+import { emptyReport } from '../src/lib/registry/trivy/report'
+import { scanPending } from '../src/lib/registry/trivy/worker'
 import { discoverRegistry, discoveryScope } from '../src/lib/registry/trivy-discovery'
-import { emptyReport } from '../src/lib/registry/trivy-report'
-import { scanPending } from '../src/lib/registry/trivy-worker'
 import { AppError } from '../src/lib/security/error'
 import { fingerprint } from '../src/lib/security/fingerprint'
 

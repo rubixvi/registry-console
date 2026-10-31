@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { INTERVAL, scanPending, worker } from '@/lib/registry/trivy-worker'
+import { INTERVAL, scanPending, worker } from '@/lib/registry/trivy/worker'
 
 export async function tick(): Promise<void> {
   try {
