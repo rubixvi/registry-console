@@ -1,7 +1,7 @@
 import 'server-only'
 
 import { securityId } from '@/lib/auth/accounts'
-import { listPasskeys } from '@/lib/database/passkey/passkey'
+import { listPasskeys } from '@/lib/database/passkey'
 import { type User } from '@/types/auth'
 import { type PasskeyRow } from '@/types/security'
 

@@ -4,7 +4,7 @@ import { type RegistrationResponseJSON, verifyRegistrationResponse } from '@simp
 
 import { securityId } from '@/lib/auth/accounts'
 import { findPasskey, passkeyHost, userPasskeys } from '@/lib/auth/passkey'
-import { insertPasskey } from '@/lib/database/passkey/passkey'
+import { insertPasskey } from '@/lib/database/passkey'
 import { AppError } from '@/lib/security/error'
 import { type User } from '@/types/auth'
 

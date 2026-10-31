@@ -8,7 +8,7 @@ import {
 
 import { securityId } from '@/lib/auth/accounts'
 import { findPasskey, passkeyHost } from '@/lib/auth/passkey'
-import { updatePasskey } from '@/lib/database/passkey/passkey'
+import { updatePasskey } from '@/lib/database/passkey'
 import { AppError } from '@/lib/security/error'
 import { type User } from '@/types/auth'
 
