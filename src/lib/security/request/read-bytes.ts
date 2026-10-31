@@ -11,7 +11,7 @@ export async function readBytes(
   const content = Number(message.headers.get('content-length'))
 
   if (content > max) {
-    await message.body?.cancel()
+    void message.body?.cancel().catch(() => undefined)
     throw new AppError(413, 'Response or request too large.')
   }
 
@@ -21,37 +21,36 @@ export async function readBytes(
 
   const chunks: Uint8Array[] = []
   let size = 0
-  let timedOut = false
+  let timer: ReturnType<typeof setTimeout> | undefined
 
-  const deadline = setTimeout(() => {
-    timedOut = true
-    void reader.cancel().catch(() => undefined)
-  }, timeoutMs)
+  const deadline = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      const status = message instanceof Request ? 408 : 504
+
+      reject(new AppError(status, 'Body read timed out.'))
+      void reader.cancel().catch(() => undefined)
+    }, timeoutMs)
+  })
 
   try {
     while (true) {
-      const { value, done } = await reader.read()
-
-      if (timedOut) {
-        const status = message instanceof Request ? 408 : 504
-        throw new AppError(status, 'Body read timed out.')
-      }
+      const { value, done } = await Promise.race([reader.read(), deadline])
 
       if (done) break
 
       size += value.byteLength
 
       if (size > max) {
-        await reader.cancel()
+        void reader.cancel().catch(() => undefined)
         throw new AppError(413, 'Response or request too large.')
       }
 
       chunks.push(value)
     }
 
-    return Buffer.concat(chunks)
+    return Buffer.concat(chunks, size)
   } finally {
-    clearTimeout(deadline)
+    clearTimeout(timer)
     reader.releaseLock()
   }
 }
