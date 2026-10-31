@@ -6,7 +6,7 @@ import { hubPrivacy } from '@/lib/registry/dockerhub'
 import { requirePublic } from '@/lib/registry/scan-policy'
 import { getRegistry } from '@/lib/registry/store'
 import { runScan, scanStatus, startScan } from '@/lib/registry/trivy'
-import { api } from '@/lib/security/api'
+import { apiRequest } from '@/lib/security/api'
 import { withLimits } from '@/lib/security/context'
 import { AppError } from '@/lib/security/error'
 import { readJson } from '@/lib/security/request'
@@ -15,7 +15,7 @@ import { scanInput, scanQuery } from '@/lib/validation/scan'
 export const runtime = 'nodejs'
 export const maxDuration = 660
 
-export const GET = api(async (request, context) => {
+export const GET = apiRequest(async (request, context) => {
   const { id } = await context.params
   const parsed = scanQuery.safeParse(Object.fromEntries(request.nextUrl.searchParams))
 
@@ -34,7 +34,7 @@ export const GET = api(async (request, context) => {
   return NextResponse.json(scanStatus(registry, parsed.data.repository, parsed.data.digest))
 })
 
-export const POST = api(async (request, context, identity) => {
+export const POST = apiRequest(async (request, context, identity) => {
   const { id } = await context.params
   const { repository, digest, override } = await readJson(request, scanInput)
 

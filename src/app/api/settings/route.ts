@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-import { api } from '@/lib/security/api'
+import { apiRequest } from '@/lib/security/api'
 import { AppError } from '@/lib/security/error'
 import { readBytes, readJson } from '@/lib/security/request'
 import { getSettings, removeLogo, updateSettings } from '@/lib/settings'
@@ -8,11 +8,11 @@ import { MAX_LOGO_BYTES, validateLogo } from '@/lib/settings/logo'
 import { brandingInput } from '@/lib/validation/branding'
 import { type Branding } from '@/types/branding'
 
-export const GET = api(async () => {
+export const GET = apiRequest(async () => {
   return NextResponse.json(getSettings())
 })
 
-export const PUT = api(async (request, _context, identity) => {
+export const PUT = apiRequest(async (request, _context, identity) => {
   const contentType = request.headers.get('content-type') ?? ''
 
   let settings: Branding
@@ -75,7 +75,7 @@ export const PUT = api(async (request, _context, identity) => {
   return NextResponse.json({ success: true })
 }, 'admin')
 
-export const DELETE = api(async (_request, _context, identity) => {
+export const DELETE = apiRequest(async (_request, _context, identity) => {
   removeLogo(identity.username)
 
   return NextResponse.json({ success: true })

@@ -1,11 +1,12 @@
 import 'server-only'
 
-import { type NextRequest, NextResponse } from 'next/server'
+import { type NextRequest, type NextResponse } from 'next/server'
 
 import { auditRequest } from '@/lib/audit'
 import { auditAuth } from '@/lib/auth/audit'
 import { getIdentity } from '@/lib/auth/session'
 import { hasRole, withIdentity } from '@/lib/security/access'
+import { apiError } from '@/lib/security/api'
 import { withLimits } from '@/lib/security/context'
 import { AppError } from '@/lib/security/error'
 import { requireOrigin } from '@/lib/security/request'
@@ -18,9 +19,8 @@ type Context = {
 type Handler = (request: NextRequest, context: Context, identity: Identity) => Promise<NextResponse>
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS'])
-const DEFAULT_ERROR = 'Operation failed. Check the server configuration or registry connection.'
 
-export function api(handler: Handler, role?: Role) {
+export function apiRequest(handler: Handler, role?: Role) {
   return auditRequest(async (request: NextRequest, context: Context): Promise<NextResponse> => {
     let identity: Identity | null = null
 
@@ -60,28 +60,4 @@ export function api(handler: Handler, role?: Role) {
       return apiError(error)
     }
   })
-}
-
-export function apiError(error: unknown): NextResponse {
-  if (error instanceof AppError) {
-    const headers = new Headers({ 'Cache-Control': 'no-store' })
-
-    if (error.retryAfter !== undefined || error.status === 429) {
-      headers.set('Retry-After', String(error.retryAfter ?? 60))
-    }
-
-    return NextResponse.json({ error: error.message }, { status: error.status, headers })
-  }
-
-  const errorName = error instanceof Error ? error.name : 'UnknownError'
-
-  console.error('Operation failed', errorName)
-
-  return NextResponse.json(
-    { error: DEFAULT_ERROR },
-    {
-      status: 500,
-      headers: { 'Cache-Control': 'no-store' },
-    }
-  )
 }

@@ -1,39 +1,9 @@
 import 'server-only'
 
-import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto'
+import { createDecipheriv } from 'node:crypto'
 
-import { env } from '@/lib/config/env'
+import { ALGORITHM, DATA_PATTERN, IV_PATTERN, TAG_PATTERN } from '@/lib/security/crypto'
 import { secretKeys } from '@/lib/security/keys'
-
-const ALGORITHM = 'aes-256-gcm'
-const VERSION = 'v2'
-const IV_PATTERN = /^[a-f0-9]{24}$/
-const TAG_PATTERN = /^[a-f0-9]{32}$/
-const DATA_PATTERN = /^(?:[a-f0-9]{2})+$/
-
-export function encryptSecret(value: string): string {
-  if (!value) return ''
-
-  const key = Buffer.from(env().ENCRYPTION_KEY, 'hex')
-  const id = env().ENCRYPTION_KEY_ID
-  const iv = randomBytes(12)
-  const cipher = createCipheriv(ALGORITHM, key, iv)
-
-  secretKeys()
-  cipher.setAAD(Buffer.from(`registry-console:${VERSION}:${id}`))
-
-  const encrypted = Buffer.concat([cipher.update(value, 'utf8'), cipher.final()])
-
-  const parts = [
-    VERSION,
-    id,
-    iv.toString('hex'),
-    cipher.getAuthTag().toString('hex'),
-    encrypted.toString('hex'),
-  ]
-
-  return parts.join('.')
-}
 
 export function decryptSecret(value: string): string {
   if (!value) return ''

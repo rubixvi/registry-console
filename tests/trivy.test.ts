@@ -11,7 +11,7 @@ import { env } from '../src/lib/config/env'
 import { database } from '../src/lib/database/client'
 import { addRegistry, getRegistries, getRegistry } from '../src/lib/registry/store'
 import { executeTrivy, prepareScan, runScan, scanStatus } from '../src/lib/registry/trivy'
-import { appendReport, emptyReport } from '../src/lib/registry/trivy-report'
+import { appendReport, emptyReport } from '../src/lib/registry/trivy/report'
 
 const directory = mkdtempSync(path.join(tmpdir(), 'registry-trivy-tests-'))
 const executable = path.join(directory, 'scanner.cjs')

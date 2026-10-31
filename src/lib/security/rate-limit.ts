@@ -2,30 +2,16 @@ import 'server-only'
 
 import { createHash } from 'node:crypto'
 
-import { database } from '@/lib/database/client'
+import { consumeLimit } from '@/lib/database/limits'
 import { AppError } from '@/lib/security/error'
 
-type RateLimit = {
-  count: number
-  expires: number
-}
-
 export function rateLimit(key: string, maximum: number, windowMs: number): void {
-  const db = database()
   const now = Date.now()
+
   const expires = now + windowMs
+
   const id = createHash('sha256').update(key).digest('hex')
-
-  db.prepare('DELETE FROM limits WHERE expires <= ?').run(now)
-
-  const row = db
-    .prepare(`
-      INSERT INTO limits (id, count, expires)
-      VALUES (?, 1, ?)
-      ON CONFLICT (id) DO UPDATE SET count = count + 1
-      RETURNING count, expires
-    `)
-    .get(id, expires) as RateLimit
+  const row = consumeLimit(id, now, expires)
 
   if (row.count > maximum) {
     throw new AppError(

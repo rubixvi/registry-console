@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server'
 
 import { auditPage } from '@/lib/database/audit'
-import { api } from '@/lib/security/api'
+import { apiRequest } from '@/lib/security/api'
 import { AppError } from '@/lib/security/error'
 import { auditInput } from '@/lib/validation/audit'
 
-export const GET = api(async (request) => {
+export const GET = apiRequest(async (request) => {
   const parsed = auditInput.safeParse(Object.fromEntries(request.nextUrl.searchParams))
 
   if (!parsed.success) {

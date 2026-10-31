@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server'
 
 import { cookieOptions, revokeSession, sessionCookieName } from '@/lib/auth/session'
-import { api } from '@/lib/security/api'
+import { apiRequest } from '@/lib/security/api'
 
-export const POST = api(async () => {
+export const POST = apiRequest(async () => {
   await revokeSession()
 
   const response = NextResponse.json({ success: true })

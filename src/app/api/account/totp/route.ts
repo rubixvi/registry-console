@@ -4,12 +4,12 @@ import { disableAuthenticator, enableAuthenticator } from '@/lib/auth/authentica
 import { clearRequest, readRequest, requireSecurity } from '@/lib/auth/requests'
 import { cookieOptions, sessionCookieName } from '@/lib/auth/session'
 import { configUser } from '@/lib/auth/verification'
-import { api } from '@/lib/security/api'
+import { apiRequest } from '@/lib/security/api'
 import { rateLimit } from '@/lib/security/rate-limit'
 import { readJson } from '@/lib/security/request'
 import { codeInput } from '@/lib/validation/security'
 
-export const POST = api(async (request, _context, identity) => {
+export const POST = apiRequest(async (request, _context, identity) => {
   requireSecurity(request, identity.username)
   rateLimit(`totp-enroll:${identity.username}`, 8, 15 * 60_000)
 
@@ -32,7 +32,7 @@ export const POST = api(async (request, _context, identity) => {
   return response
 })
 
-export const DELETE = api(async (request, _context, identity) => {
+export const DELETE = apiRequest(async (request, _context, identity) => {
   requireSecurity(request, identity.username)
   disableAuthenticator(identity.username)
 

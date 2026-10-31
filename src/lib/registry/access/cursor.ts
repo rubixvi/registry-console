@@ -4,7 +4,7 @@ import { registryCacheIdentity } from '@/lib/registry/identity'
 import { privateAccess } from '@/lib/security/access'
 import { decryptSecret } from '@/lib/security/crypto'
 import { AppError } from '@/lib/security/error'
-import { keyedFingerprint } from '@/lib/security/fingerprint'
+import { fingerprint } from '@/lib/security/fingerprint'
 import { type RegistryPageInput, type RegistryRecord } from '@/types/registry'
 
 export function readCursor(registry: RegistryRecord, input: RegistryPageInput): RegistryPageInput {
@@ -12,7 +12,7 @@ export function readCursor(registry: RegistryRecord, input: RegistryPageInput): 
 
   try {
     const cursor = JSON.parse(decryptSecret(input.last))
-    const key = keyedFingerprint('public-catalogue', [registryCacheIdentity(registry), input.n])
+    const key = fingerprint('public-catalogue', [registryCacheIdentity(registry), input.n])
 
     if (
       cursor.key !== key ||

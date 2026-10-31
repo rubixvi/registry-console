@@ -1,7 +1,7 @@
 import 'server-only'
 
 import { forget } from '@/lib/registry/cache/forget'
-import { key } from '@/lib/registry/cache/key'
+import { cacheKey } from '@/lib/registry/cache/key'
 import { entries } from '@/lib/registry/cache/state'
 import { type RegistryRecord, type RegistryResponse } from '@/types/registry'
 
@@ -10,7 +10,7 @@ export function cachedResponse(
   path: string,
   scope?: string
 ): RegistryResponse | null {
-  const id = key(registry, path, scope)
+  const id = cacheKey(registry, path, scope)
   const entry = entries.get(id)
 
   if (!entry) return null

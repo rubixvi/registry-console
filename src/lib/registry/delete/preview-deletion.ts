@@ -5,7 +5,7 @@ import { randomUUID } from 'node:crypto'
 import { audit } from '@/lib/database/audit'
 import { insertPlan } from '@/lib/database/deletion'
 import { batch } from '@/lib/registry/delete/batch'
-import { fingerprint } from '@/lib/registry/delete/fingerprint'
+import { planKey } from '@/lib/registry/delete/fingerprint'
 import { writable } from '@/lib/registry/delete/writable'
 import { imageManifest } from '@/lib/registry/image'
 import { imageDigest } from '@/lib/registry/image-digest'
@@ -73,7 +73,7 @@ export async function previewDeletion(
     registry_id: registry.id,
     session_id: session,
     repository,
-    value: JSON.stringify({ fingerprint: fingerprint(registry), entries }),
+    value: JSON.stringify({ fingerprint: planKey(registry), entries }),
     expires,
   })
 

@@ -6,9 +6,9 @@ import { hubPrivacy } from '@/lib/registry/dockerhub'
 import { imageDetails } from '@/lib/registry/image'
 import { getRegistry } from '@/lib/registry/store'
 import { scanTarget, scheduleScan } from '@/lib/registry/trivy'
-import { scanPending } from '@/lib/registry/trivy-worker'
+import { scanPending } from '@/lib/registry/trivy/worker'
 import { withIdentity } from '@/lib/security/access'
-import { api } from '@/lib/security/api'
+import { apiRequest } from '@/lib/security/api'
 import { withLimits } from '@/lib/security/context'
 import { AppError } from '@/lib/security/error'
 import { readJson } from '@/lib/security/request'
@@ -17,7 +17,7 @@ import { deleteInput, imageInput } from '@/lib/validation/registry'
 export const runtime = 'nodejs'
 export const maxDuration = 660
 
-export const GET = api(async (request, context) => {
+export const GET = apiRequest(async (request, context) => {
   const { id } = await context.params
   const params = new URL(request.url).searchParams
   const parsed = imageInput.safeParse(Object.fromEntries(params))
@@ -51,7 +51,7 @@ export const GET = api(async (request, context) => {
   return NextResponse.json({ ...details, isPrivate })
 })
 
-export const DELETE = api(async (request, context, identity) => {
+export const DELETE = apiRequest(async (request, context, identity) => {
   const { id } = await context.params
   const registry = getRegistry(id)
 

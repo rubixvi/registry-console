@@ -3,9 +3,9 @@ import { NextResponse } from 'next/server'
 import { registryPage } from '@/lib/registry/catalog'
 import { registryRequest } from '@/lib/registry/client'
 import { getRegistry } from '@/lib/registry/store'
-import { api } from '@/lib/security/api'
+import { apiRequest } from '@/lib/security/api'
 
-export const GET = api(async (_request, context) => {
+export const GET = apiRequest(async (_request, context) => {
   const { id } = await context.params
   const registry = getRegistry(id)
 

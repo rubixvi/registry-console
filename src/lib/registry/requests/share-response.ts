@@ -4,7 +4,7 @@ import { cacheGeneration } from '@/lib/registry/cache'
 import { registryCacheIdentity } from '@/lib/registry/identity'
 import { pending } from '@/lib/registry/requests/state'
 import { hasLimits } from '@/lib/security/context'
-import { keyedFingerprint } from '@/lib/security/fingerprint'
+import { fingerprint } from '@/lib/security/fingerprint'
 import { type RegistryRecord, type RegistryResponse } from '@/types/registry'
 
 export async function shareResponse(
@@ -13,7 +13,7 @@ export async function shareResponse(
   scope: string,
   load: () => Promise<RegistryResponse>
 ): Promise<RegistryResponse> {
-  const key = keyedFingerprint('registry-request', [
+  const key = fingerprint('registry-request', [
     registryCacheIdentity(registry),
     path,
     scope,

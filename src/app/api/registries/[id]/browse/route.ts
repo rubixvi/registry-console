@@ -2,11 +2,11 @@ import { NextResponse } from 'next/server'
 
 import { searchRegistry } from '@/lib/registry/search'
 import { getRegistry } from '@/lib/registry/store'
-import { api } from '@/lib/security/api'
+import { apiRequest } from '@/lib/security/api'
 import { AppError } from '@/lib/security/error'
 import { browseInput } from '@/lib/validation/registry'
 
-export const GET = api(async (request, context) => {
+export const GET = apiRequest(async (request, context) => {
   const { id } = await context.params
   const parsed = browseInput.safeParse(Object.fromEntries(request.nextUrl.searchParams))
 

@@ -29,11 +29,11 @@ import {
   scheduleScan,
   startScan,
 } from '../src/lib/registry/trivy'
+import { emptyReport } from '../src/lib/registry/trivy/report'
+import { scanPending } from '../src/lib/registry/trivy/worker'
 import { discoverRegistry, discoveryScope } from '../src/lib/registry/trivy-discovery'
-import { emptyReport } from '../src/lib/registry/trivy-report'
-import { scanPending } from '../src/lib/registry/trivy-worker'
 import { AppError } from '../src/lib/security/error'
-import { keyedFingerprint } from '../src/lib/security/fingerprint'
+import { fingerprint } from '../src/lib/security/fingerprint'
 
 const HOUR = 60 * 60_000
 const directory = mkdtempSync(path.join(tmpdir(), 'registry-paced-scans-'))
@@ -386,7 +386,7 @@ test('connection changes remove queued work and old completed reports remain iso
 })
 
 test('reports saved with the old repository key are adopted without spending the scan budget', () => {
-  const previous = keyedFingerprint('trivy-report', [registryIdentity(registry), 'team/app', first])
+  const previous = fingerprint('trivy-report', [registryIdentity(registry), 'team/app', first])
 
   database()
     .prepare(`
