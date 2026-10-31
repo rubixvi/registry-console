@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { keyedFingerprint } from '@/lib/security/fingerprint'
+import { fingerprint } from '@/lib/security/fingerprint'
 import { passwordHashSchema, usersSchema } from '@/lib/validation/auth'
 import { type User } from '@/types/auth'
 
@@ -57,7 +57,7 @@ export function userFingerprint(user: User): string {
   const passwordHash =
     provider === 'local' ? passwordHashSchema.parse(user.passwordHash) : undefined
 
-  return keyedFingerprint('user-session', {
+  return fingerprint('user-session', {
     id: user.id,
     username: user.username,
     email: user.email,

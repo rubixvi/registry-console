@@ -4,10 +4,12 @@ import { createHmac, hkdfSync } from 'node:crypto'
 
 import { env } from '@/lib/config/env'
 
-export function keyedFingerprint(purpose: string, value: unknown): string {
+export function fingerprint(purpose: string, value: unknown): string {
+  const config = env()
+
   const key = hkdfSync(
     'sha256',
-    Buffer.from(env().ENCRYPTION_KEY, 'hex'),
+    Buffer.from(config.ENCRYPTION_KEY, 'hex'),
     'registry-console',
     `fingerprint:${purpose}`,
     32

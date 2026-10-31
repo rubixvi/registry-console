@@ -5,7 +5,7 @@ import { registryCacheIdentity } from '@/lib/registry/identity'
 import { privateAccess } from '@/lib/security/access'
 import { encryptSecret } from '@/lib/security/crypto'
 import { AppError } from '@/lib/security/error'
-import { keyedFingerprint } from '@/lib/security/fingerprint'
+import { fingerprint } from '@/lib/security/fingerprint'
 import { type RegistryPage, type RegistryPageInput, type RegistryRecord } from '@/types/registry'
 
 export async function visiblePage(
@@ -32,7 +32,7 @@ export async function visiblePage(
     }
   }
 
-  const key = keyedFingerprint('public-catalogue', [registryCacheIdentity(registry), input.n])
+  const key = fingerprint('public-catalogue', [registryCacheIdentity(registry), input.n])
 
   return {
     items,

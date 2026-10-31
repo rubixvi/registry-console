@@ -1,8 +1,6 @@
 import 'server-only'
 
-import { AsyncLocalStorage } from 'node:async_hooks'
-
-const limits = new AsyncLocalStorage<boolean>()
+import { limits } from '@/lib/security/context'
 
 export function withLimits<T>(enabled: boolean, task: () => T): T {
   return limits.run(enabled, task)

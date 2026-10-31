@@ -3,7 +3,7 @@ import 'server-only'
 import { cacheLifetime } from '@/lib/registry/cache/cache-lifetime'
 import { MAX_BYTES, MAX_ENTRIES } from '@/lib/registry/cache/constants'
 import { forget } from '@/lib/registry/cache/forget'
-import { key } from '@/lib/registry/cache/key'
+import { cacheKey } from '@/lib/registry/cache/key'
 import { entries, state } from '@/lib/registry/cache/state'
 import { type RegistryRecord, type RegistryResponse } from '@/types/registry'
 
@@ -58,7 +58,7 @@ export function rememberResponse(
     if (entry.expires <= Date.now()) forget(id)
   }
 
-  const id = key(registry, path, scope)
+  const id = cacheKey(registry, path, scope)
 
   forget(id)
 

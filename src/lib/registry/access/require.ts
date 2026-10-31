@@ -4,7 +4,7 @@ import { publicRep } from '@/lib/registry/access'
 import { registryCacheIdentity } from '@/lib/registry/identity'
 import { accessState } from '@/lib/security/access'
 import { AppError } from '@/lib/security/error'
-import { keyedFingerprint } from '@/lib/security/fingerprint'
+import { fingerprint } from '@/lib/security/fingerprint'
 import { type RegistryRecord } from '@/types/registry'
 
 export async function requireRepo(registry: RegistryRecord, repository: string): Promise<void> {
@@ -12,7 +12,7 @@ export async function requireRepo(registry: RegistryRecord, repository: string):
 
   if (access?.identity.role !== 'viewer') return
 
-  const key = keyedFingerprint('repository-access', [registryCacheIdentity(registry), repository])
+  const key = fingerprint('repository-access', [registryCacheIdentity(registry), repository])
   let result = access.repositories.get(key)
 
   if (!result) {

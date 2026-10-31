@@ -4,7 +4,7 @@ import { audit } from '@/lib/database/audit'
 import { consumePlan, findPlan } from '@/lib/database/deletion'
 import { batch } from '@/lib/registry/delete/batch'
 import { deleteManifest } from '@/lib/registry/delete/delete-manifest'
-import { fingerprint } from '@/lib/registry/delete/fingerprint'
+import { planKey } from '@/lib/registry/delete/fingerprint'
 import { writable } from '@/lib/registry/delete/writable'
 import { getRegistry } from '@/lib/registry/store'
 import { AppError } from '@/lib/security/error'
@@ -35,7 +35,7 @@ export async function executeDeletion(
 
   const plan = JSON.parse(row.value) as StoredPlan
 
-  if (plan.fingerprint !== fingerprint(registry)) {
+  if (plan.fingerprint !== planKey(registry)) {
     throw new AppError(409, 'The connection changed. Preview the selection again.')
   }
 
@@ -52,7 +52,7 @@ export async function executeDeletion(
 
       const current = getRegistry(registry.id)
 
-      if (fingerprint(current) !== plan.fingerprint) {
+      if (planKey(current) !== plan.fingerprint) {
         throw new AppError(
           409,
           'The connection changed during deletion. Preview the remaining selection again.'

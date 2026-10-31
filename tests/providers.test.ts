@@ -11,7 +11,7 @@ import { hubSettings } from '../src/lib/registry/dockerhub-settings'
 import { imageDetails } from '../src/lib/registry/image'
 import { tokenKey } from '../src/lib/registry/token-cache'
 import { encryptSecret } from '../src/lib/security/crypto'
-import { keyedFingerprint } from '../src/lib/security/fingerprint'
+import { fingerprint } from '../src/lib/security/fingerprint'
 import { type RegistryRecord } from '../src/types/registry'
 
 Object.assign(process.env, {
@@ -42,12 +42,9 @@ test('keyed identifiers are separated by purpose, credentials, and scope', () =>
   assert.equal(tokenKey(value), tokenKey(value))
   assert.notEqual(tokenKey(value), tokenKey({ ...value, password: encryptSecret('changed') }))
   assert.notEqual(tokenKey(value, 'pull'), tokenKey(value, 'delete'))
+  assert.notEqual(fingerprint('cache', { id: value.id }), fingerprint('plan', { id: value.id }))
   assert.notEqual(
-    keyedFingerprint('cache', { id: value.id }),
-    keyedFingerprint('plan', { id: value.id })
-  )
-  assert.notEqual(
-    keyedFingerprint('cache', { id: value.id }),
+    fingerprint('cache', { id: value.id }),
     createHash('sha256').update(JSON.stringify(value)).digest('hex')
   )
 })
