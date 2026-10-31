@@ -34,6 +34,7 @@ export async function scanPending(reference?: ScanTarget): Promise<void> {
   if (!claimDiscovery(owner)) return
 
   let active = true
+
   const heartbeat = setInterval(() => {
     try {
       active = active && renewDiscovery(owner)
@@ -41,6 +42,7 @@ export async function scanPending(reference?: ScanTarget): Promise<void> {
       active = false
     }
   }, 30_000)
+
   const enabled = () => active && env().TRIVY_ENABLED === 'true'
 
   heartbeat.unref()
@@ -79,6 +81,7 @@ export async function scanPending(reference?: ScanTarget): Promise<void> {
               discovery.scope,
               error instanceof AppError && error.retryAfter ? error.retryAfter * 1000 : 15 * 60_000
             )
+
             console.error('Trivy discovery paused.', {
               registry: discovery.id,
               status: error instanceof AppError ? error.status : 500,
@@ -103,6 +106,8 @@ export async function scanPending(reference?: ScanTarget): Promise<void> {
       }
 
       const privacy = await hubPrivacy(registry, target.repository)
+
+      if (!enabled()) return
 
       if (privacy !== false) {
         if (privacy === true) discardScan(target.id)
@@ -133,6 +138,7 @@ export async function scanPending(reference?: ScanTarget): Promise<void> {
       } else {
         discardScan(target.id)
       }
+
       console.error('Trivy queued scan could not start.', {
         registry: target.registryId,
         status: error instanceof AppError ? error.status : 500,

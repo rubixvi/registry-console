@@ -47,7 +47,7 @@ export async function register(): Promise<void> {
       )
     }
 
-    const { startScanWorker } = await import('@/lib/registry/trivy-worker')
-    startScanWorker()
+    const { scanWorker } = await import('@/lib/registry/trivy-worker')
+    scanWorker()
   }
 }
