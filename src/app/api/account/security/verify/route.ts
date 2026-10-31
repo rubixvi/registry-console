@@ -5,13 +5,13 @@ import { getAuthenticator, verifySecondFactor } from '@/lib/auth/totp'
 import { configUser, verifyAccount } from '@/lib/auth/verification'
 import { audit } from '@/lib/database/audit'
 import { transaction } from '@/lib/database/transaction'
-import { api } from '@/lib/security/api'
+import { apiRequest } from '@/lib/security/api'
 import { AppError } from '@/lib/security/error'
 import { rateLimit } from '@/lib/security/rate-limit'
 import { readJson } from '@/lib/security/request'
 import { verificationInput } from '@/lib/validation/security'
 
-export const POST = api(async (request, _context, identity) => {
+export const POST = apiRequest(async (request, _context, identity) => {
   const { password, code } = await readJson(request, verificationInput)
 
   const user = password

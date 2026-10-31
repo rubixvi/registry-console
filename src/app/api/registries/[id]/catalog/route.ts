@@ -2,11 +2,11 @@ import { NextResponse } from 'next/server'
 
 import { registryPage } from '@/lib/registry/catalog'
 import { getRegistry } from '@/lib/registry/store'
-import { api } from '@/lib/security/api'
+import { apiRequest } from '@/lib/security/api'
 import { AppError } from '@/lib/security/error'
 import { pageInput } from '@/lib/validation/registry'
 
-export const GET = api(async (request, context) => {
+export const GET = apiRequest(async (request, context) => {
   const { id } = await context.params
   const params = new URL(request.url).searchParams
   const parsed = pageInput.safeParse(Object.fromEntries(params))

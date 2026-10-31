@@ -5,11 +5,11 @@ import { issueRequest, requireSecurity, sessionId } from '@/lib/auth/requests'
 import { generateTotpSecret, getAuthenticator } from '@/lib/auth/totp'
 import { configUser } from '@/lib/auth/verification'
 import { env } from '@/lib/config/env'
-import { api } from '@/lib/security/api'
+import { apiRequest } from '@/lib/security/api'
 import { encryptSecret } from '@/lib/security/crypto'
 import { AppError } from '@/lib/security/error'
 
-export const POST = api(async (request, _context, identity) => {
+export const POST = apiRequest(async (request, _context, identity) => {
   requireSecurity(request, identity.username)
 
   const user = configUser(identity.username)

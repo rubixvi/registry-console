@@ -4,13 +4,13 @@ import { registerPasskey } from '@/lib/auth/passkey'
 import { clearRequest, readRequest, requireSecurity } from '@/lib/auth/requests'
 import { configUser } from '@/lib/auth/verification'
 import { audit } from '@/lib/database/audit'
-import { api } from '@/lib/security/api'
+import { apiRequest } from '@/lib/security/api'
 import { AppError } from '@/lib/security/error'
 import { rateLimit } from '@/lib/security/rate-limit'
 import { readJson } from '@/lib/security/request'
 import { passkeyRegistrationInput } from '@/lib/validation/security'
 
-export const POST = api(async (request, _context, identity) => {
+export const POST = apiRequest(async (request, _context, identity) => {
   requireSecurity(request, identity.username)
   rateLimit(`passkey-enroll:${identity.username}`, 15, 15 * 60_000)
 

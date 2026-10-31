@@ -3,9 +3,9 @@ import { NextResponse } from 'next/server'
 import { registerOptions } from '@/lib/auth/passkey'
 import { issueRequest, requireSecurity, sessionId } from '@/lib/auth/requests'
 import { configUser } from '@/lib/auth/verification'
-import { api } from '@/lib/security/api'
+import { apiRequest } from '@/lib/security/api'
 
-export const POST = api(async (request, _context, identity) => {
+export const POST = apiRequest(async (request, _context, identity) => {
   requireSecurity(request, identity.username)
 
   const user = configUser(identity.username)

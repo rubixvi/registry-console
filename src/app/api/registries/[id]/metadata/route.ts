@@ -2,11 +2,11 @@ import { NextResponse } from 'next/server'
 
 import { imageMetadata } from '@/lib/registry/metadata'
 import { getRegistry } from '@/lib/registry/store'
-import { api } from '@/lib/security/api'
+import { apiRequest } from '@/lib/security/api'
 import { AppError } from '@/lib/security/error'
 import { imageInput } from '@/lib/validation/registry'
 
-export const GET = api(async (request, context) => {
+export const GET = apiRequest(async (request, context) => {
   const { id } = await context.params
   const params = new URL(request.url).searchParams
   const parsed = imageInput.safeParse(Object.fromEntries(params))

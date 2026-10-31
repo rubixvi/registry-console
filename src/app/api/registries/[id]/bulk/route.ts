@@ -3,11 +3,11 @@ import { NextResponse } from 'next/server'
 import { sessionId } from '@/lib/auth/requests'
 import { executeDeletion, previewDeletion } from '@/lib/registry/delete'
 import { getRegistry } from '@/lib/registry/store'
-import { api } from '@/lib/security/api'
+import { apiRequest } from '@/lib/security/api'
 import { readJson } from '@/lib/security/request'
 import { bulkDeleteInput, bulkPreviewInput } from '@/lib/validation/registry'
 
-export const POST = api(async (request, context, identity) => {
+export const POST = apiRequest(async (request, context, identity) => {
   const { id } = await context.params
   const registry = getRegistry(id)
   const { repository, tags } = await readJson(request, bulkPreviewInput)
@@ -23,7 +23,7 @@ export const POST = api(async (request, context, identity) => {
   return NextResponse.json(plan)
 }, 'admin')
 
-export const DELETE = api(async (request, context, identity) => {
+export const DELETE = apiRequest(async (request, context, identity) => {
   const { id } = await context.params
   const registry = getRegistry(id)
   const { planId, confirmation } = await readJson(request, bulkDeleteInput)
