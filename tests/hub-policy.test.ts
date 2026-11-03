@@ -22,8 +22,8 @@ import {
   scheduleScan,
   startScan,
 } from '../src/lib/registry/trivy'
+import { discoverRegistry, discoveryScope } from '../src/lib/registry/trivy/discovery'
 import { scanPending } from '../src/lib/registry/trivy/worker'
-import { discoverRegistry, discoveryScope } from '../src/lib/registry/trivy-discovery'
 import { withLimits } from '../src/lib/security/context'
 import { AppError } from '../src/lib/security/error'
 import { type RegistryRecord } from '../src/types/registry'

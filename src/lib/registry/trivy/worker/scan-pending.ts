@@ -22,7 +22,7 @@ import {
 import { hubPrivacy } from '@/lib/registry/dockerhub'
 import { getRegistries, getRegistry } from '@/lib/registry/store'
 import { matchesScan, needsScan, runScan, startScan } from '@/lib/registry/trivy'
-import { discoverRegistry, discoveryScope } from '@/lib/registry/trivy-discovery'
+import { discoverRegistry, discoveryScope } from '@/lib/registry/trivy/discovery'
 import { AppError } from '@/lib/security/error'
 import { type ScanTarget } from '@/types/scan'
 

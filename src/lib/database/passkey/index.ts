@@ -1,7 +1,7 @@
 import 'server-only'
 
 import { database } from '@/lib/database/client'
-import { type Filter, type Insert, type Remove, type Update } from '@/lib/database/passkey/types'
+import { type Filter, type Insert, type Remove, type Update } from '@/types/passkey'
 import { type PasskeyRow } from '@/types/security'
 
 export function deletePasskey({ id, username, fingerprint }: Remove): void {
