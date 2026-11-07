@@ -399,7 +399,6 @@ Use a registry origin without `/v2` or a repository path. Distribution discovery
 
 Viewer visibility uses Docker Hub's explicit privacy flag and GitHub Packages' `public` visibility. For Distribution registries, the console verifies anonymous repository pull access through the tag API without saved credentials. A registry that requires authentication for all repositories is private to viewers. Failed visibility checks hide the repository. Checks are shared within one request, and catalogue cursors are encrypted to avoid exposing hidden repository names. Shared credential and manifest caches cannot bypass the visibility check.
 
-
 Docker Hub connections use a user or organisation namespace, such as `rubixvi` or `library`. Public browsing can use empty credentials; private browsing needs a Docker username and suitable token. Docker Hub's registry, Hub API, token endpoint and recognised HTTPS blob CDN destinations are built in. Other destinations require explicit approval. Docker Hub defaults copied pull commands to `docker.io`; a connection can override it.
 
 Docker Hub is not forced to be read only. Deletion still depends on the connection setting, upstream permission and endpoint support. The console uses manifest deletion by digest through the Distribution API; it does not implement Docker Hub's separate tag-removal API. Upstream rate limits can still apply to admins. The console's browsing cache is reused unless an explicit refresh is requested; admin capacity is reserved in shared request and search queues.
@@ -409,7 +408,6 @@ Choose **GitHub Container** to connect to `https://ghcr.io`. Set the namespace t
 GitHub connections can allow deletion. This requires `read:packages`, `delete:packages` and admin permission on the package. The console resolves the immutable digest to its active GitHub package version and deletes that version through the Packages API. Every tag attached to the version is affected. GitHub may refuse deletion, including for public versions with more than 5,000 downloads. The existing preview and confirmation steps apply.
 
 The fixed GHCR origin, GitHub Packages API and `pkg-containers.githubusercontent.com` blob origin are built in for GitHub connections. Redirected blob requests do not carry registry credentials. A GitHub connection's package token is stored encrypted with the other registry credentials and shared by console accounts with access to the workspace. It is independent of `GITHUB_ID` and `GITHUB_SECRET`, which configure console sign-in. The scanner receives only the selected connection's package credentials for a scan.
-
 
 Bulk deletion accepts up to 100 selected tags on the visible page. The preview resolves every repository tag to list all aliases of each selected digest, including unselected tags. If it cannot resolve the complete preview, deletion is not offered from that incomplete result. The plan belongs to the current admin session, lasts five minutes and can be used once. Tags can still change upstream after preview; concurrent registry writes are outside the console's transaction boundary.
 
@@ -543,6 +541,7 @@ Registry Console is licensed under the GNU Affero General Public License, versio
 ## Support
 
 For support or inquiries:
+
 - LinkedIn: [rubixvi](https://www.linkedin.com/in/rubixvi/)
 - Website: [Rubix Studios](https://rubixstudios.com.au)
 
