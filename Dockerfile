@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-ARG TRIVY_IMAGE=ghcr.io/aquasecurity/trivy:canary
+ARG TRIVY_IMAGE=ghcr.io/aquasecurity/trivy:0.76.2
 
 FROM ${TRIVY_IMAGE} AS scanner
 
