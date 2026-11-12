@@ -4,7 +4,7 @@ ARG TRIVY_IMAGE=ghcr.io/aquasecurity/trivy:0.76.2
 
 FROM ${TRIVY_IMAGE} AS scanner
 
-FROM node:24.22.3-alpine AS base
+FROM node:24-alpine AS base
 
 WORKDIR /app
 
