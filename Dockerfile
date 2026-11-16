@@ -4,7 +4,7 @@ ARG TRIVY_IMAGE=ghcr.io/aquasecurity/trivy:0.76.2
 
 FROM ${TRIVY_IMAGE} AS scanner
 
-FROM node:24-alpine AS base
+FROM node:26-alpine AS base
 
 WORKDIR /app
 
@@ -31,7 +31,7 @@ RUN --mount=type=cache,id=registry-console-nextjs,target=/app/.next/cache,sharin
     mkdir -p public \
     && pnpm run build
 
-FROM node:24-alpine AS runner
+FROM node:26-alpine AS runner
 
 WORKDIR /app
 
