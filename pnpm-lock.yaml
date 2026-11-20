@@ -191,11 +191,11 @@ importers:
         specifier: 2.1.1
         version: 2.1.1
       ldapts:
-        specifier: 9.2.0
-        version: 9.2.0
+        specifier: 9.3.1
+        version: 9.3.1
       lucide-react:
-        specifier: 1.74.0
-        version: 1.74.0(@types/react@19.3.0)(react@19.3.1)
+        specifier: 1.76.0
+        version: 1.76.0(@types/react@19.3.0)(react@19.3.1)
       next:
         specifier: 16.4.6
         version: 16.4.6(@types/node@26.6.6)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -1879,8 +1879,8 @@ packages:
   jose@6.2.17:
     resolution: {integrity: sha512-wOuK9V1yujQFH5S0ZWmLcDZN7+IKh9bUCC2ZPCf2HDlol3WWHy+PPyNjEI75FXRLMp3vDKQcupP59xhVU95hcg==}
 
-  ldapts@9.2.0:
-    resolution: {integrity: sha512-5mDg3OT5fDP9DUXga9dCLW8cMW24OTOKT4pv/Qj+f2zCV3qxb+gkZLCzMAqzVTOANoycidKkYpPvkclUQU2aXw==}
+  ldapts@9.3.1:
+    resolution: {integrity: sha512-MiClSiwcoAuI2I/63N+fotWZvnATkbpRsKzUzhSjqhY9bk6UmMevhZBRjO1GtpX/PbeRpOKs4W9P8Do6284Bqw==}
     engines: {node: '>=22'}
 
   lightningcss-android-arm64@1.33.0:
@@ -1961,8 +1961,8 @@ packages:
     resolution: {integrity: sha512-t7hw9pI+WvuwNJXwk5zVHpyhIqzg2qTlklJOf0mVxGSbe3Fp2VieZcduNYjaLDoy6p9uGpQEGWG87WpMKlNq8g==}
     engines: {node: '>=8'}
 
-  lucide-react@1.74.0:
-    resolution: {integrity: sha512-A1doIs/1fj1WnPbtIT7WRiM6Kvw5NUg+BtkoOh3Shpr4obwSDVt6WxCEcNH56EWprzuCoKle1OF0RqIkojwL1A==}
+  lucide-react@1.76.0:
+    resolution: {integrity: sha512-wRVHt2Xf64GXndB4rQOY9+3Wy9oJ59HDMYv6vwhT0hpSwUxQhG/RM9YijnOmvmIQ+VI/n+1V/FKd6gP4XL2aBQ==}
     peerDependencies:
       '@types/react': '*'
       react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
@@ -3738,7 +3738,7 @@ snapshots:
 
   jose@6.2.17: {}
 
-  ldapts@9.2.0:
+  ldapts@9.3.1:
     dependencies:
       strict-event-emitter-types: 2.0.0
 
@@ -3795,7 +3795,7 @@ snapshots:
     dependencies:
       p-locate: 4.1.0
 
-  lucide-react@1.74.0(@types/react@19.3.0)(react@19.3.1):
+  lucide-react@1.76.0(@types/react@19.3.0)(react@19.3.1):
     dependencies:
       react: 19.3.1
     optionalDependencies:
